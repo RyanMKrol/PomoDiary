@@ -7,6 +7,10 @@ CLAUDE.md
 # Design handoff (reference prototype, not ours to format)
 design/
 
+# Vendored provider agent skills (installed by the Vercel marketplace integrations)
+.agents/
+skills-lock.json
+
 # Generated output
 .next/
 out/
