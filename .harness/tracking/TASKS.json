@@ -757,7 +757,8 @@
         "middleware.ts",
         "proxy.ts",
         "lib/api/**",
-        ".gitignore"
+        ".gitignore",
+        "scripts/visual-out/manifest.json"
       ],
       "design": null,
       "verify": [],
