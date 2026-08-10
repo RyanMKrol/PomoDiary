@@ -110,7 +110,7 @@
     {
       "id": "T006",
       "title": "Drizzle schema, Neon client, migrations, PGlite test harness",
-      "status": "pending",
+      "status": "done",
       "dependsOn": [
         "T001"
       ],
