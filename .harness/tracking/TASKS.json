@@ -139,7 +139,7 @@
     {
       "id": "T007",
       "title": "Entry store: CRUD, day queries, grid aggregate, caps",
-      "status": "pending",
+      "status": "done",
       "dependsOn": [
         "T006"
       ],
