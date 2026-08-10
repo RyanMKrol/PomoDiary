@@ -62,7 +62,7 @@
     {
       "id": "T004",
       "title": "Domain constants (TAGS/AWAY/FEELS/PHRASES) + tag inference",
-      "status": "pending",
+      "status": "done",
       "dependsOn": [
         "T001"
       ],
