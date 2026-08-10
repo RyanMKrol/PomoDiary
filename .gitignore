@@ -45,3 +45,6 @@ next-env.d.ts
 # harness-fetched tool binaries (e.g. actionlint — ensure-actionlint.sh) — machine-specific, never committed
 .harness/.bin/
 # <<< implementation-harness managed <<<
+.vercel
+.env*
+!.env.example
