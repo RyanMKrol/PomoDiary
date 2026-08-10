@@ -4,6 +4,8 @@ import { migrate } from "drizzle-orm/pglite/migrator";
 
 import * as schema from "./schema";
 
+export type TestDb = Awaited<ReturnType<typeof createTestDb>>;
+
 /**
  * Test-only Drizzle instance backed by an in-memory PGlite database.
  * Never touches `DATABASE_URL` — hermetic by construction.
