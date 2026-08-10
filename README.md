@@ -1,4 +1,4 @@
-# Pomodiary
+# PomoDiary
 
 An hourly time-tracking web app. It stays open in a browser tab all day, keeps a timer, and once
 an hour asks you one question: what did you do with the last hour? Your answers are stored so

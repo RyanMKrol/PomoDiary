@@ -1,8 +1,8 @@
-# Handoff: Pomodiary — hourly time accounting
+# Handoff: PomoDiary — hourly time accounting
 
 ## Overview
 
-Pomodiary is a single-screen web app for retroactive time accounting. A timer runs for one hour. When it expires it chimes, the user acknowledges the chime, writes bullets describing what they actually did with that hour, tags it, and logs it. The next hour starts immediately. Over days this builds a log the user can read back — the point is to answer "where did my time go?" with the user's own words rather than automatic tracking.
+PomoDiary is a single-screen web app for retroactive time accounting. A timer runs for one hour. When it expires it chimes, the user acknowledges the chime, writes bullets describing what they actually did with that hour, tags it, and logs it. The next hour starts immediately. Over days this builds a log the user can read back — the point is to answer "where did my time go?" with the user's own words rather than automatic tracking.
 
 Three features distinguish it from a standard Pomodoro timer:
 
@@ -12,11 +12,11 @@ Three features distinguish it from a standard Pomodoro timer:
 
 ## About the design files
 
-`Pomodiary.dc.html` in this bundle is a **design reference created in HTML** — a working prototype showing intended look and behaviour, not production code to copy. It is a "Design Component": a template plus a logic class, rendered by a small runtime (`support.js`). Neither the template dialect nor the runtime should be carried into your codebase.
+`PomoDiary.dc.html` in this bundle is a **design reference created in HTML** — a working prototype showing intended look and behaviour, not production code to copy. It is a "Design Component": a template plus a logic class, rendered by a small runtime (`support.js`). Neither the template dialect nor the runtime should be carried into your codebase.
 
 **The task is to recreate this design in the target codebase's existing environment** (React, Vue, SwiftUI, native, whatever is already there), using its established patterns, component library and state conventions. If no environment exists yet, choose an appropriate framework and implement it there. Read the prototype for layout, exact values and behaviour; write idiomatic code for your stack.
 
-To view the prototype: open `Pomodiary.dc.html` in a browser (it needs `support.js` beside it, which is included).
+To view the prototype: open `PomoDiary.dc.html` in a browser (it needs `support.js` beside it, which is included).
 
 ## Fidelity
 
@@ -244,5 +244,5 @@ None. No images, no icon fonts, no SVG illustration — every mark on the screen
 
 ## Files
 
-- `Pomodiary.dc.html` — the design. Template first, then the logic class: constants (`TAGS`, `AWAY`, `FEELS`, `PHRASES`) at the top, then the component, whose `renderVals()` computes every value the template renders.
+- `PomoDiary.dc.html` — the design. Template first, then the logic class: constants (`TAGS`, `AWAY`, `FEELS`, `PHRASES`) at the top, then the component, whose `renderVals()` computes every value the template renders.
 - `support.js` — the prototype runtime. **Reference only — do not port it.**

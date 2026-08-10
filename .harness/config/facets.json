@@ -23,7 +23,7 @@
           "difficultyHint": "high"
         },
         "infra": {
-          "desc": "CI / deploy / keeping the site running 24/7 on the user's machine / runtime config",
+          "desc": "CI / Vercel deployment / external service provisioning / runtime config",
           "difficultyHint": "varies"
         },
         "build": {

@@ -8,11 +8,823 @@
       "status": "pending",
       "dependsOn": [],
       "gate": "needs-human",
-      "tags": ["scaffold"],
+      "tags": [
+        "scaffold"
+      ],
       "scope": [],
       "design": null,
       "verify": [],
       "spec": ".harness/tasks/T001.md"
+    },
+    {
+      "id": "T002",
+      "title": "Provision Vercel project + Neon, Clerk, Upstash integrations",
+      "status": "pending",
+      "dependsOn": [
+        "T001"
+      ],
+      "gate": "needs-human",
+      "tags": [
+        "provisioning"
+      ],
+      "scope": [
+        ".env.example"
+      ],
+      "design": null,
+      "verify": [],
+      "spec": ".harness/tasks/T002.md"
+    },
+    {
+      "id": "T003",
+      "title": "Design tokens, Archivo font, global styles",
+      "status": "pending",
+      "dependsOn": [
+        "T001"
+      ],
+      "gate": null,
+      "tags": [
+        "design-system"
+      ],
+      "facets": {
+        "layer": "frontend",
+        "workType": "style",
+        "risk": []
+      },
+      "scope": [
+        "app/globals.css",
+        "app/layout.tsx"
+      ],
+      "design": null,
+      "verify": [],
+      "expectsTest": false,
+      "spec": ".harness/tasks/T003.md"
+    },
+    {
+      "id": "T004",
+      "title": "Domain constants (TAGS/AWAY/FEELS/PHRASES) + tag inference",
+      "status": "pending",
+      "dependsOn": [
+        "T001"
+      ],
+      "gate": null,
+      "tags": [
+        "domain"
+      ],
+      "facets": {
+        "layer": "backend",
+        "workType": "feature",
+        "risk": []
+      },
+      "scope": [
+        "lib/domain/**"
+      ],
+      "design": null,
+      "verify": [],
+      "expectsTest": true,
+      "spec": ".harness/tasks/T004.md"
+    },
+    {
+      "id": "T005",
+      "title": "Time and formatting utilities",
+      "status": "pending",
+      "dependsOn": [
+        "T001"
+      ],
+      "gate": null,
+      "tags": [
+        "domain"
+      ],
+      "facets": {
+        "layer": "backend",
+        "workType": "feature",
+        "risk": []
+      },
+      "scope": [
+        "lib/time/**"
+      ],
+      "design": null,
+      "verify": [],
+      "expectsTest": true,
+      "spec": ".harness/tasks/T005.md"
+    },
+    {
+      "id": "T006",
+      "title": "Drizzle schema, Neon client, migrations, PGlite test harness",
+      "status": "pending",
+      "dependsOn": [
+        "T001"
+      ],
+      "gate": null,
+      "tags": [
+        "persistence"
+      ],
+      "facets": {
+        "layer": "data",
+        "workType": "feature",
+        "risk": [
+          "touches-schema"
+        ]
+      },
+      "scope": [
+        "lib/db/**",
+        "drizzle.config.ts",
+        "drizzle/**",
+        "package.json"
+      ],
+      "design": null,
+      "verify": [],
+      "expectsTest": true,
+      "spec": ".harness/tasks/T006.md"
+    },
+    {
+      "id": "T007",
+      "title": "Entry store: CRUD, day queries, grid aggregate, caps",
+      "status": "pending",
+      "dependsOn": [
+        "T006"
+      ],
+      "gate": null,
+      "tags": [
+        "persistence"
+      ],
+      "facets": {
+        "layer": "data",
+        "workType": "feature",
+        "risk": []
+      },
+      "scope": [
+        "lib/db/**"
+      ],
+      "design": null,
+      "verify": [],
+      "expectsTest": true,
+      "spec": ".harness/tasks/T007.md"
+    },
+    {
+      "id": "T008",
+      "title": "Timer state machine engine (pure, wall-clock driven)",
+      "status": "pending",
+      "dependsOn": [
+        "T004",
+        "T005"
+      ],
+      "gate": null,
+      "tags": [
+        "timer-core"
+      ],
+      "facets": {
+        "layer": "timer",
+        "workType": "feature",
+        "risk": [
+          "touches-core"
+        ]
+      },
+      "scope": [
+        "lib/timer/**"
+      ],
+      "design": null,
+      "verify": [],
+      "expectsTest": true,
+      "spec": ".harness/tasks/T008.md"
+    },
+    {
+      "id": "T009",
+      "title": "Validation schemas and storage caps",
+      "status": "pending",
+      "dependsOn": [
+        "T004"
+      ],
+      "gate": null,
+      "tags": [
+        "security"
+      ],
+      "facets": {
+        "layer": "backend",
+        "workType": "feature",
+        "risk": []
+      },
+      "scope": [
+        "lib/validation/**",
+        "package.json"
+      ],
+      "design": null,
+      "verify": [],
+      "expectsTest": true,
+      "spec": ".harness/tasks/T009.md"
+    },
+    {
+      "id": "T010",
+      "title": "Rate limiter (Upstash, fail-open without env)",
+      "status": "pending",
+      "dependsOn": [
+        "T001"
+      ],
+      "gate": null,
+      "tags": [
+        "security"
+      ],
+      "facets": {
+        "layer": "backend",
+        "workType": "feature",
+        "risk": []
+      },
+      "scope": [
+        "lib/ratelimit/**",
+        "package.json"
+      ],
+      "design": null,
+      "verify": [],
+      "expectsTest": true,
+      "spec": ".harness/tasks/T010.md"
+    },
+    {
+      "id": "T011",
+      "title": "Clerk auth: middleware protection, sign-in/up pages, getUserId()",
+      "status": "pending",
+      "dependsOn": [
+        "T002"
+      ],
+      "gate": null,
+      "tags": [
+        "auth"
+      ],
+      "facets": {
+        "layer": "backend",
+        "workType": "feature",
+        "risk": [
+          "touches-core"
+        ]
+      },
+      "scope": [
+        "middleware.ts",
+        "proxy.ts",
+        "app/sign-in/**",
+        "app/sign-up/**",
+        "app/layout.tsx",
+        "lib/api/**",
+        ".github/workflows/ci.yml",
+        "package.json",
+        ".env.example"
+      ],
+      "design": null,
+      "verify": [],
+      "expectsTest": false,
+      "visualVerify": true,
+      "spec": ".harness/tasks/T011.md"
+    },
+    {
+      "id": "T012",
+      "title": "Timer state + settings API routes",
+      "status": "pending",
+      "dependsOn": [
+        "T006",
+        "T007",
+        "T008",
+        "T009",
+        "T010",
+        "T011"
+      ],
+      "gate": null,
+      "tags": [
+        "api"
+      ],
+      "facets": {
+        "layer": "backend",
+        "workType": "endpoint",
+        "risk": [
+          "full-stack"
+        ]
+      },
+      "scope": [
+        "app/api/**",
+        "lib/api/**",
+        "lib/db/**"
+      ],
+      "design": null,
+      "verify": [],
+      "expectsTest": true,
+      "spec": ".harness/tasks/T012.md"
+    },
+    {
+      "id": "T013",
+      "title": "Entries API: day/grid reads + entry edit",
+      "status": "pending",
+      "dependsOn": [
+        "T007",
+        "T009",
+        "T011"
+      ],
+      "gate": null,
+      "tags": [
+        "api"
+      ],
+      "facets": {
+        "layer": "backend",
+        "workType": "endpoint",
+        "risk": []
+      },
+      "scope": [
+        "app/api/**",
+        "lib/api/**"
+      ],
+      "design": null,
+      "verify": [],
+      "expectsTest": true,
+      "spec": ".harness/tasks/T013.md"
+    },
+    {
+      "id": "T014",
+      "title": "App shell: header, two-panel layout, RTL test setup",
+      "status": "pending",
+      "dependsOn": [
+        "T003",
+        "T011"
+      ],
+      "gate": null,
+      "tags": [
+        "ui"
+      ],
+      "facets": {
+        "layer": "frontend",
+        "workType": "component",
+        "risk": []
+      },
+      "scope": [
+        "app/**",
+        "components/**",
+        "vitest.config.ts",
+        "test/**",
+        "package.json"
+      ],
+      "design": null,
+      "verify": [],
+      "expectsTest": true,
+      "spec": ".harness/tasks/T014.md"
+    },
+    {
+      "id": "T015",
+      "title": "Client timer hook: server reconciliation + 1s tick",
+      "status": "pending",
+      "dependsOn": [
+        "T008",
+        "T012"
+      ],
+      "gate": null,
+      "tags": [
+        "timer-core"
+      ],
+      "facets": {
+        "layer": "timer",
+        "workType": "feature",
+        "risk": [
+          "touches-core"
+        ]
+      },
+      "scope": [
+        "lib/client/**"
+      ],
+      "design": null,
+      "verify": [],
+      "expectsTest": true,
+      "spec": ".harness/tasks/T015.md"
+    },
+    {
+      "id": "T016",
+      "title": "Dial + phrase block (ring fills, breathe, status copy)",
+      "status": "pending",
+      "dependsOn": [
+        "T014",
+        "T015"
+      ],
+      "gate": null,
+      "tags": [
+        "ui"
+      ],
+      "facets": {
+        "layer": "frontend",
+        "workType": "component",
+        "risk": []
+      },
+      "scope": [
+        "components/**"
+      ],
+      "design": null,
+      "verify": [],
+      "expectsTest": true,
+      "spec": ".harness/tasks/T016.md"
+    },
+    {
+      "id": "T017",
+      "title": "Bullet jotter: inputs, Enter/Backspace, pending focus, draft sync",
+      "status": "pending",
+      "dependsOn": [
+        "T014",
+        "T015"
+      ],
+      "gate": null,
+      "tags": [
+        "ui"
+      ],
+      "facets": {
+        "layer": "frontend",
+        "workType": "component",
+        "risk": []
+      },
+      "scope": [
+        "components/**",
+        "lib/client/**"
+      ],
+      "design": null,
+      "verify": [],
+      "expectsTest": true,
+      "spec": ".harness/tasks/T017.md"
+    },
+    {
+      "id": "T018",
+      "title": "Picker strip: tag chips with suggestion states, feel/intent segments",
+      "status": "pending",
+      "dependsOn": [
+        "T004",
+        "T014",
+        "T015"
+      ],
+      "gate": null,
+      "tags": [
+        "ui"
+      ],
+      "facets": {
+        "layer": "frontend",
+        "workType": "component",
+        "risk": []
+      },
+      "scope": [
+        "components/**"
+      ],
+      "design": null,
+      "verify": [],
+      "expectsTest": true,
+      "spec": ".harness/tasks/T018.md"
+    },
+    {
+      "id": "T019",
+      "title": "Control bar + recap bar",
+      "status": "pending",
+      "dependsOn": [
+        "T014",
+        "T015"
+      ],
+      "gate": null,
+      "tags": [
+        "ui"
+      ],
+      "facets": {
+        "layer": "frontend",
+        "workType": "component",
+        "risk": []
+      },
+      "scope": [
+        "components/**"
+      ],
+      "design": null,
+      "verify": [],
+      "expectsTest": true,
+      "spec": ".harness/tasks/T019.md"
+    },
+    {
+      "id": "T020",
+      "title": "Chime + away overlays",
+      "status": "pending",
+      "dependsOn": [
+        "T014",
+        "T015"
+      ],
+      "gate": null,
+      "tags": [
+        "ui"
+      ],
+      "facets": {
+        "layer": "frontend",
+        "workType": "component",
+        "risk": []
+      },
+      "scope": [
+        "components/**"
+      ],
+      "design": null,
+      "verify": [],
+      "expectsTest": true,
+      "spec": ".harness/tasks/T020.md"
+    },
+    {
+      "id": "T021",
+      "title": "Chime sound synthesis (Web Audio marimba arpeggio)",
+      "status": "pending",
+      "dependsOn": [
+        "T015"
+      ],
+      "gate": null,
+      "tags": [
+        "timer-core"
+      ],
+      "facets": {
+        "layer": "frontend",
+        "workType": "feature",
+        "risk": []
+      },
+      "scope": [
+        "lib/audio/**",
+        "lib/client/**",
+        "components/**"
+      ],
+      "design": null,
+      "verify": [],
+      "expectsTest": true,
+      "visualVerify": false,
+      "spec": ".harness/tasks/T021.md"
+    },
+    {
+      "id": "T022",
+      "title": "Chime notifications: page title/favicon + system Notification",
+      "status": "pending",
+      "dependsOn": [
+        "T015"
+      ],
+      "gate": null,
+      "tags": [
+        "notifications"
+      ],
+      "facets": {
+        "layer": "frontend",
+        "workType": "feature",
+        "risk": []
+      },
+      "scope": [
+        "lib/notify/**",
+        "lib/client/**",
+        "components/**",
+        "app/**",
+        "public/**"
+      ],
+      "design": null,
+      "verify": [],
+      "expectsTest": true,
+      "spec": ".harness/tasks/T022.md"
+    },
+    {
+      "id": "T023",
+      "title": "The vine: day view with entries and empty state",
+      "status": "pending",
+      "dependsOn": [
+        "T005",
+        "T013",
+        "T014"
+      ],
+      "gate": null,
+      "tags": [
+        "ui"
+      ],
+      "facets": {
+        "layer": "frontend",
+        "workType": "component",
+        "risk": []
+      },
+      "scope": [
+        "components/**",
+        "app/**"
+      ],
+      "design": null,
+      "verify": [],
+      "expectsTest": true,
+      "spec": ".harness/tasks/T023.md"
+    },
+    {
+      "id": "T024",
+      "title": "The vine: 10-day grid view with ruler and legend",
+      "status": "pending",
+      "dependsOn": [
+        "T023"
+      ],
+      "gate": null,
+      "tags": [
+        "ui"
+      ],
+      "facets": {
+        "layer": "frontend",
+        "workType": "component",
+        "risk": []
+      },
+      "scope": [
+        "components/**"
+      ],
+      "design": null,
+      "verify": [],
+      "expectsTest": true,
+      "spec": ".harness/tasks/T024.md"
+    },
+    {
+      "id": "T025",
+      "title": "Settings panel (session length, sound, volume, pause-after-log)",
+      "status": "pending",
+      "dependsOn": [
+        "T012",
+        "T019"
+      ],
+      "gate": null,
+      "tags": [
+        "ui"
+      ],
+      "facets": {
+        "layer": "frontend",
+        "workType": "component",
+        "risk": []
+      },
+      "scope": [
+        "components/**",
+        "lib/client/**"
+      ],
+      "design": null,
+      "verify": [],
+      "expectsTest": true,
+      "spec": ".harness/tasks/T025.md"
+    },
+    {
+      "id": "T026",
+      "title": "Edit past entries in the vine",
+      "status": "pending",
+      "dependsOn": [
+        "T013",
+        "T023"
+      ],
+      "gate": null,
+      "tags": [
+        "ui"
+      ],
+      "facets": {
+        "layer": "frontend",
+        "workType": "feature",
+        "risk": []
+      },
+      "scope": [
+        "components/**",
+        "lib/client/**"
+      ],
+      "design": null,
+      "verify": [],
+      "expectsTest": true,
+      "spec": ".harness/tasks/T026.md"
+    },
+    {
+      "id": "T027",
+      "title": "Responsive stack below ~950px",
+      "status": "pending",
+      "dependsOn": [
+        "T019",
+        "T020",
+        "T023",
+        "T024"
+      ],
+      "gate": null,
+      "tags": [
+        "ui"
+      ],
+      "facets": {
+        "layer": "frontend",
+        "workType": "style",
+        "risk": []
+      },
+      "scope": [
+        "app/globals.css",
+        "components/**"
+      ],
+      "design": null,
+      "verify": [],
+      "expectsTest": false,
+      "spec": ".harness/tasks/T027.md"
+    },
+    {
+      "id": "T028",
+      "title": "Accessibility: live regions, grid cell names, labeled inputs",
+      "status": "pending",
+      "dependsOn": [
+        "T017",
+        "T020",
+        "T023",
+        "T024"
+      ],
+      "gate": null,
+      "tags": [
+        "a11y"
+      ],
+      "facets": {
+        "layer": "frontend",
+        "workType": "component",
+        "risk": [
+          "cross-cutting"
+        ]
+      },
+      "scope": [
+        "components/**",
+        "app/**"
+      ],
+      "design": null,
+      "verify": [],
+      "expectsTest": true,
+      "spec": ".harness/tasks/T028.md"
+    },
+    {
+      "id": "T029",
+      "title": "Visual harness: Playwright driver scripts with fixture APIs",
+      "status": "pending",
+      "dependsOn": [
+        "T011",
+        "T020",
+        "T023"
+      ],
+      "gate": null,
+      "tags": [
+        "testing"
+      ],
+      "facets": {
+        "layer": "build",
+        "workType": "feature",
+        "risk": [
+          "touches-core"
+        ]
+      },
+      "scope": [
+        "scripts/**",
+        "package.json",
+        "middleware.ts",
+        "proxy.ts",
+        "lib/api/**",
+        ".gitignore"
+      ],
+      "design": null,
+      "verify": [],
+      "expectsTest": false,
+      "spec": ".harness/tasks/T029.md"
+    },
+    {
+      "id": "T030",
+      "title": "Wire VISUAL_VERIFY_HOOK to the visual harness",
+      "status": "pending",
+      "dependsOn": [
+        "T029"
+      ],
+      "gate": "needs-human",
+      "tags": [
+        "harness"
+      ],
+      "scope": [
+        ".harness/config/harness.env"
+      ],
+      "design": null,
+      "verify": [],
+      "spec": ".harness/tasks/T030.md"
+    },
+    {
+      "id": "T031",
+      "title": "Clock-driven flow check: rollover, chime, recap, away backfill",
+      "status": "pending",
+      "dependsOn": [
+        "T029"
+      ],
+      "gate": null,
+      "tags": [
+        "testing"
+      ],
+      "facets": {
+        "layer": "build",
+        "workType": "feature",
+        "risk": []
+      },
+      "scope": [
+        "scripts/**",
+        "package.json"
+      ],
+      "design": null,
+      "verify": [],
+      "expectsTest": false,
+      "spec": ".harness/tasks/T031.md"
+    },
+    {
+      "id": "T032",
+      "title": "Production deploy: migrations, Clerk production, smoke test",
+      "status": "pending",
+      "dependsOn": [
+        "T020",
+        "T021",
+        "T023",
+        "T024"
+      ],
+      "gate": "needs-human",
+      "tags": [
+        "deploy"
+      ],
+      "scope": [],
+      "design": null,
+      "verify": [],
+      "spec": ".harness/tasks/T032.md"
     }
   ]
 }

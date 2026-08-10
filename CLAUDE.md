@@ -7,7 +7,7 @@ that drives autonomous runs is described in [`.harness/docs/HARNESS.md`](./.harn
 
 ## Project orientation
 
-**Pomodiary** (repo folder `pomodoro`, remote `pomodiary`) is an hourly time-tracking web app:
+**PomoDiary** (repo folder and remote `PomoDiary`, npm package `pomodiary`) is an hourly time-tracking web app:
 a Next.js site that keeps a one-hour timer
 and, at each chime, prompts the user to write bullets about what they did with the previous
 hour, tag it, and log it. Entries build a reviewable log ("the vine") plus a 10-day grid.
