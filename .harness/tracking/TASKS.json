@@ -37,7 +37,7 @@
     {
       "id": "T003",
       "title": "Design tokens, Archivo font, global styles",
-      "status": "pending",
+      "status": "done",
       "dependsOn": [
         "T001"
       ],
