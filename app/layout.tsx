@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "pomodoro",
+  title: "Pomodiary",
   description:
     "Hourly time tracking: log what you did with every hour of your day.",
 };

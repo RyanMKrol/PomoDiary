@@ -7,11 +7,17 @@ that drives autonomous runs is described in [`.harness/docs/HARNESS.md`](./.harn
 
 ## Project orientation
 
-**pomodoro** is an hourly time-tracking web app: a Next.js website that runs 24/7 on the
-user's own computer, keeps a timer, and every hour prompts the user to type in what they did
-with the previous hour. Entries are stored so the user can review their day, see where their
-time goes, and spot inefficiencies. (Despite the repo name, it is not a classic 25/5 pomodoro
-timer.) A full product design will land in `.harness/docs/designs/` when available.
+**Pomodiary** (repo folder `pomodoro`, remote `pomodiary`) is an hourly time-tracking web app:
+a Next.js site that keeps a one-hour timer
+and, at each chime, prompts the user to write bullets about what they did with the previous
+hour, tag it, and log it. Entries build a reviewable log ("the vine") plus a 10-day grid.
+(The name is pomodoro + diary; it is not a classic 25/5 pomodoro timer.) It is an external-facing,
+multi-user app deployed on **Vercel**: auth via **Clerk** (everything behind sign-in), data in
+**Neon Postgres** via **Drizzle ORM** (lazy client init so builds pass without env), rate
+limiting via **Upstash Redis**, zod validation + storage caps on every write. Tests are
+hermetic: DB tests run against in-process PGlite, never a real database. The authoritative
+design handoff lives in `design/README.md` + `design/Pomodoro.dc.html` (reference prototype —
+recreate, never port).
 
 - **What it is / what you're building:** see `README.md` and (if present) `PLAN.md` or
   `.harness/docs/designs/`. `README.md` is the source of truth for **what is currently

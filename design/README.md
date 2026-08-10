@@ -1,8 +1,8 @@
-# Handoff: Pomodoro — hourly time accounting
+# Handoff: Pomodiary — hourly time accounting
 
 ## Overview
 
-Pomodoro is a single-screen web app for retroactive time accounting. A timer runs for one hour. When it expires it chimes, the user acknowledges the chime, writes bullets describing what they actually did with that hour, tags it, and logs it. The next hour starts immediately. Over days this builds a log the user can read back — the point is to answer "where did my time go?" with the user's own words rather than automatic tracking.
+Pomodiary is a single-screen web app for retroactive time accounting. A timer runs for one hour. When it expires it chimes, the user acknowledges the chime, writes bullets describing what they actually did with that hour, tags it, and logs it. The next hour starts immediately. Over days this builds a log the user can read back — the point is to answer "where did my time go?" with the user's own words rather than automatic tracking.
 
 Three features distinguish it from a standard Pomodoro timer:
 
@@ -12,11 +12,11 @@ Three features distinguish it from a standard Pomodoro timer:
 
 ## About the design files
 
-`Pomodoro.dc.html` in this bundle is a **design reference created in HTML** — a working prototype showing intended look and behaviour, not production code to copy. It is a "Design Component": a template plus a logic class, rendered by a small runtime (`support.js`). Neither the template dialect nor the runtime should be carried into your codebase.
+`Pomodiary.dc.html` in this bundle is a **design reference created in HTML** — a working prototype showing intended look and behaviour, not production code to copy. It is a "Design Component": a template plus a logic class, rendered by a small runtime (`support.js`). Neither the template dialect nor the runtime should be carried into your codebase.
 
 **The task is to recreate this design in the target codebase's existing environment** (React, Vue, SwiftUI, native, whatever is already there), using its established patterns, component library and state conventions. If no environment exists yet, choose an appropriate framework and implement it there. Read the prototype for layout, exact values and behaviour; write idiomatic code for your stack.
 
-To view the prototype: open `Pomodoro.dc.html` in a browser (it needs `support.js` beside it, which is included).
+To view the prototype: open `Pomodiary.dc.html` in a browser (it needs `support.js` beside it, which is included).
 
 ## Fidelity
 
@@ -101,7 +101,7 @@ Full viewport, no page scroll (`height:100vh; overflow:hidden`). Column stack:
 1. **Header** — 68px tall, 2px bottom rule, 26px side padding.
 2. **Body** — CSS grid, `grid-template-columns: minmax(430px,46%) 1fr; grid-template-rows: minmax(0,1fr)`. Left = timer panel (2px right rule), right = log panel. Both panels are `min-height:0` flex columns; only their inner regions scroll.
 
-**Header contents:** 13px red square + wordmark `POMODORO` (21px/800) · tagline "One hour. One honest account of it." (11px/600/upper/.5 alpha) · flex spacer · hours-logged-today count (21px/800, accent) followed by "picked today · Mon 10 Aug".
+**Header contents:** 13px red square + wordmark `POMODIARY` (21px/800) · tagline "One hour. One honest account of it." (11px/600/upper/.5 alpha) · flex spacer · hours-logged-today count (21px/800, accent) followed by "picked today · Mon 10 Aug".
 
 ### Left panel — the timer
 
@@ -244,5 +244,5 @@ None. No images, no icon fonts, no SVG illustration — every mark on the screen
 
 ## Files
 
-- `Pomodoro.dc.html` — the design. Template first, then the logic class: constants (`TAGS`, `AWAY`, `FEELS`, `PHRASES`) at the top, then the component, whose `renderVals()` computes every value the template renders.
+- `Pomodiary.dc.html` — the design. Template first, then the logic class: constants (`TAGS`, `AWAY`, `FEELS`, `PHRASES`) at the top, then the component, whose `renderVals()` computes every value the template renders.
 - `support.js` — the prototype runtime. **Reference only — do not port it.**

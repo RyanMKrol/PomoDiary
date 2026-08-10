@@ -1,20 +1,23 @@
-# pomodoro
+# Pomodiary
 
-An hourly time-tracking web app. It runs in your browser all day, keeps a timer, and once an
-hour asks you one question: what did you do with the last hour? Your answers are stored so you
-can look back over a day or a week, see where the time actually went, and spot the things that
-are eating it.
+An hourly time-tracking web app. It stays open in a browser tab all day, keeps a timer, and once
+an hour asks you one question: what did you do with the last hour? Your answers are stored so
+you can look back over a day or a week, see where the time actually went, and spot the things
+that are eating it.
 
-Despite the repo name, this is not a classic 25/5 pomodoro timer. The point is the hourly
-check-in and the record it builds up.
+The name is a play on "pomodoro" and "diary": a diary kept on a pomodoro timer. It is not a
+classic 25/5 pomodoro timer; the point is the hourly check-in and the record it builds up.
 
 ## How it works (planned)
 
-- A website that stays open on your computer 24/7.
-- Every hour it prompts you to type in what you did with the previous hour.
-- Entries are saved so you can review your day and find inefficiencies.
+- A multi-user web app deployed on Vercel, with accounts (Clerk) and a Postgres entry log (Neon).
+- A one-hour ring fills on screen; you can jot bullets at any point during the hour.
+- When the hour chimes you tidy the bullets up, tag the hour, and log it; the next hour starts.
+- Sleep and Work away modes back-fill absences as one-hour blocks.
+- "The vine" shows your day as a readable log, and a 10-day grid shows where the hours went.
 
-A full product design is coming; this section will grow as the app takes shape.
+The full design lives in [`design/`](design/README.md); the visual prototype is
+`design/Pomodoro.dc.html`.
 
 ## Building this project
 
