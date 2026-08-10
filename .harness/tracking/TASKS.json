@@ -825,6 +825,114 @@
       "design": null,
       "verify": [],
       "spec": ".harness/tasks/T032.md"
+    },
+    {
+      "id": "T033",
+      "title": "Security headers (frame-ancestors, nosniff, referrer, permissions)",
+      "status": "pending",
+      "dependsOn": [
+        "T011"
+      ],
+      "gate": null,
+      "tags": [
+        "security"
+      ],
+      "facets": {
+        "layer": "infra",
+        "workType": "config",
+        "risk": []
+      },
+      "scope": [
+        "next.config.ts",
+        "test/**"
+      ],
+      "design": null,
+      "verify": [],
+      "expectsTest": true,
+      "spec": ".harness/tasks/T033.md"
+    },
+    {
+      "id": "T034",
+      "title": "Account deletion cleanup via Clerk webhook",
+      "status": "pending",
+      "dependsOn": [
+        "T007",
+        "T011"
+      ],
+      "gate": null,
+      "tags": [
+        "security"
+      ],
+      "facets": {
+        "layer": "backend",
+        "workType": "endpoint",
+        "risk": [
+          "touches-core"
+        ]
+      },
+      "scope": [
+        "app/api/**",
+        "lib/db/**",
+        "middleware.ts",
+        "proxy.ts",
+        "package.json",
+        ".env.example"
+      ],
+      "design": null,
+      "verify": [],
+      "expectsTest": true,
+      "spec": ".harness/tasks/T034.md"
+    },
+    {
+      "id": "T035",
+      "title": "Non-blocking dependency audit step in CI",
+      "status": "pending",
+      "dependsOn": [
+        "T001"
+      ],
+      "gate": null,
+      "tags": [
+        "security"
+      ],
+      "facets": {
+        "layer": "infra",
+        "workType": "config",
+        "risk": []
+      },
+      "scope": [
+        ".github/workflows/ci.yml"
+      ],
+      "design": null,
+      "verify": [],
+      "expectsTest": false,
+      "spec": ".harness/tasks/T035.md"
+    },
+    {
+      "id": "T036",
+      "title": "Data export endpoint (download all entries as JSON)",
+      "status": "pending",
+      "dependsOn": [
+        "T007",
+        "T011"
+      ],
+      "gate": null,
+      "tags": [
+        "api"
+      ],
+      "facets": {
+        "layer": "backend",
+        "workType": "endpoint",
+        "risk": []
+      },
+      "scope": [
+        "app/api/**",
+        "lib/api/**",
+        "lib/db/**"
+      ],
+      "design": null,
+      "verify": [],
+      "expectsTest": true,
+      "spec": ".harness/tasks/T036.md"
     }
   ]
 }
