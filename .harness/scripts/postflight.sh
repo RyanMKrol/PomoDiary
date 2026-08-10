@@ -1,0 +1,90 @@
+#!/usr/bin/env bash
+#
+# postflight.sh — read-only, ZERO-TOKEN status board for the single sequential loop.
+#
+# Counterpart to loop.sh: where loop.sh decides what to BUILD, postflight reports what
+# the backlog looks like. It reads everything from `origin/main` (the integrated truth) —
+# the same source loop.sh uses — plus the loop's branches/worklog, so the two never
+# disagree. It never invokes Claude, so it's fast, reliable, and free to run every cycle.
+#
+# Output goes to stdout AND to .harness/worklog/STATUS.md (overwritten each run).
+#
+# Usage:  .harness/scripts/postflight.sh
+# Exit:   0 always (a report is informational; it never fails a cycle).
+set -uo pipefail
+
+ROOT="$(git rev-parse --show-toplevel)"
+NAME="$(basename "$ROOT")"
+TASKS_REF="${TASKS_REF:-origin/main}"
+STATUS_FILE="$ROOT/.harness/worklog/STATUS.md"
+cd "$ROOT" || exit 0
+mkdir -p .harness/worklog
+git fetch origin --quiet 2>/dev/null || true
+
+# All reads come from origin/main (mirrors loop.sh), so the board matches what runs.
+# TASKS.json (schema: .harness/docs/HARNESS.md §8.1) is parsed with jq — same as loop.sh.
+command -v jq >/dev/null 2>&1 || { echo "[postflight] jq is required to parse TASKS.json — install it (e.g. brew install jq)" >&2; exit 0; }
+blob()         { git show "$TASKS_REF:.harness/$1" 2>/dev/null || true; }
+tj()           { blob tracking/TASKS.json | jq "$@" 2>/dev/null; }
+all_tasks()    { tj -r '.tasks[].id'; }
+task_done()    { tj -e --arg id "$1" '.tasks[]|select(.id==$id)|.status=="done"' >/dev/null; }
+task_title()   { tj -r --arg id "$1" '.tasks[]|select(.id==$id)|.title'; }
+deps_for()     { tj -r --arg id "$1" '.tasks[]|select(.id==$id)|.dependsOn[]?' | tr '\n' ' '; }
+needs_human()  { tj -e --arg id "$1" '.tasks[]|select(.id==$id)|.gate=="needs-human"' >/dev/null; }
+# status="blocked"/"failed" are first-class TASKS.json values the LOOP sets (block_task / manual-fail
+# reconcile) — check them directly, not just the legacy worklog grep, so the board matches the loop.
+task_blocked() { tj -e --arg id "$1" '.tasks[]|select(.id==$id)|.status=="blocked"' >/dev/null 2>&1 || blob "worklog/$1.md" | grep -qiE 'failed:blocked|needs-human'; }
+task_failed()  { tj -e --arg id "$1" '.tasks[]|select(.id==$id)|.status=="failed"' >/dev/null; }
+inprogress()   { git branch --format='%(refname:short)' | grep -E '^t[0-9]{3,}$' | head -1 || true; }
+
+board=(); needs=(); ready=0; done_all=1
+for t in $(all_tasks); do
+  task_done "$t" && continue
+  done_all=0
+  title="$(task_title "$t")"
+  if task_failed "$t"; then
+    board+=("  ❌ failed        $t  $title")
+    needs+=("$t — ❌ failed (owner overturned a false success): $title — the re-do is a separate follow-up task")
+  elif needs_human "$t" || task_blocked "$t"; then
+    board+=("  🔒 needs you     $t  $title")
+    needs+=("$t — 🔒 needs-human: $title")
+  else
+    unmet=""
+    for d in $(deps_for "$t"); do task_done "$d" || unmet="$unmet $d"; done
+    if [ -n "$unmet" ]; then
+      board+=("  ⏳ waiting deps  $t  (needs:${unmet} )")
+    else
+      board+=("  ▶︎  ready         $t  $title")
+      ready=$((ready + 1))
+    fi
+  fi
+done
+
+ip="$(inprogress)"
+: >"$STATUS_FILE"
+out() { printf '%s\n' "$*"; printf '%s\n' "$*" >>"$STATUS_FILE"; }
+
+out "# $NAME — loop status ($(date '+%Y-%m-%d %H:%M:%S'))"
+out ""
+if [ -n "$ip" ]; then out "🔨 In flight: branch \`$ip\` (a task is mid-build / awaiting CI)."
+else out "(no task branch in flight — the loop is between tasks or idle)"; fi
+out ""
+if [ "$done_all" -eq 1 ]; then
+  out "✅ Every task in the backlog is done."
+else
+  out "## Backlog (not-done)"
+  for l in ${board[@]+"${board[@]}"}; do out "$l"; done
+  out ""
+  out "$ready task(s) ready to build now."
+fi
+out ""
+out "## Needs you"
+if [ "${#needs[@]}" -eq 0 ]; then
+  out "  (nothing — all clear)"
+else
+  for n in ${needs[@]+"${needs[@]}"}; do out "  $n"; done
+fi
+
+echo
+echo "   (saved to .harness/worklog/STATUS.md)"
+exit 0
