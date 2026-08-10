@@ -6,6 +6,7 @@ const eslintConfig = [
     // The vendored harness tree and generated output are not ours to lint.
     ignores: [
       ".harness/**",
+      "design/**",
       "node_modules/**",
       ".next/**",
       "out/**",

@@ -4,6 +4,9 @@
 CLAUDE.md
 .github/workflows/lint-workflows.yml
 
+# Design handoff (reference prototype, not ours to format)
+design/
+
 # Generated output
 .next/
 out/
