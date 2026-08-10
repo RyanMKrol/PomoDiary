@@ -1,2 +1,12 @@
+# Vendored harness tree + harness-authored prose (plugin-owned, not ours to format)
 .harness/
+.claude/
 CLAUDE.md
+.github/workflows/lint-workflows.yml
+
+# Generated output
+.next/
+out/
+build/
+next-env.d.ts
+package-lock.json
