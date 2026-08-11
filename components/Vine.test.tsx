@@ -268,6 +268,27 @@ describe("Vine", () => {
 
 describe("back to the day", () => {
   it("returns to TODAY even after a past day was opened from the grid", async () => {
+    // The grid only shows days back to the earliest entry, so anchor one
+    // three days ago to make day-row-2 exist.
+    const from = new Date();
+    from.setHours(10, 0, 0, 0);
+    from.setDate(from.getDate() - 3);
+    const to = new Date(from);
+    to.setHours(11, 0, 0, 0);
+    const anchor = {
+      id: "anchor-3",
+      from: from.toISOString(),
+      to: to.toISOString(),
+      tag: "Deep work",
+      feel: "Steady",
+      intent: "yes",
+      bullets: ["anchor"],
+    };
+    global.fetch = vi.fn(
+      () => mockFetchResponse([anchor]),
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    ) as any;
+
     render(<Vine timerState={{ mode: "running" }} />);
 
     // Zoom out, open a past day (index 2), confirm we left Today.
