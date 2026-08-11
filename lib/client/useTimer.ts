@@ -280,8 +280,16 @@ export function createTimerClient(fetchImpl: FetchLike = fetch): TimerClient {
   }
 
   async function refetchState(): Promise<void> {
-    const payload = await fetchState();
-    applyState(payload, Date.now());
+    // Never throw: this is fired unawaited from start() and tick(), where a
+    // transient fetch failure must not become an unhandled rejection (it
+    // fails CI's test runs and would surface as console noise in prod).
+    // State simply stays stale until the next action or tick retries.
+    try {
+      const payload = await fetchState();
+      applyState(payload, Date.now());
+    } catch {
+      // swallow — next refetch retries
+    }
   }
 
   async function performAction(action: TimerAction): Promise<void> {
