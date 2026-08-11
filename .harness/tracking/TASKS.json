@@ -650,7 +650,7 @@
     {
       "id": "T026",
       "title": "Edit past entries in the vine",
-      "status": "pending",
+      "status": "done",
       "dependsOn": [
         "T013",
         "T023"
