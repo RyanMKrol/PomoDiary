@@ -8,5 +8,10 @@
     "failed": true,
     "reason": "review-failed: superseded by T038+T039 — split into RTL infra (tsconfig.json now in scope, the original blocker) and the app shell",
     "at": "2026-08-11T06:35:46Z"
+  },
+  "T022": {
+    "failed": true,
+    "reason": "review-failed: superseded by T040 — re-attempt uses the T038 jsdom pragma pattern that did not exist when T022 was built",
+    "at": "2026-08-11T09:25:32Z"
   }
 }
