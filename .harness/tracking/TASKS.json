@@ -518,7 +518,7 @@
     {
       "id": "T021",
       "title": "Chime sound synthesis (Web Audio marimba arpeggio)",
-      "status": "pending",
+      "status": "done",
       "dependsOn": [
         "T015"
       ],
