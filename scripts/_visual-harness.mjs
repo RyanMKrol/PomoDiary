@@ -139,10 +139,16 @@ const HOUR_MS = 3_600_000;
  * grid shows a real spread. Day offset 3 is deliberately left empty (the empty-state shot). */
 export function seedEntries(now) {
   let n = 0;
+  // Anchor at noon TODAY, not the wall clock: seeding "2 hours ago" from a
+  // just-after-midnight run put every "today" entry on yesterday, emptying
+  // the day view and failing the harness's article checks.
+  const anchor = new Date(now);
+  anchor.setHours(12, 0, 0, 0);
+  const base = anchor.getTime();
   const mk = (agoHours, tag, feel, intent, bullets) => ({
     id: `seed-${n++}`,
-    from: new Date(now - agoHours * HOUR_MS).toISOString(),
-    to: new Date(now - (agoHours - 1) * HOUR_MS).toISOString(),
+    from: new Date(base - agoHours * HOUR_MS).toISOString(),
+    to: new Date(base - (agoHours - 1) * HOUR_MS).toISOString(),
     tag,
     feel,
     intent,
@@ -433,9 +439,9 @@ export const FLOWS = [
   },
   {
     name: "03-paused",
-    description: "The hour paused via the control bar.",
-    covers: ["ControlBar", "Dial"],
-    waitFor: '[data-testid="control-pause-resume"]:has-text("Resume")',
+    description: "The full-panel pause overlay shown while the clock waits.",
+    covers: ["PauseOverlay", "ControlBar"],
+    waitFor: '[data-testid="pause-overlay"]',
     async run(page) {
       await page.getByTestId("control-pause-resume").click();
     },
@@ -446,7 +452,7 @@ export const FLOWS = [
     covers: ["ChimeOverlay"],
     waitFor: '[data-testid="chime-overlay"]',
     async run(page) {
-      await page.getByTestId("control-pause-resume").click(); // resume first
+      await page.getByTestId("pause-overlay").click(); // click anywhere resumes
       // force: true — the dial's progress arc animates continuously (CSS transition tied to
       // the ticking countdown), so Playwright's actionability "element is stable" check never
       // settles on its own.

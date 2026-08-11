@@ -1,7 +1,7 @@
 "use client";
 
 import { fmtClock } from "@/lib/time";
-import { PHRASES, tagColor, inferTag } from "@/lib/domain";
+import { PHRASES } from "@/lib/domain";
 import { useTimer, type UseTimerResult } from "@/lib/client/useTimer";
 import styles from "./Dial.module.css";
 
@@ -42,8 +42,6 @@ export function Dial({ timerState }: DialProps = {}) {
     mode = "running",
     remainingSeconds = SESSION_SECONDS,
     chimeFrom,
-    draftBullets = [],
-    draftTag,
     phraseIdx = 0,
     ringNow = async () => {},
   } = state;
@@ -59,9 +57,8 @@ export function Dial({ timerState }: DialProps = {}) {
   const remaining = remainingSeconds ?? sessionSeconds;
   const dashOffset = 552.92 * (remaining / sessionSeconds);
 
-  const guess = inferTag(draftBullets);
-  const activeTag = draftTag || guess;
-  const arcColor = activeTag ? tagColor(activeTag) : "#ec3013";
+  // The progress arc is core branding — always accent red, never tag-colored.
+  const arcColor = "#ec3013";
 
   const statusLabel = isRecap
     ? "Recap the hour"

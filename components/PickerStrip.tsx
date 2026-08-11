@@ -107,6 +107,7 @@ export function PickerStrip({ timerState, updateDraft }: PickerStripProps) {
       </div>
 
       {/* Feeling row */}
+      <div className={styles.miniLabel}>How it felt</div>
       <div className={styles.segmentedRow}>
         <div
           className={styles.segmentedContainer}
@@ -130,6 +131,7 @@ export function PickerStrip({ timerState, updateDraft }: PickerStripProps) {
       </div>
 
       {/* Intent row */}
+      <div className={styles.miniLabel}>Meant to?</div>
       <div className={styles.segmentedRow}>
         <div
           className={styles.segmentedContainer}

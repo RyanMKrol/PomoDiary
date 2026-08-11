@@ -12,7 +12,7 @@ import {
 import { render, screen, cleanup } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Dial } from "./Dial";
-import { PHRASES, tagColor } from "@/lib/domain";
+import { PHRASES } from "@/lib/domain";
 
 beforeAll(() => {
   Object.defineProperty(window, "matchMedia", {
@@ -76,7 +76,6 @@ describe("Dial", () => {
 
     it("renders track circle with correct attributes", () => {
       const { container } = render(<Dial timerState={{ loading: true }} />);
-      const circles = container.querySelectorAll("circle");
       const trackCircle = container.querySelector('circle[stroke="#e0dddd"]');
       expect(trackCircle).toHaveAttribute("cx", "100");
       expect(trackCircle).toHaveAttribute("cy", "100");
@@ -511,9 +510,8 @@ describe("Dial", () => {
       expect(progressArc).toHaveAttribute("stroke", "#ec3013");
     });
 
-    it("uses draft tag's colour when explicitly set", () => {
+    it("stays brand red when a tag is explicitly set", () => {
       const tagLabel = "Deep work";
-      const expectedColor = tagColor(tagLabel);
       const { container } = render(
         <Dial
           timerState={{
@@ -534,11 +532,10 @@ describe("Dial", () => {
       );
       const circles = container.querySelectorAll("circle");
       const progressArc = circles[circles.length - 1];
-      expect(progressArc).toHaveAttribute("stroke", expectedColor);
+      expect(progressArc).toHaveAttribute("stroke", "#ec3013");
     });
 
-    it("uses inferred tag's colour when no explicit tag", () => {
-      const expectedColor = tagColor("Comms");
+    it("stays brand red when a tag could be inferred", () => {
       const { container } = render(
         <Dial
           timerState={{
@@ -559,12 +556,11 @@ describe("Dial", () => {
       );
       const circles = container.querySelectorAll("circle");
       const progressArc = circles[circles.length - 1];
-      expect(progressArc).toHaveAttribute("stroke", expectedColor);
+      expect(progressArc).toHaveAttribute("stroke", "#ec3013");
     });
 
-    it("prefers explicit tag over inferred tag", () => {
+    it("stays brand red with both explicit and inferred tags", () => {
       const tagLabel = "Deep work";
-      const expectedColor = tagColor(tagLabel);
       const { container } = render(
         <Dial
           timerState={{
@@ -585,7 +581,7 @@ describe("Dial", () => {
       );
       const circles = container.querySelectorAll("circle");
       const progressArc = circles[circles.length - 1];
-      expect(progressArc).toHaveAttribute("stroke", expectedColor);
+      expect(progressArc).toHaveAttribute("stroke", "#ec3013");
     });
   });
 

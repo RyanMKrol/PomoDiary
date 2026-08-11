@@ -200,17 +200,17 @@ describe("DayView", () => {
 
       const yesChip = await screen.findByTestId("chip-intent-intent-yes");
       const noChip = await screen.findByTestId("chip-intent-intent-no");
-      const nullChip = await screen.findByTestId("chip-intent-intent-null");
 
       expect(yesChip).toHaveTextContent("Intentional");
       expect(noChip).toHaveTextContent("Got away");
       expect(noChip).toHaveStyle({
         backgroundColor: "oklch(0.42 0.012 40)",
       });
-      expect(nullChip).toHaveTextContent("Unmarked");
+      // No intent picked = no chip at all (no placeholder).
+      expect(screen.queryByTestId("chip-intent-intent-null")).toBeNull();
     });
 
-    it("shows the — feel chip for away hours", async () => {
+    it("hides the feel chip for away hours", async () => {
       global.fetch = vi.fn(() =>
         Promise.resolve({
           ok: true,
@@ -222,8 +222,8 @@ describe("DayView", () => {
         <DayView dayStart={0} dayEnd={1000} timerState={{ mode: "running" }} />,
       );
 
-      const awayFeel = await screen.findByTestId("chip-feel-test-away");
-      expect(awayFeel).toHaveTextContent("—");
+      await screen.findByTestId("chip-tag-test-away");
+      expect(screen.queryByTestId("chip-feel-test-away")).toBeNull();
     });
 
     it("renders bullets with correct formatting", async () => {

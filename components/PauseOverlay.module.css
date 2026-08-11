@@ -1,0 +1,106 @@
+.overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: stretch;
+  color: white;
+  background-color: #201e1d;
+  padding: 44px 34px 0;
+  animation: pauseWipeIn 0.45s cubic-bezier(0.2, 0.8, 0.3, 1);
+  cursor: pointer;
+}
+
+@keyframes pauseWipeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.content {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding-bottom: 20px;
+}
+
+.headline {
+  font-size: clamp(44px, 6.5vw, 72px);
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  text-transform: uppercase;
+  margin: 0;
+  line-height: 1.1;
+}
+
+.rule {
+  height: 3px;
+  background: rgba(255, 255, 255, 0.5);
+  animation: pauseBarGrow 1.4s cubic-bezier(0.2, 0.7, 0.3, 1);
+  transform-origin: left;
+}
+
+@keyframes pauseBarGrow {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+.elapsed {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  margin: 0;
+  color: white;
+}
+
+.note {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.012em;
+  margin: 0;
+  color: rgba(255, 255, 255, 0.72);
+  max-width: 34ch;
+}
+
+.resumeButton {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
+  width: calc(100% + 68px);
+  margin: 0 -34px 0 -34px;
+  padding: 22px 34px;
+  background-color: white;
+  color: #201e1d;
+  border: none;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  transition: background-color 0.2s ease;
+}
+
+.resumeButton:hover {
+  background-color: #f3f2f2;
+}
+
+.swatch {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  flex-shrink: 0;
+  background-color: #ec3013;
+}

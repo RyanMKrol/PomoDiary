@@ -8,6 +8,15 @@
   background-color: var(--bg);
 }
 
+.brandGroup {
+  /* Baseline-align the big wordmark with the small tagline — box-centering
+     mixed type sizes made the tagline sit optically high. */
+  display: flex;
+  align-items: baseline;
+  gap: 22px;
+  min-width: 0;
+}
+
 .redSquare {
   width: 13px;
   height: 13px;

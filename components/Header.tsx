@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { padCount, fmtTodayLabel } from "@/lib/time";
 import styles from "./Header.module.css";
 
@@ -8,16 +8,18 @@ interface StateResponse {
   count?: number;
 }
 
+const emptySubscribe = () => () => {};
+
 export function Header() {
   const [hoursToday, setHoursToday] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
-  const [todayLabel, setTodayLabel] = useState("");
-
-  // The date label needs no server data — set it as soon as we're on the
-  // client (it can't be SSR'd: the server runs in UTC, not the user's zone).
-  useEffect(() => {
-    setTodayLabel(fmtTodayLabel(Date.now()));
-  }, []);
+  // Client-only value: the server can't render the user's local date (it runs
+  // in UTC), so SSR gets an empty label and the client fills it immediately.
+  const todayLabel = useSyncExternalStore(
+    emptySubscribe,
+    () => fmtTodayLabel(Date.now()),
+    () => "",
+  );
 
   useEffect(() => {
     async function fetchHoursToday() {
@@ -52,8 +54,12 @@ export function Header() {
   return (
     <header className={styles.header}>
       <div className={styles.redSquare} />
-      <div className={styles.wordmark}>POMODIARY</div>
-      <div className={styles.tagline}>One hour. One honest account of it.</div>
+      <div className={styles.brandGroup}>
+        <div className={styles.wordmark}>POMODIARY</div>
+        <div className={styles.tagline}>
+          Hour by hour, an honest accounting.
+        </div>
+      </div>
       <div className={styles.spacer} />
       <div className={styles.countSection}>
         <span className={styles.count}>{displayCount}</span>

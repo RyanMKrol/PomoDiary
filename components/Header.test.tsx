@@ -67,7 +67,7 @@ describe("Header", () => {
     const { container } = render(<Header />);
     const tagline = container.querySelector('[class*="tagline"]');
 
-    expect(tagline).toHaveTextContent("One hour. One honest account of it.");
+    expect(tagline).toHaveTextContent("Hour by hour, an honest accounting.");
   });
 
   it("renders hours-today count with fetch mocked", async () => {

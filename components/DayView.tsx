@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { Entry } from "@/lib/db/entries.store";
-import { fmtClock } from "@/lib/time";
+import { fmtClock, gridCellTitle, gridCellEmptyTitle } from "@/lib/time";
 import { tagColor } from "@/lib/domain";
 import { EntryEditor } from "./EntryEditor";
 import styles from "./DayView.module.css";
@@ -81,9 +81,44 @@ export function DayView({ dayStart, dayEnd, timerState }: DayViewProps) {
     return <div className={styles.container} />;
   }
 
+  const hourMap = new Map<number, Entry>();
+  for (const entry of entries) {
+    const t =
+      typeof entry.from === "string"
+        ? new Date(entry.from).getTime()
+        : entry.from.getTime();
+    const hour = new Date(t).getHours();
+    if (!hourMap.has(hour)) hourMap.set(hour, entry);
+  }
+  const hourStrip = (
+    <div className={styles.hourStrip} data-testid="day-hour-strip">
+      {Array.from({ length: 24 }, (_, hour) => {
+        const entry = hourMap.get(hour);
+        return (
+          <div
+            key={hour}
+            className={styles.hourCell}
+            style={{
+              backgroundColor: entry
+                ? tagColor(entry.tag)
+                : "var(--empty-cell)",
+            }}
+            title={
+              entry
+                ? gridCellTitle(hour, entry.tag, entry.bullets[0] || "")
+                : gridCellEmptyTitle(hour)
+            }
+            data-testid={`day-hour-cell-${hour}`}
+          />
+        );
+      })}
+    </div>
+  );
+
   if (entries.length === 0) {
     return (
       <div className={styles.container}>
+        {hourStrip}
         <div className={styles.emptyState}>
           <div className={styles.emptySquare} />
           <h2 className={styles.emptyHeadline}>Nothing in the basket yet.</h2>
@@ -108,6 +143,7 @@ export function DayView({ dayStart, dayEnd, timerState }: DayViewProps) {
 
   return (
     <div className={styles.container}>
+      {hourStrip}
       {entries.map((entry) => {
         const isEditing = editingId === entry.id;
 
@@ -150,41 +186,44 @@ export function DayView({ dayStart, dayEnd, timerState }: DayViewProps) {
                 <>
                   <div className={styles.chipRowContainer}>
                     <div className={styles.chipRow}>
-                      <div
-                        className={styles.tagChip}
-                        style={{
-                          backgroundColor: tagColor(entry.tag),
-                          borderColor: tagColor(entry.tag),
-                        }}
-                        data-testid={`chip-tag-${entry.id}`}
-                      >
-                        {entry.tag}
-                      </div>
-                      <div
-                        className={styles.feelChip}
-                        data-testid={`chip-feel-${entry.id}`}
-                      >
-                        {entry.tag === "Asleep" || entry.tag === "At work"
-                          ? "—"
-                          : entry.feel}
-                      </div>
-                      <div
-                        className={`${styles.intentChip} ${
-                          entry.intent === "no" ? styles.intentNo : ""
-                        }`}
-                        style={
-                          entry.intent === "no"
-                            ? { backgroundColor: "oklch(0.42 0.012 40)" }
-                            : {}
-                        }
-                        data-testid={`chip-intent-${entry.id}`}
-                      >
-                        {entry.intent === "yes"
-                          ? "Intentional"
-                          : entry.intent === "no"
-                            ? "Got away"
-                            : "Unmarked"}
-                      </div>
+                      {entry.tag !== "Unfiled" && (
+                        <div
+                          className={styles.tagChip}
+                          style={{
+                            backgroundColor: tagColor(entry.tag),
+                            borderColor: tagColor(entry.tag),
+                          }}
+                          data-testid={`chip-tag-${entry.id}`}
+                        >
+                          {entry.tag}
+                        </div>
+                      )}
+                      {entry.feel !== "—" &&
+                        entry.feel &&
+                        entry.tag !== "Asleep" &&
+                        entry.tag !== "At work" && (
+                          <div
+                            className={styles.feelChip}
+                            data-testid={`chip-feel-${entry.id}`}
+                          >
+                            {entry.feel}
+                          </div>
+                        )}
+                      {(entry.intent === "yes" || entry.intent === "no") && (
+                        <div
+                          className={`${styles.intentChip} ${
+                            entry.intent === "no" ? styles.intentNo : ""
+                          }`}
+                          style={
+                            entry.intent === "no"
+                              ? { backgroundColor: "oklch(0.42 0.012 40)" }
+                              : {}
+                          }
+                          data-testid={`chip-intent-${entry.id}`}
+                        >
+                          {entry.intent === "yes" ? "Intentional" : "Got away"}
+                        </div>
+                      )}
                     </div>
                     <button
                       className={styles.editButton}
