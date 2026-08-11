@@ -830,7 +830,7 @@
     {
       "id": "T033",
       "title": "Security headers (frame-ancestors, nosniff, referrer, permissions)",
-      "status": "pending",
+      "status": "done",
       "dependsOn": [
         "T011"
       ],
