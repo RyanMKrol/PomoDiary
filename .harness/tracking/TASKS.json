@@ -573,7 +573,7 @@
     {
       "id": "T023",
       "title": "The vine: day view with entries and empty state",
-      "status": "pending",
+      "status": "done",
       "dependsOn": [
         "T005",
         "T013",
