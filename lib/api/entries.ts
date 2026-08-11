@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import type { Db } from "../db/entries.store";
 import {
+  listAllEntries,
   listEntriesForRange,
   updateEntry as storeUpdateEntry,
   type Entry,
@@ -38,8 +39,19 @@ export async function getEntriesHandler(
   const fromParam = url.searchParams.get("from");
   const toParam = url.searchParams.get("to");
 
+  // No range at all = the user's full history (the grid view grows one row
+  // per day back to the first entry). Auth-scoped and rate-limited, and a
+  // personal diary's volume (24 rows/day) keeps this cheap. The 31-day span
+  // cap below still applies to explicit ranges.
+  if (fromParam === null && toParam === null) {
+    const all = await listAllEntries(db, userId);
+    return NextResponse.json(all);
+  }
+
   if (fromParam === null || toParam === null) {
-    throw new BadRequestError("Both 'from' and 'to' parameters are required");
+    throw new BadRequestError(
+      "Provide both 'from' and 'to', or neither for full history",
+    );
   }
 
   const from = Number(fromParam);

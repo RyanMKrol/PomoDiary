@@ -237,6 +237,8 @@ function buildStatePayload(state, now) {
     remainingSeconds: state.remainingSeconds,
     chimeFrom: state.chimeFrom,
     chimeTo: state.chimeTo,
+    awayKind: state.awayKind,
+    awaySince: state.awaySince,
     draftBullets: state.draftBullets,
     draftTag: state.draftTag,
     draftFeel: state.draftFeel,
@@ -348,10 +350,12 @@ export async function routeApi(page, state) {
     }
 
     if (pathname === "/api/entries" && method === "GET") {
+      const hasRange = url.searchParams.has("from");
       const from = Number(url.searchParams.get("from"));
       const to = Number(url.searchParams.get("to"));
       const list = state.entries
         .filter((e) => {
+          if (!hasRange) return true; // no params = full history (grid view)
           const t = new Date(e.from).getTime();
           return t >= from && t < to;
         })

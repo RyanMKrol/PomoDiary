@@ -560,7 +560,7 @@ describe("GridView", () => {
   });
 
   describe("date boundaries", () => {
-    it("fetches 10 days of data starting from 9 days ago", async () => {
+    it("fetches the full history with no range params", async () => {
       const fetchSpy = vi.fn(() => mockFetchResponse([])) as any;
       global.fetch = fetchSpy;
 
@@ -570,11 +570,11 @@ describe("GridView", () => {
 
       await screen.findByTestId("day-row-0");
 
-      // Should have been called with from/to parameters
+      // No from/to: the API returns everything for this user (grid grows
+      // one row per day back to the earliest entry).
       expect(fetchSpy).toHaveBeenCalled();
       const callUrl = fetchSpy.mock.calls[0][0];
-      expect(callUrl).toContain("/api/entries?from=");
-      expect(callUrl).toContain("&to=");
+      expect(callUrl).toBe("/api/entries");
     });
   });
 

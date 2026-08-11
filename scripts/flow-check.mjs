@@ -73,6 +73,8 @@ function statePayload(fx, todayStart, todayEnd) {
     remainingSeconds,
     chimeFrom: fx.state.chimeFrom,
     chimeTo: fx.state.chimeTo,
+    awayKind: fx.state.awayKind,
+    awaySince: fx.state.awaySince,
     draftBullets: fx.state.draftBullets.length ? fx.state.draftBullets : [""],
     draftTag: fx.state.draftTag,
     draftFeel: fx.state.draftFeel,
@@ -124,10 +126,12 @@ async function routeStatefulApi(page, fx) {
     }
 
     if (pathname === "/api/entries" && method === "GET") {
+      const hasRange = url.searchParams.has("from");
       const from = Number(url.searchParams.get("from"));
       const to = Number(url.searchParams.get("to"));
       const list = fx.entries
         .filter((e) => {
+          if (!hasRange) return true; // no params = full history (grid view)
           const t = new Date(e.from).getTime();
           return t >= from && t < to;
         })
