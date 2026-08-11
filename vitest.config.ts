@@ -6,6 +6,7 @@ export default defineConfig({
     // which has its own runner inside the harness.
     include: [
       "app/**/*.test.{ts,tsx}",
+      "components/**/*.test.{ts,tsx}",
       "lib/**/*.test.{ts,tsx}",
       "test/**/*.test.{ts,tsx}",
     ],
@@ -16,5 +17,6 @@ export default defineConfig({
     // a slow-but-correct run.
     testTimeout: 120_000,
     hookTimeout: 120_000,
+    environment: "node",
   },
 });
