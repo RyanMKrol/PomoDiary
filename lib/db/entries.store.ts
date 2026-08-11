@@ -1,7 +1,10 @@
 import { and, desc, eq, gte, lt } from "drizzle-orm";
 
+import type { getDb } from "./index";
 import type { TestDb } from "./test-db";
 import { entries } from "./schema";
+
+export type Db = TestDb | ReturnType<typeof getDb>;
 
 export class CapError extends Error {
   constructor(message: string) {
@@ -49,7 +52,7 @@ function validateBullets(bullets: string[]): void {
   }
 }
 
-export async function insertEntry<T extends TestDb>(
+export async function insertEntry<T extends Db>(
   db: T,
   userId: string,
   entry: EntryInput,
@@ -79,7 +82,7 @@ export async function insertEntry<T extends TestDb>(
   });
 }
 
-export async function insertEntries<T extends TestDb>(
+export async function insertEntries<T extends Db>(
   db: T,
   userId: string,
   entryList: EntryInput[],
@@ -114,7 +117,7 @@ export async function insertEntries<T extends TestDb>(
   );
 }
 
-export async function listEntriesForDay<T extends TestDb>(
+export async function listEntriesForDay<T extends Db>(
   db: T,
   userId: string,
   dayStartTs: Date,
@@ -133,7 +136,7 @@ export async function listEntriesForDay<T extends TestDb>(
     .orderBy(desc(entries.from));
 }
 
-export async function listEntriesForRange<T extends TestDb>(
+export async function listEntriesForRange<T extends Db>(
   db: T,
   userId: string,
   fromTs: Date,
@@ -152,7 +155,7 @@ export async function listEntriesForRange<T extends TestDb>(
     .orderBy(desc(entries.from));
 }
 
-export async function updateEntry<T extends TestDb>(
+export async function updateEntry<T extends Db>(
   db: T,
   userId: string,
   entryId: string,
@@ -174,7 +177,7 @@ export async function updateEntry<T extends TestDb>(
     .where(and(eq(entries.id, entryId), eq(entries.userId, userId)));
 }
 
-export async function countEntriesForDay<T extends TestDb>(
+export async function countEntriesForDay<T extends Db>(
   db: T,
   userId: string,
   dayStartTs: Date,
@@ -192,4 +195,15 @@ export async function countEntriesForDay<T extends TestDb>(
     );
 
   return rows.length;
+}
+
+export async function listAllEntries<T extends Db>(
+  db: T,
+  userId: string,
+): Promise<Entry[]> {
+  return db
+    .select()
+    .from(entries)
+    .where(eq(entries.userId, userId))
+    .orderBy(entries.from);
 }

@@ -1,7 +1,10 @@
 import { eq } from "drizzle-orm";
 
+import type { getDb } from "./index";
 import type { TestDb } from "./test-db";
 import { timerState, userSettings } from "./schema";
+
+export type Db = TestDb | ReturnType<typeof getDb>;
 
 export type TimerState = typeof timerState.$inferSelect;
 export type UserSettings = typeof userSettings.$inferSelect;
@@ -35,7 +38,7 @@ const DEFAULT_SETTINGS = {
   pauseAfterLog: false,
 };
 
-export async function getTimerState<T extends TestDb>(
+export async function getTimerState<T extends Db>(
   db: T,
   userId: string,
 ): Promise<TimerState | null> {
@@ -46,7 +49,7 @@ export async function getTimerState<T extends TestDb>(
   return result[0] || null;
 }
 
-export async function upsertTimerState<T extends TestDb>(
+export async function upsertTimerState<T extends Db>(
   db: T,
   userId: string,
   state: TimerStateInput,
@@ -79,7 +82,7 @@ export async function upsertTimerState<T extends TestDb>(
     });
 }
 
-export async function getSettings<T extends TestDb>(
+export async function getSettings<T extends Db>(
   db: T,
   userId: string,
 ): Promise<UserSettings | Partial<UserSettings>> {
@@ -95,7 +98,7 @@ export async function getSettings<T extends TestDb>(
   return DEFAULT_SETTINGS;
 }
 
-export async function upsertSettings<T extends TestDb>(
+export async function upsertSettings<T extends Db>(
   db: T,
   userId: string,
   patch: UserSettingsInput,
