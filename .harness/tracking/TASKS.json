@@ -1071,7 +1071,7 @@
     {
       "id": "T042",
       "title": "App composition: wire the timer and vine components into Panels",
-      "status": "pending",
+      "status": "done",
       "dependsOn": [],
       "gate": null,
       "tags": [
