@@ -704,7 +704,7 @@
     {
       "id": "T028",
       "title": "Accessibility: live regions, grid cell names, labeled inputs",
-      "status": "pending",
+      "status": "done",
       "dependsOn": [
         "T017",
         "T020",
