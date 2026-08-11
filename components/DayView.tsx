@@ -22,9 +22,13 @@ export function DayView({ dayStart, dayEnd, timerState }: DayViewProps) {
   const [editingId, setEditingId] = useState<string | null>(null);
 
   useEffect(() => {
+    // Refetches (a new day picked, the timer mode changing after a log) keep
+    // the previous entries on screen until fresh data lands — only the very
+    // first load shows the blank container. Blanking on every refetch made the
+    // whole panel flash empty right after page load.
+    let cancelled = false;
     const fetchEntries = async () => {
       try {
-        setLoading(true);
         setError(null);
         const response = await fetch(
           `/api/entries?from=${dayStart}&to=${dayEnd}`,
@@ -33,15 +37,19 @@ export function DayView({ dayStart, dayEnd, timerState }: DayViewProps) {
           throw new Error("Failed to fetch entries");
         }
         const data = await response.json();
-        setEntries(data);
+        if (!cancelled) setEntries(data);
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Unknown error");
+        if (!cancelled)
+          setError(err instanceof Error ? err.message : "Unknown error");
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     };
 
     fetchEntries();
+    return () => {
+      cancelled = true;
+    };
   }, [dayStart, dayEnd, timerState.mode]);
 
   if (loading) {

@@ -9,6 +9,7 @@
   color: white;
   padding: 44px 34px 0;
   animation: wipeIn 0.45s cubic-bezier(0.2, 0.8, 0.3, 1);
+  cursor: pointer;
 }
 
 .content {
@@ -62,7 +63,10 @@
   justify-content: flex-start;
   gap: 10px;
   width: calc(100% + 68px);
-  margin: 0 -34px -44px -34px;
+  /* Full-bleed against the overlay's 34px side padding; the overlay has no
+     bottom padding, so no negative bottom margin — that pushed the button
+     below the panel edge, leaving only a bare white sliver visible. */
+  margin: 0 -34px 0 -34px;
   padding: 22px 34px;
   background-color: white;
   color: #201e1d;

@@ -3,7 +3,7 @@
   border-bottom: 2px solid rgba(32, 30, 29, 0.4);
   padding: 0 26px;
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 22px;
   background-color: var(--bg);
 }
