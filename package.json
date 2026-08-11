@@ -12,7 +12,8 @@
     "test": "vitest run",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
-    "visual:check": "node scripts/visual-check.mjs"
+    "visual:check": "node scripts/visual-check.mjs",
+    "flow:check": "tsx scripts/flow-check.mjs"
   },
   "dependencies": {
     "@clerk/nextjs": "^7.7.3",
@@ -40,6 +41,7 @@
     "jsdom": "^25.0.1",
     "playwright": "^1.62.1",
     "prettier": "^3.9.6",
+    "tsx": "^4.23.12",
     "typescript": "^6.0.3",
     "vitest": "^4.1.10"
   }
