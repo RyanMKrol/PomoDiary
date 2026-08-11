@@ -14,6 +14,25 @@ function mockFetchResponse(data: unknown) {
   });
 }
 
+/** An entry n days ago at 10:00 — used to anchor the grid's start date,
+ *  since the grid only shows days from the earliest entry onward. */
+function entryDaysAgo(n: number) {
+  const from = new Date();
+  from.setHours(10, 0, 0, 0);
+  from.setDate(from.getDate() - n);
+  const to = new Date(from);
+  to.setHours(11, 0, 0, 0);
+  return {
+    id: `anchor-${n}`,
+    from: from.toISOString(),
+    to: to.toISOString(),
+    tag: "Deep work",
+    feel: "Steady",
+    intent: "yes",
+    bullets: ["anchor"],
+  };
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
 });
@@ -25,8 +44,8 @@ afterEach(() => {
 
 describe("GridView", () => {
   describe("structure", () => {
-    it("renders 10 day rows", async () => {
-      global.fetch = vi.fn(() => mockFetchResponse([])) as any;
+    it("renders one row per day back to the earliest entry", async () => {
+      global.fetch = vi.fn(() => mockFetchResponse([entryDaysAgo(9)])) as any;
       render(
         <GridView onSelectDay={() => {}} timerState={{ mode: "running" }} />,
       );
@@ -69,7 +88,7 @@ describe("GridView", () => {
     });
 
     it("renders 24 cells per day row", async () => {
-      global.fetch = vi.fn(() => mockFetchResponse([])) as any;
+      global.fetch = vi.fn(() => mockFetchResponse([entryDaysAgo(9)])) as any;
       render(
         <GridView onSelectDay={() => {}} timerState={{ mode: "running" }} />,
       );
@@ -99,7 +118,7 @@ describe("GridView", () => {
     });
 
     it("renders Yesterday for second day", async () => {
-      global.fetch = vi.fn(() => mockFetchResponse([])) as any;
+      global.fetch = vi.fn(() => mockFetchResponse([entryDaysAgo(9)])) as any;
       render(
         <GridView onSelectDay={() => {}} timerState={{ mode: "running" }} />,
       );
@@ -109,7 +128,7 @@ describe("GridView", () => {
     });
 
     it("renders weekday and date for older days", async () => {
-      global.fetch = vi.fn(() => mockFetchResponse([])) as any;
+      global.fetch = vi.fn(() => mockFetchResponse([entryDaysAgo(9)])) as any;
       render(
         <GridView onSelectDay={() => {}} timerState={{ mode: "running" }} />,
       );
@@ -473,7 +492,7 @@ describe("GridView", () => {
       const user = userEvent.setup();
       const onSelectDay = vi.fn();
 
-      global.fetch = vi.fn(() => mockFetchResponse([])) as any;
+      global.fetch = vi.fn(() => mockFetchResponse([entryDaysAgo(9)])) as any;
       render(
         <GridView onSelectDay={onSelectDay} timerState={{ mode: "running" }} />,
       );
@@ -488,7 +507,7 @@ describe("GridView", () => {
       const user = userEvent.setup();
       const onSelectDay = vi.fn();
 
-      global.fetch = vi.fn(() => mockFetchResponse([])) as any;
+      global.fetch = vi.fn(() => mockFetchResponse([entryDaysAgo(9)])) as any;
       render(
         <GridView onSelectDay={onSelectDay} timerState={{ mode: "running" }} />,
       );
@@ -659,5 +678,17 @@ describe("history growth", () => {
     await screen.findByTestId("day-row-14");
     const rows = await screen.findAllByTestId(/^day-row-/);
     expect(rows).toHaveLength(15);
+  });
+
+  it("shows only today when there are no entries at all", async () => {
+    global.fetch = vi.fn(() => mockFetchResponse([])) as any;
+
+    render(
+      <GridView onSelectDay={() => {}} timerState={{ mode: "running" }} />,
+    );
+
+    await screen.findByTestId("day-row-0");
+    const rows = await screen.findAllByTestId(/^day-row-/);
+    expect(rows).toHaveLength(1);
   });
 });

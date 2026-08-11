@@ -58,8 +58,9 @@ export function GridView({ onSelectDay, timerState }: GridViewProps) {
     const today = new Date(now);
     today.setHours(0, 0, 0, 0);
 
-    // One row per day from today back to the earliest entry (minimum 10 rows),
-    // so the grid grows with use and quiet days still show at a glance.
+    // One row per day from today back to the earliest entry — the grid
+    // starts the day the diary started. Missed days in between still show
+    // (they're honest gaps), but days before first use don't exist here.
     let earliest = today.getTime();
     for (const entry of entries) {
       const t =
@@ -71,7 +72,7 @@ export function GridView({ onSelectDay, timerState }: GridViewProps) {
       if (d.getTime() < earliest) earliest = d.getTime();
     }
     const daysBack = Math.round((today.getTime() - earliest) / 86_400_000);
-    const totalDays = Math.max(10, daysBack + 1);
+    const totalDays = daysBack + 1;
 
     const dayList = [];
     for (let i = 0; i < totalDays; i++) {
