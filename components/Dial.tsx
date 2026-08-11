@@ -108,6 +108,19 @@ export function Dial({ timerState }: DialProps = {}) {
           className={styles.svg}
           style={{ overflow: "visible" }}
         >
+          {/* Radial "hour in progress" pulse, swelling out from the centre.
+              Uses the design system's ringPulse keyframes; running mode only. */}
+          {isRunning && (
+            <circle
+              cx="100"
+              cy="100"
+              r="58"
+              fill="#ec3013"
+              className={styles.pulse}
+              data-testid="dial-pulse"
+            />
+          )}
+
           {/* Track circle */}
           <circle
             cx="100"
