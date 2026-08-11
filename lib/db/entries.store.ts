@@ -3,6 +3,7 @@ import { and, desc, eq, gte, lt } from "drizzle-orm";
 import type { getDb } from "./index";
 import type { TestDb } from "./test-db";
 import { entries } from "./schema";
+import { LIMITS } from "../validation";
 
 export type Db = TestDb | ReturnType<typeof getDb>;
 
@@ -14,9 +15,9 @@ export class CapError extends Error {
 }
 
 export const CAPS = {
-  ENTRIES_PER_DAY: 100,
-  BULLETS_PER_ENTRY: 30,
-  CHARS_PER_BULLET: 500,
+  ENTRIES_PER_DAY: LIMITS.MAX_ENTRIES_PER_DAY,
+  BULLETS_PER_ENTRY: LIMITS.MAX_BULLETS_PER_ENTRY,
+  CHARS_PER_BULLET: LIMITS.MAX_BULLET_LENGTH,
 };
 
 export interface EntryInput {
