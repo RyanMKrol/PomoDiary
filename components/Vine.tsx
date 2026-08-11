@@ -4,17 +4,26 @@ import { useState, useMemo } from "react";
 import { fmtDayTitle } from "@/lib/time";
 import { DayView } from "./DayView";
 import { GridView } from "./GridView";
+import { SettingsPanel } from "./SettingsPanel";
 import styles from "./Vine.module.css";
 
 interface VineProps {
   timerState: {
     mode?: string;
+    settings?: {
+      sessionMinutes?: number;
+      soundOn?: boolean;
+      chimeVolume?: number;
+      pauseAfterLog?: boolean;
+    };
+    updateSettings?: (patch: Record<string, unknown>) => Promise<void>;
   };
 }
 
 export function Vine({ timerState }: VineProps) {
   const [view, setView] = useState<"day" | "grid">("day");
   const [selectedDayIndex, setSelectedDayIndex] = useState(0);
+  const [settingsPanelOpen, setSettingsPanelOpen] = useState(false);
 
   const dayInfo = useMemo(() => {
     // eslint-disable-next-line react-hooks/purity
@@ -53,6 +62,13 @@ export function Vine({ timerState }: VineProps) {
         <div className={styles.viewTitle}>{viewTitle}</div>
         <div className={styles.spacer} />
         <button
+          className={styles.settingsButton}
+          onClick={() => setSettingsPanelOpen(!settingsPanelOpen)}
+          data-testid="vine-settings-button"
+        >
+          <span className={styles.settingsLabel}>Settings</span>
+        </button>
+        <button
           className={styles.zoomButton}
           onClick={() => setView(view === "day" ? "grid" : "day")}
           data-testid="vine-zoom-button"
@@ -63,6 +79,23 @@ export function Vine({ timerState }: VineProps) {
           <span className={styles.zoomSquare} />
         </button>
       </div>
+      {settingsPanelOpen &&
+        timerState.settings &&
+        timerState.updateSettings && (
+          <SettingsPanel
+            settings={
+              timerState.settings as Record<string, unknown> & {
+                sessionMinutes: number;
+                soundOn: boolean;
+                chimeVolume: number;
+                pauseAfterLog: boolean;
+              }
+            }
+            updateSettings={timerState.updateSettings}
+            onClose={() => setSettingsPanelOpen(false)}
+            isOpen={settingsPanelOpen}
+          />
+        )}
       {view === "day" && (
         <DayView
           dayStart={dayInfo.dayStart}

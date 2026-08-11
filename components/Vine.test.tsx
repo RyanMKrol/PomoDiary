@@ -50,6 +50,13 @@ describe("Vine", () => {
       expect(button).toBeInTheDocument();
       expect(button.textContent).toContain("Zoom out");
     });
+
+    it("renders settings button", async () => {
+      render(<Vine timerState={{ mode: "running" }} />);
+      const button = screen.getByTestId("vine-settings-button");
+      expect(button).toBeInTheDocument();
+      expect(button).toHaveTextContent("Settings");
+    });
   });
 
   describe("view toggling", () => {
@@ -105,6 +112,92 @@ describe("Vine", () => {
       await user.click(button);
 
       await screen.findByText("Nothing in the basket yet.");
+    });
+  });
+
+  describe("settings panel", () => {
+    it("does not render settings panel initially", async () => {
+      const settings = {
+        sessionMinutes: 60,
+        soundOn: true,
+        chimeVolume: 0.5,
+        pauseAfterLog: false,
+      };
+      const updateSettings = vi.fn();
+
+      render(
+        <Vine
+          timerState={{
+            mode: "running",
+            settings,
+            updateSettings,
+          }}
+        />,
+      );
+
+      await screen.findByText("Nothing in the basket yet.");
+      expect(screen.queryByTestId("settings-panel")).not.toBeInTheDocument();
+    });
+
+    it("opens settings panel when settings button clicked", async () => {
+      const user = userEvent.setup();
+      const settings = {
+        sessionMinutes: 60,
+        soundOn: true,
+        chimeVolume: 0.5,
+        pauseAfterLog: false,
+      };
+      const updateSettings = vi.fn();
+
+      render(
+        <Vine
+          timerState={{
+            mode: "running",
+            settings,
+            updateSettings,
+          }}
+        />,
+      );
+
+      await screen.findByText("Nothing in the basket yet.");
+      const settingsButton = screen.getByTestId("vine-settings-button");
+      await user.click(settingsButton);
+
+      expect(screen.getByTestId("settings-panel")).toBeInTheDocument();
+    });
+
+    it("shows settings panel when settings button is clicked with settings provided", async () => {
+      const user = userEvent.setup();
+      const settings = {
+        sessionMinutes: 60,
+        soundOn: true,
+        chimeVolume: 0.5,
+        pauseAfterLog: false,
+      };
+      const updateSettings = vi.fn();
+
+      render(
+        <Vine
+          timerState={{
+            mode: "running",
+            settings,
+            updateSettings,
+          }}
+        />,
+      );
+
+      await screen.findByText("Nothing in the basket yet.");
+      const settingsButton = screen.getByTestId("vine-settings-button");
+
+      // Initially panel should not be visible
+      expect(screen.queryByTestId("settings-panel")).not.toBeInTheDocument();
+
+      // Click to open
+      await user.click(settingsButton);
+
+      // Panel should now be visible
+      expect(screen.getByTestId("settings-panel")).toBeInTheDocument();
+      expect(screen.getByTestId("session-minutes-input")).toBeInTheDocument();
     });
   });
 
