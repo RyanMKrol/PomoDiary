@@ -13,5 +13,10 @@
     "failed": true,
     "reason": "review-failed: superseded by T040 — re-attempt uses the T038 jsdom pragma pattern that did not exist when T022 was built",
     "at": "2026-08-11T09:25:32Z"
+  },
+  "T039": {
+    "failed": true,
+    "reason": "review-failed: superseded by T041 — spec now states the real per-file jsdom pattern and scope includes the test configs as a safety valve",
+    "at": "2026-08-11T09:25:34Z"
   }
 }
