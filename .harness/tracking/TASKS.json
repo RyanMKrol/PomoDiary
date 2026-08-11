@@ -911,7 +911,7 @@
     {
       "id": "T036",
       "title": "Data export endpoint (download all entries as JSON)",
-      "status": "pending",
+      "status": "done",
       "dependsOn": [
         "T007",
         "T011"
