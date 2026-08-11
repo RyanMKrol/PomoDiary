@@ -275,7 +275,7 @@
     {
       "id": "T012",
       "title": "Timer state + settings API routes",
-      "status": "pending",
+      "status": "done",
       "dependsOn": [
         "T006",
         "T007",
