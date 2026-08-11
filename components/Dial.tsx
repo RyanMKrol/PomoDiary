@@ -13,13 +13,17 @@ function generateTicks(): Array<{
   x2: number;
   y2: number;
 }> {
+  // Rounded to 3 decimals: server and browser trig can differ in the last
+  // float digits, and any difference in the SSR'd SVG attributes trips
+  // React's hydration mismatch warning.
+  const round = (v: number) => Math.round(v * 1000) / 1000;
   return Array.from({ length: 12 }, (_, i) => {
     const angle = (i * 30 - 90) * (Math.PI / 180);
     return {
-      x1: 100 + Math.cos(angle) * 70,
-      y1: 100 + Math.sin(angle) * 70,
-      x2: 100 + Math.cos(angle) * 78,
-      y2: 100 + Math.sin(angle) * 78,
+      x1: round(100 + Math.cos(angle) * 70),
+      y1: round(100 + Math.sin(angle) * 70),
+      x2: round(100 + Math.cos(angle) * 78),
+      y2: round(100 + Math.sin(angle) * 78),
     };
   });
 }
