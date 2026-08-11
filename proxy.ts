@@ -6,7 +6,14 @@ const isPublicRoute = createRouteMatcher([
   "/api/webhooks(.*)",
 ]);
 
+// Lets the visual harness (scripts/visual-check.mjs) drive the real composed UI without
+// Clerk credentials. Guarded so the bypass is dead in any real deployment.
+function isE2EBypassAuth(): boolean {
+  return process.env.E2E_BYPASS_AUTH === "1" && !process.env.VERCEL;
+}
+
 export default clerkMiddleware(async (auth, req) => {
+  if (isE2EBypassAuth()) return;
   if (!isPublicRoute(req)) await auth.protect();
 });
 
