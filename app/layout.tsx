@@ -13,6 +13,9 @@ export const metadata: Metadata = {
   title: "PomoDiary",
   description:
     "Hourly time tracking: log what you did with every hour of your day.",
+  icons: {
+    icon: "/favicon.svg",
+  },
 };
 
 export default function RootLayout({

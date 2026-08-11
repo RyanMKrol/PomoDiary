@@ -4,6 +4,12 @@ import { useEffect, useRef, useState } from "react";
 
 import { playChime } from "../audio/chime";
 import {
+  setChimeTitle,
+  setChimeFavicon,
+  requestNotifyPermission,
+  notifyChime as postNotification,
+} from "../notify";
+import {
   deriveNow,
   type AwayKind,
   type Settings as EngineSettings,
@@ -194,6 +200,7 @@ export function createTimerClient(fetchImpl: FetchLike = fetch): TimerClient {
 
   let pendingDraftPatch: DraftPatch = {};
   let draftTimer: ReturnType<typeof setTimeout> | null = null;
+  let hasRequestedNotifyPermission = false;
 
   function notifyState(): void {
     if (current === null) return;
@@ -206,6 +213,12 @@ export function createTimerClient(fetchImpl: FetchLike = fetch): TimerClient {
         soundOn: current.settings.soundOn,
         chimeVolume: current.settings.chimeVolume,
       });
+      // Fire title/favicon/notification alongside the sound
+      setChimeTitle(true);
+      setChimeFavicon(true);
+      if (current.chimeFrom !== null && current.chimeTo !== null) {
+        postNotification(current.chimeFrom, current.chimeTo);
+      }
     }
     for (const listener of chimeListeners) listener();
   }
@@ -227,6 +240,12 @@ export function createTimerClient(fetchImpl: FetchLike = fetch): TimerClient {
     if (prevMode !== null && prevMode !== "chime" && payload.mode === "chime") {
       notifyChime();
     }
+
+    // Clear title and favicon when chime mode ends
+    if (prevMode === "chime" && payload.mode !== "chime") {
+      setChimeTitle(false);
+      setChimeFavicon(false);
+    }
   }
 
   async function fetchState(): Promise<StatePayload> {
@@ -245,6 +264,12 @@ export function createTimerClient(fetchImpl: FetchLike = fetch): TimerClient {
   }
 
   async function performAction(action: TimerAction): Promise<void> {
+    // Request notification permission on first user interaction
+    if (!hasRequestedNotifyPermission) {
+      hasRequestedNotifyPermission = true;
+      void requestNotifyPermission();
+    }
+
     try {
       const res = await fetchImpl("/api/timer", {
         method: "POST",
