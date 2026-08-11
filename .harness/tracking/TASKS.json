@@ -190,7 +190,7 @@
     {
       "id": "T009",
       "title": "Validation schemas and storage caps",
-      "status": "pending",
+      "status": "blocked",
       "dependsOn": [
         "T004"
       ],
