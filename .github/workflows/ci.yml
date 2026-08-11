@@ -29,6 +29,9 @@ jobs:
       - name: Install
         run: npm ci
 
+      - name: Audit dependencies (non-blocking)
+        run: npm audit --omit=dev --audit-level=high || true
+
       - name: Format check
         run: npm run format:check
 
