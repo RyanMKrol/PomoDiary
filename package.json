@@ -14,6 +14,7 @@
     "db:migrate": "drizzle-kit migrate"
   },
   "dependencies": {
+    "@clerk/nextjs": "^7.7.3",
     "@neondatabase/serverless": "^1.1.0",
     "@upstash/ratelimit": "^2.0.8",
     "@upstash/redis": "^1.35.0",

@@ -40,3 +40,7 @@ jobs:
 
       - name: Build
         run: npm run build
+        env:
+          # Dummy Clerk key (not a secret) so `next build` can prerender pages
+          # under ClerkProvider without real credentials.
+          NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: pk_test_Y2xlcmsuZXhhbXBsZS5jb20k
