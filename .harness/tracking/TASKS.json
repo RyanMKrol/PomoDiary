@@ -215,7 +215,7 @@
     {
       "id": "T010",
       "title": "Rate limiter (Upstash, fail-open without env)",
-      "status": "pending",
+      "status": "done",
       "dependsOn": [
         "T001"
       ],
