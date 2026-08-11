@@ -70,25 +70,25 @@
 
 .pulse {
   /* Scale about the circle's own centre; without fill-box, SVG transforms
-     scale about the viewBox origin and the pulse would fly off-corner. */
+     scale about the viewBox origin and the glow would fly off-corner. */
   transform-box: fill-box;
   transform-origin: center;
   /* Transparent at rest: if the animation ever doesn't run (reduced motion,
-     load order), the pulse disappears instead of sitting as a solid blob. */
+     load order), the glow disappears instead of sitting as a solid blob. */
   opacity: 0;
   /* Keyframes must live IN this module: CSS Modules scope animation names,
-     so referencing the global ringPulse silently resolves to nothing. */
-  animation: dialPulse 3.2s cubic-bezier(0.2, 0.7, 0.3, 1) infinite;
+     so referencing a global name silently resolves to nothing. */
+  animation: dialGlow 1.1s ease-in-out infinite alternate;
   pointer-events: none;
 }
 
-@keyframes dialPulse {
+@keyframes dialGlow {
   from {
-    opacity: 0.55;
-    transform: scale(1);
+    opacity: 0.18;
+    transform: scale(0.9);
   }
   to {
-    opacity: 0;
-    transform: scale(1.5);
+    opacity: 0.55;
+    transform: scale(1.06);
   }
 }
