@@ -77,7 +77,7 @@ describe("Dial", () => {
     it("renders track circle with correct attributes", () => {
       const { container } = render(<Dial timerState={{ loading: true }} />);
       const circles = container.querySelectorAll("circle");
-      const trackCircle = circles[0];
+      const trackCircle = container.querySelector('circle[stroke="#e0dddd"]');
       expect(trackCircle).toHaveAttribute("cx", "100");
       expect(trackCircle).toHaveAttribute("cy", "100");
       expect(trackCircle).toHaveAttribute("r", "88");
@@ -104,7 +104,7 @@ describe("Dial", () => {
     it("renders progress arc with correct attributes", () => {
       const { container } = render(<Dial timerState={{ loading: true }} />);
       const circles = container.querySelectorAll("circle");
-      const progressArc = circles[1];
+      const progressArc = circles[circles.length - 1];
       expect(progressArc).toHaveAttribute("cx", "100");
       expect(progressArc).toHaveAttribute("cy", "100");
       expect(progressArc).toHaveAttribute("r", "88");
@@ -136,7 +136,7 @@ describe("Dial", () => {
         />,
       );
       const circles = container.querySelectorAll("circle");
-      const progressArc = circles[1];
+      const progressArc = circles[circles.length - 1];
       const offset = parseFloat(
         progressArc.getAttribute("stroke-dashoffset") || "0",
       );
@@ -164,7 +164,7 @@ describe("Dial", () => {
         />,
       );
       const circles = container.querySelectorAll("circle");
-      const progressArc = circles[1];
+      const progressArc = circles[circles.length - 1];
       const offset = parseFloat(
         progressArc.getAttribute("stroke-dashoffset") || "0",
       );
@@ -193,7 +193,7 @@ describe("Dial", () => {
         />,
       );
       const circles = container.querySelectorAll("circle");
-      const progressArc = circles[1];
+      const progressArc = circles[circles.length - 1];
       const offset = parseFloat(
         progressArc.getAttribute("stroke-dashoffset") || "0",
       );
@@ -482,7 +482,7 @@ describe("Dial", () => {
         />,
       );
       const circles = container.querySelectorAll("circle");
-      const progressArc = circles[1];
+      const progressArc = circles[circles.length - 1];
       expect(progressArc).toHaveAttribute("stroke", "#ec3013");
     });
 
@@ -506,7 +506,7 @@ describe("Dial", () => {
         />,
       );
       const circles = container.querySelectorAll("circle");
-      const progressArc = circles[1];
+      const progressArc = circles[circles.length - 1];
       // No tag and too short to infer, should default to #ec3013
       expect(progressArc).toHaveAttribute("stroke", "#ec3013");
     });
@@ -533,7 +533,7 @@ describe("Dial", () => {
         />,
       );
       const circles = container.querySelectorAll("circle");
-      const progressArc = circles[1];
+      const progressArc = circles[circles.length - 1];
       expect(progressArc).toHaveAttribute("stroke", expectedColor);
     });
 
@@ -558,7 +558,7 @@ describe("Dial", () => {
         />,
       );
       const circles = container.querySelectorAll("circle");
-      const progressArc = circles[1];
+      const progressArc = circles[circles.length - 1];
       expect(progressArc).toHaveAttribute("stroke", expectedColor);
     });
 
@@ -584,7 +584,7 @@ describe("Dial", () => {
         />,
       );
       const circles = container.querySelectorAll("circle");
-      const progressArc = circles[1];
+      const progressArc = circles[circles.length - 1];
       expect(progressArc).toHaveAttribute("stroke", expectedColor);
     });
   });
@@ -719,5 +719,23 @@ describe("Dial", () => {
       expect(dialWrapper?.className).toMatch(/dialWrapper/);
       // CSS class includes the animation
     });
+  });
+});
+
+describe("running pulse", () => {
+  afterEach(() => cleanup());
+
+  it("shows the radial pulse while an hour is running", () => {
+    const { getByTestId } = render(
+      <Dial timerState={{ mode: "running", remainingSeconds: 1800 }} />,
+    );
+    expect(getByTestId("dial-pulse")).toBeInTheDocument();
+  });
+
+  it("hides the pulse when paused", () => {
+    const { queryByTestId } = render(
+      <Dial timerState={{ mode: "paused", remainingSeconds: 1800 }} />,
+    );
+    expect(queryByTestId("dial-pulse")).not.toBeInTheDocument();
   });
 });

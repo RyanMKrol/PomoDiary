@@ -67,3 +67,12 @@
   color: rgba(32, 30, 29, 0.38);
   margin-top: 9px;
 }
+
+.pulse {
+  /* Scale about the circle's own centre; without fill-box, SVG transforms
+     scale about the viewBox origin and the pulse would fly off-corner. */
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: ringPulse 3.2s cubic-bezier(0.2, 0.7, 0.3, 1) infinite;
+  pointer-events: none;
+}
