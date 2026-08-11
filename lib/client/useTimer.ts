@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 
+import { playChime } from "../audio/chime";
 import {
   deriveNow,
   type AwayKind,
@@ -200,6 +201,12 @@ export function createTimerClient(fetchImpl: FetchLike = fetch): TimerClient {
   }
 
   function notifyChime(): void {
+    if (current !== null) {
+      playChime({
+        soundOn: current.settings.soundOn,
+        chimeVolume: current.settings.chimeVolume,
+      });
+    }
     for (const listener of chimeListeners) listener();
   }
 
