@@ -416,7 +416,7 @@
     {
       "id": "T017",
       "title": "Bullet jotter: inputs, Enter/Backspace, pending focus, draft sync",
-      "status": "pending",
+      "status": "done",
       "dependsOn": [
         "T015",
         "T041"
