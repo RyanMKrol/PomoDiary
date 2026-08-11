@@ -63,3 +63,9 @@
 .separator {
   margin: 0 4px;
 }
+
+@media (max-width: 720px) {
+  .tagline {
+    display: none;
+  }
+}

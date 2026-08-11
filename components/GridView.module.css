@@ -145,3 +145,13 @@
   font-weight: 600;
   color: rgba(32, 30, 29, 0.45);
 }
+
+@media (max-width: 720px) {
+  .rulerRow {
+    grid-template-columns: 64px 1fr 42px;
+  }
+
+  .dayRow {
+    grid-template-columns: 64px 1fr 42px;
+  }
+}

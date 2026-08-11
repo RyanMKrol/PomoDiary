@@ -20,3 +20,15 @@
   flex-direction: column;
   background-color: var(--bg);
 }
+
+@media (max-width: 950px) {
+  .panelsContainer {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto 1fr;
+  }
+
+  .leftPanel {
+    border-right: none;
+    border-bottom: 2px solid rgba(32, 30, 29, 0.4);
+  }
+}
