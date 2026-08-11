@@ -163,7 +163,7 @@
     {
       "id": "T008",
       "title": "Timer state machine engine (pure, wall-clock driven)",
-      "status": "pending",
+      "status": "done",
       "dependsOn": [
         "T004",
         "T005"
