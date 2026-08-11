@@ -965,7 +965,7 @@
     {
       "id": "T038",
       "title": "RTL/jsdom test infrastructure for component tests",
-      "status": "pending",
+      "status": "done",
       "dependsOn": [],
       "gate": null,
       "tags": [
