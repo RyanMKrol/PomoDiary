@@ -335,7 +335,7 @@
     {
       "id": "T014",
       "title": "App shell: header, two-panel layout, RTL test setup",
-      "status": "pending",
+      "status": "blocked",
       "dependsOn": [
         "T003",
         "T011"

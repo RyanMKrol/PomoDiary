@@ -1,3 +1,4 @@
 {"id":"T005","ts":"2026-08-10T23:16:06Z","kind":"audit-fail","rung":0,"attempt":0,"model":"claude-haiku-4-5","effort":"","facets":{"layer":"backend","workType":"feature","risk":[]},"detail":""}
 {"id":"T007","ts":"2026-08-10T23:38:51Z","kind":"ci-red","rung":0,"attempt":0,"model":"claude-haiku-4-5","effort":"","facets":{"layer":"data","workType":"feature","risk":[]},"detail":"CI checks failed on the branch"}
 {"id":"T009","ts":"2026-08-11T00:09:12Z","kind":"scope-creep","rung":0,"attempt":0,"model":"claude-haiku-4-5","effort":"","facets":{"layer":"backend","workType":"feature","risk":[]},"detail":"vitest.config.ts"}
+{"id":"T014","ts":"2026-08-11T00:33:07Z","kind":"scope-creep","rung":0,"attempt":0,"model":"claude-haiku-4-5","effort":"","facets":{"layer":"frontend","workType":"component","risk":[]},"detail":"tsconfig.json"}
