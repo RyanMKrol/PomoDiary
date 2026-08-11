@@ -598,7 +598,7 @@ describe("GridView", () => {
   });
 
   describe("refetching", () => {
-    it("refetches when timerState.mode changes", async () => {
+    it("refetches only when the timer leaves an entry-creating mode", async () => {
       const fetchSpy = vi.fn(() =>
         Promise.resolve({
           ok: true,
@@ -615,10 +615,16 @@ describe("GridView", () => {
       await screen.findByTestId("day-row-0");
       expect(fetchSpy).toHaveBeenCalledTimes(1);
 
+      // Entering recap creates no entries yet — no refetch.
       rerender(
         <GridView onSelectDay={() => {}} timerState={{ mode: "recap" }} />,
       );
+      expect(fetchSpy).toHaveBeenCalledTimes(1);
 
+      // Leaving recap (the log landed) — refetch.
+      rerender(
+        <GridView onSelectDay={() => {}} timerState={{ mode: "running" }} />,
+      );
       expect(fetchSpy).toHaveBeenCalledTimes(2);
     });
   });

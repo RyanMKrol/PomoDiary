@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { Entry } from "@/lib/db/entries.store";
 import {
   dayKey,
@@ -24,7 +24,21 @@ export function GridView({ onSelectDay, timerState }: GridViewProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const prevModeRef = useRef<string | undefined | null>(null);
+
   useEffect(() => {
+    // Refetch on first load or when the timer LEAVES an entry-creating mode
+    // (log from recap/chime, backfill from away) — not on every mode change,
+    // which doubled the network calls at page load.
+    const prevMode = prevModeRef.current;
+    prevModeRef.current = timerState.mode;
+    if (prevMode !== null) {
+      const leftEntryCreatingMode =
+        prevMode !== timerState.mode &&
+        (prevMode === "recap" || prevMode === "away" || prevMode === "chime");
+      if (!leftEntryCreatingMode) return;
+    }
+
     // No range params = the user's full history: the grid shows every day
     // since first use, not a fixed window. Refetches keep the previous rows
     // on screen until fresh data lands (no blank flash).
