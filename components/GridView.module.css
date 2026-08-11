@@ -1,0 +1,147 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow: hidden;
+}
+
+.gridWrapper {
+  flex: 1;
+  overflow: auto;
+  padding: 0 26px;
+}
+
+.rulerRow {
+  display: grid;
+  grid-template-columns: 88px 1fr 42px;
+  gap: 14px;
+  padding: 0;
+  margin-top: 12px;
+  margin-bottom: 12px;
+}
+
+.rulerLeft {
+  /* Empty space for alignment with day labels */
+}
+
+.rulerMiddle {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 0;
+}
+
+.rulerLabel {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  color: rgba(32, 30, 29, 0.4);
+  text-align: center;
+}
+
+.rulerRight {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  color: rgba(32, 30, 29, 0.4);
+  text-align: right;
+}
+
+.dayRow {
+  display: grid;
+  grid-template-columns: 88px 1fr 42px;
+  gap: 14px;
+  padding: 6px 0;
+  margin: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  transition:
+    background-color 0.4s cubic-bezier(0.2, 0.7, 0.3, 1),
+    opacity 0.4s cubic-bezier(0.2, 0.7, 0.3, 1);
+}
+
+.dayRow:hover {
+  background-color: var(--surface);
+}
+
+.dayLabel {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text);
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  align-self: center;
+}
+
+.hourCells {
+  display: grid;
+  grid-template-columns: repeat(24, 1fr);
+  gap: 2px;
+  align-self: center;
+}
+
+.cell {
+  height: 22px;
+  background-color: var(--empty-cell);
+  cursor: pointer;
+  border: none;
+  padding: 0;
+  margin: 0;
+}
+
+.dayCount {
+  font-size: 13px;
+  font-weight: 800;
+  color: rgba(32, 30, 29, 0.6);
+  text-align: right;
+  align-self: center;
+}
+
+.footer {
+  flex: 0 0 auto;
+  padding: 0 26px 20px 26px;
+  border-top: 2px solid var(--divider-strong);
+}
+
+.divider {
+  height: 2px;
+  background-color: var(--divider-strong);
+  margin-bottom: 12px;
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.legendItem {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.legendSquare {
+  width: 11px;
+  height: 11px;
+  flex-shrink: 0;
+}
+
+.legendLabel {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(32, 30, 29, 0.6);
+}
+
+.footerText {
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(32, 30, 29, 0.45);
+}

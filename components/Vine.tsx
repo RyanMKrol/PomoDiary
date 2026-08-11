@@ -3,6 +3,7 @@
 import { useState, useMemo } from "react";
 import { fmtDayTitle } from "@/lib/time";
 import { DayView } from "./DayView";
+import { GridView } from "./GridView";
 import styles from "./Vine.module.css";
 
 interface VineProps {
@@ -13,20 +14,32 @@ interface VineProps {
 
 export function Vine({ timerState }: VineProps) {
   const [view, setView] = useState<"day" | "grid">("day");
+  const [selectedDayIndex, setSelectedDayIndex] = useState(0);
 
   const dayInfo = useMemo(() => {
     // eslint-disable-next-line react-hooks/purity
     const now = Date.now();
-    const start = new Date(now);
-    start.setHours(0, 0, 0, 0);
-    const end = new Date(start);
-    end.setDate(end.getDate() + 1);
+    const displayStart = new Date(now);
+    displayStart.setHours(0, 0, 0, 0);
+
+    if (selectedDayIndex > 0) {
+      displayStart.setDate(displayStart.getDate() - selectedDayIndex);
+    }
+
+    const displayEnd = new Date(displayStart);
+    displayEnd.setDate(displayEnd.getDate() + 1);
+
     return {
-      dayStart: start.getTime(),
-      dayEnd: end.getTime(),
+      dayStart: displayStart.getTime(),
+      dayEnd: displayEnd.getTime(),
       now,
     };
-  }, []);
+  }, [selectedDayIndex]);
+
+  const handleSelectDay = (dayIndex: number) => {
+    setSelectedDayIndex(dayIndex);
+    setView("day");
+  };
 
   const viewTitle =
     view === "day" ? fmtDayTitle(dayInfo.dayStart, dayInfo.now) : "Every day";
@@ -56,6 +69,9 @@ export function Vine({ timerState }: VineProps) {
           dayEnd={dayInfo.dayEnd}
           timerState={timerState}
         />
+      )}
+      {view === "grid" && (
+        <GridView onSelectDay={handleSelectDay} timerState={timerState} />
       )}
     </div>
   );
