@@ -23,11 +23,6 @@ export function ChimeOverlay({
       aria-label={label}
       data-testid="chime-overlay"
     >
-      <div className={styles.pulseBox}>
-        <div className={styles.solid} />
-        <div className={styles.outline} />
-      </div>
-
       <div className={styles.content}>
         <h1 className={styles.headline}>
           TIME&rsquo;S

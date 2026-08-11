@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { tagColor, inferTag } from "@/lib/domain";
 import { type UseTimerResult } from "@/lib/client/useTimer";
 import styles from "./BulletJotter.module.css";
 
@@ -11,7 +10,7 @@ export interface BulletJotterProps {
 }
 
 export function BulletJotter({ timerState, updateDraft }: BulletJotterProps) {
-  const { mode = "running", draftTag } = timerState;
+  const { mode = "running" } = timerState;
   // The server's draft starts (and resets to) an empty array — always render
   // at least one input, or the jotter vanishes the moment real state loads.
   const rawBullets = timerState.draftBullets ?? [""];
@@ -69,9 +68,8 @@ export function BulletJotter({ timerState, updateDraft }: BulletJotterProps) {
     }
   };
 
-  const guess = inferTag(draftBullets);
-  const activeTag = draftTag || guess;
-  const markerColor = activeTag ? tagColor(activeTag) : "#ec3013";
+  // The live marker is core branding — always accent red, never tag-colored.
+  const markerColor = "#ec3013";
 
   const jotHeading = isRecap ? "What did you actually do?" : "As you go";
   const jotHint = isRecap ? "Tidy it up" : "Enter for the next bullet";

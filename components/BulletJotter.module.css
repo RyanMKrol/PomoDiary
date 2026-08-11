@@ -76,11 +76,6 @@
   color: rgba(32, 30, 29, 0.32);
 }
 
-.input:focus {
-  outline: 2px solid #ec3013;
-  outline-offset: 2px;
-}
-
 @media (max-width: 950px) {
   .scroller {
     max-height: 40vh;

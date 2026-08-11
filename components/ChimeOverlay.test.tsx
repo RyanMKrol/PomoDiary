@@ -120,20 +120,6 @@ describe("ChimeOverlay", () => {
     );
   });
 
-  it("renders pulse animation box", () => {
-    const onAcknowledge = vi.fn();
-    const { container } = render(
-      <ChimeOverlay
-        chimeFrom={aug10_214pm}
-        chimeTo={aug10_314pm}
-        onAcknowledge={onAcknowledge}
-      />,
-    );
-
-    const pulseBox = container.querySelector("[class*='pulseBox']");
-    expect(pulseBox).toBeInTheDocument();
-  });
-
   it("has absolute positioning to cover panel", () => {
     const onAcknowledge = vi.fn();
     const { container } = render(

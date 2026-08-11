@@ -77,6 +77,15 @@
   border-color: #ec3013;
 }
 
+.miniLabel {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(32, 30, 29, 0.45);
+  margin: 10px 0 6px;
+}
+
 .segmentedRow {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
@@ -95,11 +104,13 @@
   letter-spacing: 0.05em;
   text-transform: uppercase;
   padding: 10px;
-  border-right: 2px solid rgba(32, 30, 29, 0.3);
   cursor: pointer;
   background-color: transparent;
   color: #201e1d;
   border: 0;
+  /* Must come AFTER border: 0 — the shorthand was silently erasing the
+     separator, which is why the feels row had no dividers. */
+  border-right: 2px solid rgba(32, 30, 29, 0.3);
   transition: background-color 0.2s ease;
   text-align: center;
 }

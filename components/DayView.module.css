@@ -104,6 +104,17 @@
   gap: 5px;
 }
 
+.hourStrip {
+  display: grid;
+  grid-template-columns: repeat(24, 1fr);
+  gap: 2px;
+  padding: 16px 0 6px;
+}
+
+.hourCell {
+  height: 14px;
+}
+
 .bullet {
   display: flex;
   gap: 11px;
@@ -123,7 +134,8 @@
   height: 7px;
   background-color: var(--marker-color);
   flex-shrink: 0;
-  transform: translateY(-2px);
+  /* Center the 7px square on the first text line (16px * 1.55 line height). */
+  margin-top: 9px;
 }
 
 .emptyState {

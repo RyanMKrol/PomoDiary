@@ -8,6 +8,7 @@ import { ControlBar } from "./ControlBar";
 import { RecapBar } from "./RecapBar";
 import { ChimeOverlay } from "./ChimeOverlay";
 import { AwayOverlay } from "./AwayOverlay";
+import { PauseOverlay } from "./PauseOverlay";
 import { Vine } from "./Vine";
 import styles from "./Panels.module.css";
 
@@ -15,6 +16,7 @@ export function Panels() {
   const timerState = useTimer();
   const {
     mode,
+    remainingSeconds,
     chimeFrom,
     chimeTo,
     awayKind,
@@ -68,6 +70,12 @@ export function Panels() {
               onReturn={() => awayReturn()}
             />
           )}
+        {mode === "paused" && (
+          <PauseOverlay
+            remainingSeconds={remainingSeconds ?? 0}
+            onResume={() => resume()}
+          />
+        )}
       </div>
       <div className={styles.rightPanel} data-testid="right-panel">
         <Vine timerState={timerState} />

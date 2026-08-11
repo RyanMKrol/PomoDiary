@@ -85,7 +85,7 @@ describe("BulletJotter", () => {
       );
 
       const marker = container.querySelector('[data-testid="bullet-marker-0"]');
-      expect(marker).toHaveStyle("background-color: oklch(0.58 0.20 30)");
+      expect(marker).toHaveStyle("background-color: #ec3013");
     });
 
     it("renders with default accent color when no tag", () => {
@@ -456,8 +456,8 @@ describe("BulletJotter", () => {
     });
   });
 
-  describe("marker color follows active hue", () => {
-    it("uses inferred tag color when no explicit tag", () => {
+  describe("marker color is core branding", () => {
+    it("stays brand red even when a tag could be inferred", () => {
       const updateDraft = vi.fn();
       const timerState: Partial<UseTimerResult> = {
         mode: "running",
@@ -470,10 +470,10 @@ describe("BulletJotter", () => {
       );
 
       const marker = container.querySelector('[data-testid="bullet-marker-0"]');
-      expect(marker).toHaveStyle("background-color: oklch(0.58 0.14 155)");
+      expect(marker).toHaveStyle("background-color: #ec3013");
     });
 
-    it("uses explicit tag color over inferred", () => {
+    it("stays brand red with an explicit tag", () => {
       const updateDraft = vi.fn();
       const timerState: Partial<UseTimerResult> = {
         mode: "running",
@@ -486,10 +486,10 @@ describe("BulletJotter", () => {
       );
 
       const marker = container.querySelector('[data-testid="bullet-marker-0"]');
-      expect(marker).toHaveStyle("background-color: oklch(0.58 0.20 30)");
+      expect(marker).toHaveStyle("background-color: #ec3013");
     });
 
-    it("updates marker color when tag changes", () => {
+    it("stays brand red when the tag changes", () => {
       const updateDraft = vi.fn();
       const timerState: Partial<UseTimerResult> = {
         mode: "running",
@@ -502,7 +502,7 @@ describe("BulletJotter", () => {
       );
 
       let marker = container.querySelector('[data-testid="bullet-marker-0"]');
-      expect(marker).toHaveStyle("background-color: oklch(0.58 0.20 30)");
+      expect(marker).toHaveStyle("background-color: #ec3013");
 
       const updatedState: Partial<UseTimerResult> = {
         mode: "running",
@@ -515,7 +515,7 @@ describe("BulletJotter", () => {
       );
 
       marker = container.querySelector('[data-testid="bullet-marker-0"]');
-      expect(marker).toHaveStyle("background-color: oklch(0.60 0.14 62)");
+      expect(marker).toHaveStyle("background-color: #ec3013");
     });
   });
 });
