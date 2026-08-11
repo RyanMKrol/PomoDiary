@@ -21,7 +21,7 @@ export async function getStateHandler(
   const todayStartParam = url.searchParams.get("todayStart");
   const todayEndParam = url.searchParams.get("todayEnd");
 
-  let count: number | undefined;
+  let countPromise: Promise<number> | undefined;
   if (todayStartParam !== null && todayEndParam !== null) {
     const todayStart = Number(todayStartParam);
     const todayEnd = Number(todayEndParam);
@@ -33,7 +33,7 @@ export async function getStateHandler(
     ) {
       throw new BadRequestError("Invalid todayStart/todayEnd span");
     }
-    count = await countEntriesForDay(
+    countPromise = countEntriesForDay(
       db,
       userId,
       new Date(todayStart),
@@ -41,9 +41,12 @@ export async function getStateHandler(
     );
   }
 
-  const [state, settings] = await Promise.all([
+  // All three queries in one wall-clock step — the count ran serially before
+  // the other two, making every /api/state pay an extra DB roundtrip.
+  const [state, settings, count] = await Promise.all([
     loadOrCreateState(db, userId, now),
     loadSettings(db, userId),
+    countPromise,
   ]);
 
   return NextResponse.json(buildStatePayload(state, settings, now, count));

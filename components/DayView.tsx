@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Entry } from "@/lib/db/entries.store";
 import { fmtClock } from "@/lib/time";
 import { tagColor } from "@/lib/domain";
@@ -21,11 +21,32 @@ export function DayView({ dayStart, dayEnd, timerState }: DayViewProps) {
   const [error, setError] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
 
+  const prevRef = useRef<{
+    dayStart: number;
+    dayEnd: number;
+    mode?: string;
+  } | null>(null);
+
   useEffect(() => {
-    // Refetches (a new day picked, the timer mode changing after a log) keep
-    // the previous entries on screen until fresh data lands — only the very
-    // first load shows the blank container. Blanking on every refetch made the
-    // whole panel flash empty right after page load.
+    // Refetch on the first load, when the shown day changes, or when the timer
+    // LEAVES an entry-creating mode (log from recap/chime, backfill from away).
+    // Refetching on every mode change doubled the network calls at page load
+    // (undefined -> running) for no new data.
+    const prev = prevRef.current;
+    prevRef.current = { dayStart, dayEnd, mode: timerState.mode };
+    if (prev !== null) {
+      const dayChanged = prev.dayStart !== dayStart || prev.dayEnd !== dayEnd;
+      const leftEntryCreatingMode =
+        prev.mode !== timerState.mode &&
+        (prev.mode === "recap" ||
+          prev.mode === "away" ||
+          prev.mode === "chime");
+      if (!dayChanged && !leftEntryCreatingMode) return;
+    }
+
+    // Refetches keep the previous entries on screen until fresh data lands —
+    // only the very first load shows the blank container. Blanking on every
+    // refetch made the whole panel flash empty right after page load.
     let cancelled = false;
     const fetchEntries = async () => {
       try {

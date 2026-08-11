@@ -281,7 +281,7 @@ describe("DayView", () => {
       expect(fetchSpy).toHaveBeenCalledTimes(2);
     });
 
-    it("refetches when timerState.mode changes", async () => {
+    it("refetches only when the timer leaves an entry-creating mode", async () => {
       const fetchSpy = vi.fn(() =>
         Promise.resolve({
           ok: true,
@@ -302,6 +302,7 @@ describe("DayView", () => {
       await screen.findByText("Nothing in the basket yet.");
       expect(fetchSpy).toHaveBeenCalledTimes(1);
 
+      // Entering recap creates no entries yet — no refetch.
       rerender(
         <DayView
           dayStart={1000}
@@ -309,7 +310,16 @@ describe("DayView", () => {
           timerState={{ mode: "recap" }}
         />,
       );
+      expect(fetchSpy).toHaveBeenCalledTimes(1);
 
+      // Leaving recap (the log landed) — refetch.
+      rerender(
+        <DayView
+          dayStart={1000}
+          dayEnd={2000}
+          timerState={{ mode: "running" }}
+        />,
+      );
       expect(fetchSpy).toHaveBeenCalledTimes(2);
     });
   });
