@@ -280,9 +280,9 @@
         "T006",
         "T007",
         "T008",
-        "T009",
         "T010",
-        "T011"
+        "T011",
+        "T037"
       ],
       "gate": null,
       "tags": [
@@ -311,8 +311,8 @@
       "status": "pending",
       "dependsOn": [
         "T007",
-        "T009",
-        "T011"
+        "T011",
+        "T037"
       ],
       "gate": null,
       "tags": [
@@ -393,8 +393,8 @@
       "title": "Dial + phrase block (ring fills, breathe, status copy)",
       "status": "pending",
       "dependsOn": [
-        "T014",
-        "T015"
+        "T015",
+        "T039"
       ],
       "gate": null,
       "tags": [
@@ -418,8 +418,8 @@
       "title": "Bullet jotter: inputs, Enter/Backspace, pending focus, draft sync",
       "status": "pending",
       "dependsOn": [
-        "T014",
-        "T015"
+        "T015",
+        "T039"
       ],
       "gate": null,
       "tags": [
@@ -445,8 +445,8 @@
       "status": "pending",
       "dependsOn": [
         "T004",
-        "T014",
-        "T015"
+        "T015",
+        "T039"
       ],
       "gate": null,
       "tags": [
@@ -470,8 +470,8 @@
       "title": "Control bar + recap bar",
       "status": "pending",
       "dependsOn": [
-        "T014",
-        "T015"
+        "T015",
+        "T039"
       ],
       "gate": null,
       "tags": [
@@ -495,8 +495,8 @@
       "title": "Chime + away overlays",
       "status": "pending",
       "dependsOn": [
-        "T014",
-        "T015"
+        "T015",
+        "T039"
       ],
       "gate": null,
       "tags": [
@@ -577,7 +577,7 @@
       "dependsOn": [
         "T005",
         "T013",
-        "T014"
+        "T039"
       ],
       "gate": null,
       "tags": [
@@ -934,6 +934,85 @@
       "verify": [],
       "expectsTest": true,
       "spec": ".harness/tasks/T036.md"
+    },
+    {
+      "id": "T037",
+      "title": "Validation schemas and storage caps (re-attempt with scope covering vitest config)",
+      "status": "pending",
+      "dependsOn": [
+        "T004"
+      ],
+      "gate": null,
+      "tags": [
+        "security"
+      ],
+      "scope": [
+        "lib/validation/**",
+        "lib/db/entries.store.ts",
+        "package.json",
+        "vitest.config.ts"
+      ],
+      "design": null,
+      "verify": [],
+      "expectsTest": true,
+      "spec": ".harness/tasks/T037.md",
+      "facets": {
+        "layer": "backend",
+        "workType": "feature",
+        "risk": []
+      }
+    },
+    {
+      "id": "T038",
+      "title": "RTL/jsdom test infrastructure for component tests",
+      "status": "pending",
+      "dependsOn": [],
+      "gate": null,
+      "tags": [
+        "testing",
+        "tooling"
+      ],
+      "scope": [
+        "vitest.config.ts",
+        "tsconfig.json",
+        "test/**",
+        "package.json"
+      ],
+      "design": null,
+      "verify": [],
+      "expectsTest": true,
+      "spec": ".harness/tasks/T038.md",
+      "facets": {
+        "layer": "build",
+        "workType": "config",
+        "risk": []
+      }
+    },
+    {
+      "id": "T039",
+      "title": "App shell: header and two-panel layout with RTL tests",
+      "status": "pending",
+      "dependsOn": [
+        "T038"
+      ],
+      "gate": null,
+      "tags": [
+        "ui"
+      ],
+      "scope": [
+        "app/**",
+        "components/**",
+        "package.json"
+      ],
+      "design": null,
+      "verify": [],
+      "expectsTest": true,
+      "spec": ".harness/tasks/T039.md",
+      "facets": {
+        "layer": "frontend",
+        "workType": "component",
+        "risk": []
+      }
     }
   ]
 }
