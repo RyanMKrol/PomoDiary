@@ -770,7 +770,7 @@
       "title": "Wire VISUAL_VERIFY_HOOK to the visual harness",
       "status": "pending",
       "dependsOn": [
-        "T029"
+        "T043"
       ],
       "gate": "needs-human",
       "tags": [
@@ -788,7 +788,7 @@
       "title": "Clock-driven flow check: rollover, chime, recap, away backfill",
       "status": "pending",
       "dependsOn": [
-        "T029"
+        "T043"
       ],
       "gate": null,
       "tags": [
@@ -1066,6 +1066,62 @@
         "layer": "frontend",
         "workType": "component",
         "risk": []
+      }
+    },
+    {
+      "id": "T042",
+      "title": "App composition: wire the timer and vine components into Panels",
+      "status": "pending",
+      "dependsOn": [],
+      "gate": null,
+      "tags": [
+        "frontend"
+      ],
+      "scope": [
+        "components/**",
+        "app/**",
+        "lib/client/**"
+      ],
+      "design": null,
+      "verify": [],
+      "expectsTest": true,
+      "spec": ".harness/tasks/T042.md",
+      "facets": {
+        "layer": "frontend",
+        "workType": "feature",
+        "risk": [
+          "touches-core"
+        ]
+      }
+    },
+    {
+      "id": "T043",
+      "title": "Visual harness: Playwright driver scripts with fixture APIs (re-attempt on the composed app)",
+      "status": "pending",
+      "dependsOn": [
+        "T042"
+      ],
+      "gate": null,
+      "tags": [
+        "testing"
+      ],
+      "scope": [
+        "scripts/**",
+        "package.json",
+        "proxy.ts",
+        "lib/api/**",
+        ".gitignore"
+      ],
+      "design": null,
+      "verify": [],
+      "expectsTest": false,
+      "spec": ".harness/tasks/T043.md",
+      "facets": {
+        "layer": "build",
+        "workType": "feature",
+        "risk": [
+          "touches-core"
+        ]
       }
     }
   ]
