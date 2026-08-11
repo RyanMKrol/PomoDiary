@@ -364,7 +364,7 @@
     {
       "id": "T015",
       "title": "Client timer hook: server reconciliation + 1s tick",
-      "status": "pending",
+      "status": "done",
       "dependsOn": [
         "T008",
         "T012"
