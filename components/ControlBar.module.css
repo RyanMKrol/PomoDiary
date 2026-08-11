@@ -1,0 +1,63 @@
+.bar {
+  display: flex;
+  border-top: 2px solid rgba(32, 30, 29, 0.4);
+  flex: 0 0 auto;
+}
+
+.button {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 15px 16px;
+  background: transparent;
+  border: none;
+  border-right: 2px solid rgba(32, 30, 29, 0.4);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #201e1d;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease;
+}
+
+.buttonLast {
+  border-right: none;
+}
+
+.swatch {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  flex-shrink: 0;
+}
+
+.pauseResumeButton {
+  flex: 1;
+}
+
+.pauseResumeButton:hover {
+  background-color: #ffe0d9;
+  color: #ae1800;
+}
+
+.restartButton:hover {
+  background-color: #eae9e9;
+  color: #201e1d;
+}
+
+.restartButton {
+  opacity: 0.55;
+}
+
+.sleepButton:hover {
+  background-color: #eae9e9;
+  color: #201e1d;
+}
+
+.workButton:hover {
+  background-color: #eae9e9;
+  color: #201e1d;
+}

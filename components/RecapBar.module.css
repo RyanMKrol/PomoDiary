@@ -1,0 +1,59 @@
+.bar {
+  display: flex;
+  border-top: 2px solid rgba(32, 30, 29, 0.4);
+  flex: 0 0 auto;
+}
+
+.logItButton {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
+  flex: 1;
+  padding: 19px 22px;
+  background-color: #ec3013;
+  color: white;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  transition: background-color 0.2s ease;
+}
+
+.logItButton:hover {
+  background-color: #dd2b0f;
+}
+
+.logItSwatch {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  flex-shrink: 0;
+  background-color: white;
+}
+
+.skipButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 19px 22px;
+  background: transparent;
+  color: rgba(32, 30, 29, 0.5);
+  border: none;
+  border-left: 2px solid rgba(32, 30, 29, 0.4);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease;
+}
+
+.skipButton:hover {
+  background-color: #eae9e9;
+  color: #201e1d;
+}
