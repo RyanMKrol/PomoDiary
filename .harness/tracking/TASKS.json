@@ -545,7 +545,7 @@
     {
       "id": "T022",
       "title": "Chime notifications: page title/favicon + system Notification",
-      "status": "pending",
+      "status": "blocked",
       "dependsOn": [
         "T015"
       ],
