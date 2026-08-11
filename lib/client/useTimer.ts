@@ -1,0 +1,458 @@
+"use client";
+
+import { useEffect, useRef, useState } from "react";
+
+import {
+  deriveNow,
+  type AwayKind,
+  type Settings as EngineSettings,
+} from "../timer/engine";
+import type { ApiSettings, StatePayload } from "../api/timer-state";
+
+const DRAFT_DEBOUNCE_MS = 800;
+const TICK_MS = 1000;
+
+export interface ClientState {
+  mode: StatePayload["mode"];
+  remainingSeconds: number;
+  chimeFrom: number | null;
+  chimeTo: number | null;
+  draftBullets: string[];
+  draftTag: string | null;
+  draftFeel: string | null;
+  draftIntent: string | null;
+  phraseIdx: number;
+  settings: ApiSettings;
+  hoursToday: number | undefined;
+  awayElapsedSeconds: number | null;
+}
+
+export interface DraftPatch {
+  bullets?: string[];
+  tag?: string | null;
+  feel?: string | null;
+  intent?: string | null;
+}
+
+export interface LogPayload {
+  bullets: string[];
+  tag: string | null;
+  feel: string | null;
+  intent: string | null;
+}
+
+/** Minimal shadow of the engine's TimerState, rebuilt from each server payload, used only to drive local ticking via deriveNow. */
+interface ShadowState {
+  mode: StatePayload["mode"];
+  hourStart: number;
+  pausedRemaining: number | null;
+  chimeFrom: number | null;
+  chimeTo: number | null;
+  awayKind: AwayKind | null;
+  awaySince: number | null;
+  draftBullets: string[];
+  draftTag: string | null;
+  draftFeel: string | null;
+  draftIntent: string | null;
+  phraseIdx: number;
+}
+
+export function todayBoundsFor(now: number): {
+  todayStart: number;
+  todayEnd: number;
+} {
+  const start = new Date(now);
+  start.setHours(0, 0, 0, 0);
+  const todayStart = start.getTime();
+  return { todayStart, todayEnd: todayStart + 24 * 60 * 60 * 1000 };
+}
+
+export function reconstructShadow(
+  payload: StatePayload,
+  now: number,
+): ShadowState {
+  const sessionMs = payload.settings.sessionMinutes * 60 * 1000;
+  const base: ShadowState = {
+    mode: payload.mode,
+    hourStart: now,
+    pausedRemaining: null,
+    chimeFrom: payload.chimeFrom,
+    chimeTo: payload.chimeTo,
+    awayKind: null,
+    awaySince: null,
+    draftBullets: payload.draftBullets,
+    draftTag: payload.draftTag,
+    draftFeel: payload.draftFeel,
+    draftIntent: payload.draftIntent,
+    phraseIdx: payload.phraseIdx,
+  };
+
+  if (payload.mode === "running") {
+    return {
+      ...base,
+      hourStart: now - sessionMs + payload.remainingSeconds * 1000,
+    };
+  }
+
+  if (payload.mode === "paused") {
+    return { ...base, pausedRemaining: payload.remainingSeconds };
+  }
+
+  return base;
+}
+
+export function toEngineSettings(settings: ApiSettings): EngineSettings {
+  return {
+    sessionMinutes: settings.sessionMinutes,
+    pauseAfterLog: settings.pauseAfterLog,
+  };
+}
+
+export function toClientState(
+  payload: StatePayload,
+  awayEnteredAt: number | null,
+  now: number,
+): ClientState {
+  return {
+    mode: payload.mode,
+    remainingSeconds: payload.remainingSeconds,
+    chimeFrom: payload.chimeFrom,
+    chimeTo: payload.chimeTo,
+    draftBullets: payload.draftBullets,
+    draftTag: payload.draftTag,
+    draftFeel: payload.draftFeel,
+    draftIntent: payload.draftIntent,
+    phraseIdx: payload.phraseIdx,
+    settings: payload.settings,
+    hoursToday: payload.count,
+    awayElapsedSeconds:
+      payload.mode === "away" && awayEnteredAt !== null
+        ? Math.floor((now - awayEnteredAt) / 1000)
+        : null,
+  };
+}
+
+export function applyDraftPatchLocally(
+  state: ClientState,
+  patch: DraftPatch,
+): ClientState {
+  return {
+    ...state,
+    draftBullets:
+      patch.bullets !== undefined ? patch.bullets : state.draftBullets,
+    draftTag: patch.tag !== undefined ? patch.tag : state.draftTag,
+    draftFeel: patch.feel !== undefined ? patch.feel : state.draftFeel,
+    draftIntent: patch.intent !== undefined ? patch.intent : state.draftIntent,
+  };
+}
+
+type TimerAction =
+  | { type: "pause" }
+  | { type: "resume" }
+  | { type: "restart" }
+  | { type: "ringNow" }
+  | { type: "acknowledge" }
+  | { type: "log"; payload: LogPayload }
+  | { type: "skip" }
+  | { type: "awayStart"; kind: "sleep" | "work" }
+  | { type: "awayReturn" }
+  | { type: "draftUpdate"; patch: DraftPatch };
+
+export interface TimerClient {
+  getState(): ClientState | null;
+  isLoading(): boolean;
+  subscribe(listener: (state: ClientState) => void): () => void;
+  onChime(listener: () => void): () => void;
+  start(): void;
+  stop(): void;
+  pause(): Promise<void>;
+  resume(): Promise<void>;
+  restart(): Promise<void>;
+  ringNow(): Promise<void>;
+  acknowledge(): Promise<void>;
+  log(payload: LogPayload): Promise<void>;
+  skip(): Promise<void>;
+  awayStart(kind: "sleep" | "work"): Promise<void>;
+  awayReturn(): Promise<void>;
+  updateDraft(patch: DraftPatch): void;
+  flushDraft(): Promise<void>;
+  updateSettings(patch: Partial<ApiSettings>): Promise<void>;
+}
+
+type FetchLike = typeof fetch;
+
+export function createTimerClient(fetchImpl: FetchLike = fetch): TimerClient {
+  let current: ClientState | null = null;
+  let shadow: ShadowState | null = null;
+  let awayEnteredAt: number | null = null;
+  let loading = true;
+  let intervalId: ReturnType<typeof setInterval> | null = null;
+
+  const stateListeners = new Set<(state: ClientState) => void>();
+  const chimeListeners = new Set<() => void>();
+
+  let pendingDraftPatch: DraftPatch = {};
+  let draftTimer: ReturnType<typeof setTimeout> | null = null;
+
+  function notifyState(): void {
+    if (current === null) return;
+    for (const listener of stateListeners) listener(current);
+  }
+
+  function notifyChime(): void {
+    for (const listener of chimeListeners) listener();
+  }
+
+  function applyState(payload: StatePayload, now: number): void {
+    const prevMode = current?.mode ?? null;
+
+    if (payload.mode === "away") {
+      if (prevMode !== "away") awayEnteredAt = now;
+    } else {
+      awayEnteredAt = null;
+    }
+
+    shadow = reconstructShadow(payload, now);
+    current = toClientState(payload, awayEnteredAt, now);
+    loading = false;
+    notifyState();
+
+    if (prevMode !== null && prevMode !== "chime" && payload.mode === "chime") {
+      notifyChime();
+    }
+  }
+
+  async function fetchState(): Promise<StatePayload> {
+    const now = Date.now();
+    const { todayStart, todayEnd } = todayBoundsFor(now);
+    const res = await fetchImpl(
+      `/api/state?todayStart=${todayStart}&todayEnd=${todayEnd}`,
+    );
+    if (!res.ok) throw new Error(`GET /api/state failed: ${res.status}`);
+    return (await res.json()) as StatePayload;
+  }
+
+  async function refetchState(): Promise<void> {
+    const payload = await fetchState();
+    applyState(payload, Date.now());
+  }
+
+  async function performAction(action: TimerAction): Promise<void> {
+    try {
+      const res = await fetchImpl("/api/timer", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(action),
+      });
+      if (!res.ok) throw new Error(`POST /api/timer failed: ${res.status}`);
+      const payload = (await res.json()) as StatePayload;
+      applyState(payload, Date.now());
+    } catch {
+      await refetchState();
+    }
+  }
+
+  function tick(now: number): void {
+    if (shadow === null || current === null) return;
+
+    const wasMode = shadow.mode;
+    const engineSettings = toEngineSettings(current.settings);
+    const { state: nextShadow, remainingSeconds } = deriveNow(
+      shadow,
+      engineSettings,
+      now,
+    );
+    shadow = nextShadow;
+
+    if (wasMode !== "chime" && nextShadow.mode === "chime") {
+      current = {
+        ...current,
+        mode: "chime",
+        remainingSeconds: 0,
+        chimeFrom: nextShadow.chimeFrom,
+        chimeTo: nextShadow.chimeTo,
+      };
+      notifyState();
+      notifyChime();
+      void refetchState();
+      return;
+    }
+
+    if (wasMode === "running") {
+      current = { ...current, remainingSeconds };
+      notifyState();
+      return;
+    }
+
+    if (wasMode === "away" && awayEnteredAt !== null) {
+      current = {
+        ...current,
+        awayElapsedSeconds: Math.floor((now - awayEnteredAt) / 1000),
+      };
+      notifyState();
+    }
+  }
+
+  function clearDraftTimer(): void {
+    if (draftTimer !== null) {
+      clearTimeout(draftTimer);
+      draftTimer = null;
+    }
+  }
+
+  function updateDraft(patch: DraftPatch): void {
+    if (current !== null) {
+      current = applyDraftPatchLocally(current, patch);
+      notifyState();
+    }
+    pendingDraftPatch = { ...pendingDraftPatch, ...patch };
+
+    clearDraftTimer();
+    draftTimer = setTimeout(() => {
+      draftTimer = null;
+      void flushDraft();
+    }, DRAFT_DEBOUNCE_MS);
+  }
+
+  async function flushDraft(): Promise<void> {
+    clearDraftTimer();
+    if (Object.keys(pendingDraftPatch).length === 0) return;
+    const patch = pendingDraftPatch;
+    pendingDraftPatch = {};
+    await performAction({ type: "draftUpdate", patch });
+  }
+
+  async function updateSettings(patch: Partial<ApiSettings>): Promise<void> {
+    try {
+      const res = await fetchImpl("/api/settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(patch),
+      });
+      if (!res.ok) throw new Error(`PATCH /api/settings failed: ${res.status}`);
+      const settings = (await res.json()) as ApiSettings;
+      if (current !== null) {
+        current = { ...current, settings };
+        notifyState();
+      }
+    } catch {
+      await refetchState();
+    }
+  }
+
+  return {
+    getState: () => current,
+    isLoading: () => loading,
+
+    subscribe(listener) {
+      stateListeners.add(listener);
+      return () => stateListeners.delete(listener);
+    },
+
+    onChime(listener) {
+      chimeListeners.add(listener);
+      return () => chimeListeners.delete(listener);
+    },
+
+    start() {
+      void refetchState();
+      if (intervalId === null) {
+        intervalId = setInterval(() => tick(Date.now()), TICK_MS);
+      }
+    },
+
+    stop() {
+      if (intervalId !== null) {
+        clearInterval(intervalId);
+        intervalId = null;
+      }
+      clearDraftTimer();
+    },
+
+    pause: () => performAction({ type: "pause" }),
+    resume: () => performAction({ type: "resume" }),
+    restart: () => performAction({ type: "restart" }),
+    ringNow: () => performAction({ type: "ringNow" }),
+    acknowledge: () => performAction({ type: "acknowledge" }),
+
+    async log(payload) {
+      await flushDraft();
+      await performAction({ type: "log", payload });
+    },
+
+    async skip() {
+      await flushDraft();
+      await performAction({ type: "skip" });
+    },
+
+    async awayStart(kind) {
+      await flushDraft();
+      await performAction({ type: "awayStart", kind });
+    },
+
+    awayReturn: () => performAction({ type: "awayReturn" }),
+
+    updateDraft,
+    flushDraft,
+    updateSettings,
+  };
+}
+
+export interface UseTimerOptions {
+  onChime?: () => void;
+}
+
+export interface UseTimerResult extends Partial<ClientState> {
+  loading: boolean;
+  pause(): Promise<void>;
+  resume(): Promise<void>;
+  restart(): Promise<void>;
+  ringNow(): Promise<void>;
+  acknowledge(): Promise<void>;
+  log(payload: LogPayload): Promise<void>;
+  skip(): Promise<void>;
+  awayStart(kind: "sleep" | "work"): Promise<void>;
+  awayReturn(): Promise<void>;
+  updateDraft(patch: DraftPatch): void;
+  updateSettings(patch: Partial<ApiSettings>): Promise<void>;
+}
+
+export function useTimer(options: UseTimerOptions = {}): UseTimerResult {
+  const [client] = useState<TimerClient>(() => createTimerClient());
+  const [state, setState] = useState<ClientState | null>(() =>
+    client.getState(),
+  );
+
+  const onChimeRef = useRef(options.onChime);
+  useEffect(() => {
+    onChimeRef.current = options.onChime;
+  }, [options.onChime]);
+
+  useEffect(() => {
+    const unsubState = client.subscribe(setState);
+    const unsubChime = client.onChime(() => onChimeRef.current?.());
+    client.start();
+    return () => {
+      unsubState();
+      unsubChime();
+      client.stop();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  return {
+    ...(state ?? {}),
+    loading: state === null,
+    pause: client.pause,
+    resume: client.resume,
+    restart: client.restart,
+    ringNow: client.ringNow,
+    acknowledge: client.acknowledge,
+    log: client.log,
+    skip: client.skip,
+    awayStart: client.awayStart,
+    awayReturn: client.awayReturn,
+    updateDraft: client.updateDraft,
+    updateSettings: client.updateSettings,
+  };
+}
