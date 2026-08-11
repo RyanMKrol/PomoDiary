@@ -1,8 +1,12 @@
+import { Header } from "@/components/Header";
+import { Panels } from "@/components/Panels";
+import styles from "./page.module.css";
+
 export default function Home() {
   return (
-    <main>
-      <h1>PomoDiary</h1>
-      <p>Hourly time tracking. The app is under construction.</p>
-    </main>
+    <div className={styles.appContainer}>
+      <Header />
+      <Panels />
+    </div>
   );
 }

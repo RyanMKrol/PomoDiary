@@ -1,6 +1,12 @@
 import { defineConfig } from "vitest/config";
+import path from "path";
 
 export default defineConfig({
+  resolve: {
+    alias: {
+      "@": path.resolve(__dirname, "./"),
+    },
+  },
   test: {
     // Only our own test trees — never .harness/dashboard/*.test.js,
     // which has its own runner inside the harness.
