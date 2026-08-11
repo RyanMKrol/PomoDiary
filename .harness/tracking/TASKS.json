@@ -308,7 +308,7 @@
     {
       "id": "T013",
       "title": "Entries API: day/grid reads + entry edit",
-      "status": "pending",
+      "status": "done",
       "dependsOn": [
         "T007",
         "T011",
