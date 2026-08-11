@@ -240,7 +240,7 @@
     {
       "id": "T011",
       "title": "Clerk auth: middleware protection, sign-in/up pages, getUserId()",
-      "status": "pending",
+      "status": "done",
       "dependsOn": [
         "T002"
       ],
