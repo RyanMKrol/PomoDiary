@@ -1,0 +1,69 @@
+@keyframes breathe {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.02);
+  }
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  padding: 22px 32px 20px;
+  flex: 0 0 auto;
+}
+
+.dialWrapper {
+  width: min(124px, 17vh);
+  aspect-ratio: 1 / 1;
+  flex: 0 0 auto;
+  cursor: pointer;
+  animation: breathe 7s ease-in-out infinite;
+  position: relative;
+}
+
+.svg {
+  width: 100%;
+  height: 100%;
+}
+
+.textColumn {
+  min-width: 0;
+}
+
+.statusLabel {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #ec3013;
+}
+
+.phrase {
+  font-size: 26px;
+  font-weight: 800;
+  line-height: 1.08;
+  letter-spacing: -0.03em;
+  margin: 7px 0 6px;
+  text-wrap: pretty;
+}
+
+.subPhrase {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(32, 30, 29, 0.5);
+}
+
+.timeSince {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(32, 30, 29, 0.38);
+  margin-top: 9px;
+}
