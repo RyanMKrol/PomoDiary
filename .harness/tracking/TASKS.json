@@ -442,7 +442,7 @@
     {
       "id": "T018",
       "title": "Picker strip: tag chips with suggestion states, feel/intent segments",
-      "status": "pending",
+      "status": "done",
       "dependsOn": [
         "T004",
         "T015",
