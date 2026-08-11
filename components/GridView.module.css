@@ -35,7 +35,9 @@
   font-weight: 800;
   letter-spacing: 0.1em;
   color: rgba(32, 30, 29, 0.4);
-  text-align: center;
+  /* Left-aligned so each label sits over the START of its 3-hour block of
+     cells (centering floated the labels between squares). */
+  text-align: left;
 }
 
 .rulerRight {
@@ -50,6 +52,9 @@
   display: grid;
   grid-template-columns: 88px 1fr 42px;
   gap: 14px;
+  /* Buttons shrink-to-fit their content by default, which collapsed the 1fr
+     hour-cell column to zero width — the squares never rendered. */
+  width: 100%;
   padding: 6px 0;
   margin: 0;
   border: none;
@@ -104,7 +109,8 @@
 .footer {
   flex: 0 0 auto;
   padding: 0 26px 20px 26px;
-  border-top: 2px solid var(--divider-strong);
+  /* The .divider element inside is the rule here — a border-top as well
+     rendered as a doubled line. */
 }
 
 .divider {

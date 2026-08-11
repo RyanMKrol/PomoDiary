@@ -13,6 +13,12 @@ export function Header() {
   const [isLoading, setIsLoading] = useState(true);
   const [todayLabel, setTodayLabel] = useState("");
 
+  // The date label needs no server data — set it as soon as we're on the
+  // client (it can't be SSR'd: the server runs in UTC, not the user's zone).
+  useEffect(() => {
+    setTodayLabel(fmtTodayLabel(Date.now()));
+  }, []);
+
   useEffect(() => {
     async function fetchHoursToday() {
       try {
@@ -30,11 +36,9 @@ export function Header() {
         const response = await fetch(`/api/state?${params}`);
         const data: StateResponse = await response.json();
         setHoursToday(data.count ?? 0);
-        setTodayLabel(fmtTodayLabel(now));
       } catch (error) {
         console.error("Failed to fetch hours today:", error);
         setHoursToday(0);
-        setTodayLabel(fmtTodayLabel(Date.now()));
       } finally {
         setIsLoading(false);
       }

@@ -74,9 +74,10 @@ button {
   outline: none;
 }
 
+/* Owner's call: no focus ring anywhere — the accent outline read as visual
+   noise (programmatic .focus() calls made it appear even on mouse clicks). */
 :focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
+  outline: none;
 }
 
 ::selection {

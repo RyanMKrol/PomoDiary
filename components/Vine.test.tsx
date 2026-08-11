@@ -265,3 +265,21 @@ describe("Vine", () => {
     });
   });
 });
+
+describe("back to the day", () => {
+  it("returns to TODAY even after a past day was opened from the grid", async () => {
+    render(<Vine timerState={{ mode: "running" }} />);
+
+    // Zoom out, open a past day (index 2), confirm we left Today.
+    await userEvent.click(screen.getByTestId("vine-zoom-button"));
+    await userEvent.click(await screen.findByTestId("day-row-2"));
+    await waitFor(() =>
+      expect(screen.queryByText("Today")).not.toBeInTheDocument(),
+    );
+
+    // Zoom out again and come back — must land on Today, not the past day.
+    await userEvent.click(screen.getByTestId("vine-zoom-button"));
+    await userEvent.click(screen.getByTestId("vine-zoom-button"));
+    expect(await screen.findByText("Today")).toBeInTheDocument();
+  });
+});

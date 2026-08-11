@@ -519,3 +519,16 @@ describe("BulletJotter", () => {
     });
   });
 });
+
+describe("empty draft", () => {
+  it("renders one empty input when the server draft is an empty array", () => {
+    render(
+      <BulletJotter
+        timerState={{ mode: "running", draftBullets: [] }}
+        updateDraft={() => {}}
+      />,
+    );
+
+    expect(screen.getByTestId("bullet-input-0")).toBeInTheDocument();
+  });
+});

@@ -12,7 +12,10 @@
   height: 54px;
   border-bottom: 2px solid rgba(32, 30, 29, 0.4);
   padding-left: 26px;
-  gap: 12px;
+  /* No gap: the settings/zoom buttons are bordered cells and must sit flush
+     against each other and the header edges, or their hover highlight shows
+     unhighlighted strips around the cell. Left-side spacing is on .viewTitle. */
+  gap: 0;
   position: relative;
 }
 
@@ -34,6 +37,7 @@
   font-weight: 800;
   letter-spacing: -0.02em;
   color: var(--text);
+  margin-left: 12px;
 }
 
 .spacer {
@@ -44,7 +48,8 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  height: 100%;
+  align-self: stretch;
+  height: auto;
   padding: 0 16px;
   border: none;
   border-left: 2px solid rgba(32, 30, 29, 0.4);
@@ -73,7 +78,8 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  height: 100%;
+  align-self: stretch;
+  height: auto;
   padding: 0 22px;
   border: none;
   border-left: 2px solid rgba(32, 30, 29, 0.4);

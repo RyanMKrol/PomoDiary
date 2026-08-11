@@ -21,10 +21,13 @@ export function AwayOverlay({
   const mode = AWAY[awayKind];
 
   return (
+    // Clicking anywhere on the card ends the away block — the labeled button
+    // at the bottom stays as the discoverable, keyboard-reachable affordance.
     <div
       className={styles.overlay}
       style={{ backgroundColor: mode.color }}
       data-testid="away-overlay"
+      onClick={onReturn}
     >
       <div className={styles.content}>
         <h1 className={styles.headline}>{mode.title}</h1>
@@ -40,7 +43,10 @@ export function AwayOverlay({
 
       <button
         className={styles.returnButton}
-        onClick={onReturn}
+        onClick={(e) => {
+          e.stopPropagation();
+          onReturn();
+        }}
         data-testid="away-return-button"
       >
         <span

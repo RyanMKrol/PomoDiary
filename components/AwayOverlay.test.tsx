@@ -274,3 +274,37 @@ describe("AwayOverlay", () => {
     expect(elapsed?.textContent).toContain("Since");
   });
 });
+
+describe("click anywhere to return", () => {
+  afterEach(() => cleanup());
+
+  it("calls onReturn when the card itself is clicked", async () => {
+    const onReturn = vi.fn();
+    const { getByTestId } = render(
+      <AwayOverlay
+        awayKind="sleep"
+        awaySince={1_700_000_000_000}
+        now={1_700_000_000_000}
+        onReturn={onReturn}
+      />,
+    );
+
+    await userEvent.click(getByTestId("away-overlay"));
+    expect(onReturn).toHaveBeenCalledTimes(1);
+  });
+
+  it("calls onReturn exactly once when the labeled button is clicked", async () => {
+    const onReturn = vi.fn();
+    const { getByTestId } = render(
+      <AwayOverlay
+        awayKind="work"
+        awaySince={1_700_000_000_000}
+        now={1_700_000_000_000}
+        onReturn={onReturn}
+      />,
+    );
+
+    await userEvent.click(getByTestId("away-return-button"));
+    expect(onReturn).toHaveBeenCalledTimes(1);
+  });
+});

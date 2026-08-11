@@ -77,7 +77,16 @@ export function Vine({ timerState }: VineProps) {
         </button>
         <button
           className={styles.zoomButton}
-          onClick={() => setView(view === "day" ? "grid" : "day")}
+          onClick={() => {
+            if (view === "day") {
+              setView("grid");
+            } else {
+              // "Back to the day" always means TODAY, not whichever past
+              // day was last opened from the grid.
+              setSelectedDayIndex(0);
+              setView("day");
+            }
+          }}
           data-testid="vine-zoom-button"
         >
           <span className={styles.zoomLabel}>

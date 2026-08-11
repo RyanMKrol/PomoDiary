@@ -11,7 +11,11 @@ export interface BulletJotterProps {
 }
 
 export function BulletJotter({ timerState, updateDraft }: BulletJotterProps) {
-  const { mode = "running", draftBullets = [""], draftTag } = timerState;
+  const { mode = "running", draftTag } = timerState;
+  // The server's draft starts (and resets to) an empty array — always render
+  // at least one input, or the jotter vanishes the moment real state loads.
+  const rawBullets = timerState.draftBullets ?? [""];
+  const draftBullets = rawBullets.length > 0 ? rawBullets : [""];
 
   const isRecap = mode === "recap";
 

@@ -632,3 +632,32 @@ describe("GridView", () => {
     });
   });
 });
+
+describe("history growth", () => {
+  it("shows one row per day back to the earliest entry, beyond the 10-day floor", async () => {
+    const from = new Date();
+    from.setHours(10, 0, 0, 0);
+    from.setDate(from.getDate() - 14);
+    const to = new Date(from);
+    to.setHours(11, 0, 0, 0);
+    const oldEntry = {
+      id: "old-1",
+      from: from.toISOString(),
+      to: to.toISOString(),
+      tag: "Deep work",
+      feel: "Steady",
+      intent: "yes",
+      bullets: ["ancient history"],
+    };
+    global.fetch = vi.fn(() => mockFetchResponse([oldEntry])) as any;
+
+    render(
+      <GridView onSelectDay={() => {}} timerState={{ mode: "running" }} />,
+    );
+
+    // 14 days ago + today = 15 rows.
+    await screen.findByTestId("day-row-14");
+    const rows = await screen.findAllByTestId(/^day-row-/);
+    expect(rows).toHaveLength(15);
+  });
+});

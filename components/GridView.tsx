@@ -24,49 +24,67 @@ export function GridView({ onSelectDay, timerState }: GridViewProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  useEffect(() => {
+    // Fetch the FULL history (epoch to end of today): the grid shows every
+    // day since first use, not a fixed window. Refetches keep the previous
+    // rows on screen until fresh data lands (no blank flash).
+    let cancelled = false;
+    const fetchEntries = async () => {
+      try {
+        setError(null);
+        const to = new Date();
+        to.setHours(0, 0, 0, 0);
+        to.setDate(to.getDate() + 1);
+
+        const response = await fetch(`/api/entries?from=0&to=${to.getTime()}`);
+        if (!response.ok) {
+          throw new Error("Failed to fetch entries");
+        }
+        const data = await response.json();
+        if (!cancelled) setEntries(data);
+      } catch (err) {
+        if (!cancelled)
+          setError(err instanceof Error ? err.message : "Unknown error");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+
+    fetchEntries();
+    return () => {
+      cancelled = true;
+    };
+  }, [timerState.mode]);
+
   const days = useMemo(() => {
     // eslint-disable-next-line react-hooks/purity
     const now = Date.now();
     const today = new Date(now);
     today.setHours(0, 0, 0, 0);
 
+    // One row per day from today back to the earliest entry (minimum 10 rows),
+    // so the grid grows with use and quiet days still show at a glance.
+    let earliest = today.getTime();
+    for (const entry of entries) {
+      const t =
+        typeof entry.from === "string"
+          ? new Date(entry.from).getTime()
+          : entry.from.getTime();
+      const d = new Date(t);
+      d.setHours(0, 0, 0, 0);
+      if (d.getTime() < earliest) earliest = d.getTime();
+    }
+    const daysBack = Math.round((today.getTime() - earliest) / 86_400_000);
+    const totalDays = Math.max(10, daysBack + 1);
+
     const dayList = [];
-    for (let i = 0; i < 10; i++) {
+    for (let i = 0; i < totalDays; i++) {
       const dayStart = new Date(today);
       dayStart.setDate(dayStart.getDate() - i);
       dayList.push(dayStart);
     }
     return dayList;
-  }, []);
-
-  useEffect(() => {
-    const fetchEntries = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-
-        // Calculate bounds: 9 days ago through end of today
-        const from = days[9];
-        const to = new Date(days[0]);
-        to.setDate(to.getDate() + 1);
-
-        const response = await fetch(
-          `/api/entries?from=${from.getTime()}&to=${to.getTime()}`,
-        );
-        if (!response.ok) {
-          throw new Error("Failed to fetch entries");
-        }
-        const data = await response.json();
-        setEntries(data);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Unknown error");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchEntries();
-  }, [days, timerState.mode]);
+  }, [entries]);
 
   if (loading) {
     return <div className={styles.container} />;

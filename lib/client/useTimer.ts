@@ -22,6 +22,8 @@ const TICK_MS = 1000;
 export interface ClientState {
   mode: StatePayload["mode"];
   remainingSeconds: number;
+  /** Start of the running hour (ms), reconstructed from the payload; null unless running. */
+  hourStart: number | null;
   chimeFrom: number | null;
   chimeTo: number | null;
   draftBullets: string[];
@@ -123,9 +125,14 @@ export function toClientState(
   now: number,
   awayKind: AwayKind | null = null,
 ): ClientState {
+  const sessionMs = payload.settings.sessionMinutes * 60 * 1000;
   return {
     mode: payload.mode,
     remainingSeconds: payload.remainingSeconds,
+    hourStart:
+      payload.mode === "running"
+        ? now - sessionMs + payload.remainingSeconds * 1000
+        : null,
     chimeFrom: payload.chimeFrom,
     chimeTo: payload.chimeTo,
     draftBullets: payload.draftBullets,

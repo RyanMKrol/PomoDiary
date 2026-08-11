@@ -5,11 +5,13 @@ import {
   buildStatePayload,
   toEngineSettings,
   type ApiSettings,
+  type StatePayload,
 } from "../api/timer-state";
 import {
   applyDraftPatchLocally,
   createTimerClient,
   reconstructShadow,
+  toClientState,
   todayBoundsFor,
   type ClientState,
 } from "./useTimer";
@@ -317,5 +319,32 @@ describe("createTimerClient", () => {
     expect(getCalls.length).toBeGreaterThanOrEqual(2);
 
     client.stop();
+  });
+});
+
+describe("toClientState hourStart", () => {
+  const basePayload: StatePayload = {
+    mode: "running",
+    remainingSeconds: 1800,
+    chimeFrom: null,
+    chimeTo: null,
+    draftBullets: [],
+    draftTag: null,
+    draftFeel: null,
+    draftIntent: null,
+    phraseIdx: 0,
+    settings: SETTINGS,
+    count: 0,
+  };
+
+  it("reconstructs hourStart for a running hour (Dial's Since label)", () => {
+    const state = toClientState(basePayload, null, T0);
+    // 30 of 60 minutes remain, so the hour started 30 minutes ago.
+    expect(state.hourStart).toBe(T0 - 30 * 60 * 1000);
+  });
+
+  it("is null when not running", () => {
+    const paused = toClientState({ ...basePayload, mode: "paused" }, null, T0);
+    expect(paused.hourStart).toBeNull();
   });
 });
