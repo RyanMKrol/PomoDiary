@@ -786,7 +786,7 @@
     {
       "id": "T031",
       "title": "Clock-driven flow check: rollover, chime, recap, away backfill",
-      "status": "pending",
+      "status": "done",
       "dependsOn": [
         "T043"
       ],
