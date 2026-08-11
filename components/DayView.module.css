@@ -43,10 +43,18 @@
   gap: 11px;
 }
 
+.chipRowContainer {
+  display: flex;
+  gap: 11px;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
 .chipRow {
   display: flex;
   gap: 11px;
   flex-wrap: wrap;
+  flex: 1;
 }
 
 .tagChip {
@@ -150,4 +158,23 @@
   max-width: 450px;
   text-align: center;
   line-height: 1.55;
+}
+
+.editButton {
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  background: transparent;
+  color: rgba(32, 30, 29, 0.45);
+  border: none;
+  cursor: pointer;
+  transition: color 0.2s;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+.editButton:hover {
+  color: #ec3013;
 }

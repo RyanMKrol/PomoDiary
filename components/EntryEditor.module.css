@@ -1,0 +1,194 @@
+.editor {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px;
+  background: rgba(32, 30, 29, 0.02);
+  border: 1px solid rgba(32, 30, 29, 0.1);
+}
+
+.bulletList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.bulletRow {
+  display: flex;
+  gap: 11px;
+  align-items: center;
+}
+
+.marker {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  flex-shrink: 0;
+  transform: translateY(-2px);
+}
+
+.bulletInput {
+  flex: 1;
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: -0.012em;
+  border: none;
+  background: transparent;
+  outline: none;
+  padding: 0;
+  font-family: inherit;
+}
+
+.bulletInput::placeholder {
+  color: rgba(32, 30, 29, 0.35);
+}
+
+.tagChipsContainer {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.tagChip {
+  padding: 3px 9px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  border: 2px solid rgba(32, 30, 29, 0.2);
+  background: transparent;
+  color: rgba(32, 30, 29, 0.5);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.tagChip:hover {
+  border-color: rgba(32, 30, 29, 0.4);
+}
+
+.tagChipSelected {
+  color: white;
+  border-color: var(--color);
+  background: var(--color);
+}
+
+.feelChipsContainer {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.feelChip {
+  padding: 4px 12px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  border: 1px solid rgba(32, 30, 29, 0.25);
+  background: transparent;
+  color: rgba(32, 30, 29, 0.6);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.feelChip:hover {
+  border-color: rgba(32, 30, 29, 0.4);
+  background: rgba(32, 30, 29, 0.02);
+}
+
+.feelChipSelected {
+  background: rgba(32, 30, 29, 0.1);
+  border-color: rgba(32, 30, 29, 0.4);
+  color: rgba(32, 30, 29, 0.8);
+  font-weight: 700;
+}
+
+.intentChipsContainer {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.intentChip {
+  padding: 4px 12px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  border: 1px solid rgba(32, 30, 29, 0.25);
+  background: transparent;
+  color: rgba(32, 30, 29, 0.6);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.intentChip:hover {
+  border-color: rgba(32, 30, 29, 0.4);
+  background: rgba(32, 30, 29, 0.02);
+}
+
+.intentChipSelected {
+  background: rgba(32, 30, 29, 0.1);
+  border-color: rgba(32, 30, 29, 0.4);
+  color: rgba(32, 30, 29, 0.8);
+  font-weight: 700;
+}
+
+.error {
+  padding: 8px 12px;
+  font-size: 13px;
+  color: white;
+  background: #ec3013;
+  border-radius: 2px;
+}
+
+.actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.saveButton {
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  background: #ec3013;
+  color: white;
+  border: none;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.saveButton:hover:not(:disabled) {
+  background: #d62a0d;
+}
+
+.saveButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.cancelButton {
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  background: transparent;
+  color: rgba(32, 30, 29, 0.6);
+  border: 2px solid rgba(32, 30, 29, 0.3);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.cancelButton:hover:not(:disabled) {
+  border-color: rgba(32, 30, 29, 0.5);
+  color: rgba(32, 30, 29, 0.8);
+}
+
+.cancelButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
