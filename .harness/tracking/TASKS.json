@@ -468,7 +468,7 @@
     {
       "id": "T019",
       "title": "Control bar + recap bar",
-      "status": "pending",
+      "status": "done",
       "dependsOn": [
         "T015",
         "T041"
