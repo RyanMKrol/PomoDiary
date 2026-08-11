@@ -73,6 +73,22 @@
      scale about the viewBox origin and the pulse would fly off-corner. */
   transform-box: fill-box;
   transform-origin: center;
-  animation: ringPulse 3.2s cubic-bezier(0.2, 0.7, 0.3, 1) infinite;
+  /* Transparent at rest: if the animation ever doesn't run (reduced motion,
+     load order), the pulse disappears instead of sitting as a solid blob. */
+  opacity: 0;
+  /* Keyframes must live IN this module: CSS Modules scope animation names,
+     so referencing the global ringPulse silently resolves to nothing. */
+  animation: dialPulse 3.2s cubic-bezier(0.2, 0.7, 0.3, 1) infinite;
   pointer-events: none;
+}
+
+@keyframes dialPulse {
+  from {
+    opacity: 0.55;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(1.5);
+  }
 }
