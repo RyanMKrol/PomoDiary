@@ -32,6 +32,8 @@ export interface ClientState {
   settings: ApiSettings;
   hoursToday: number | undefined;
   awayElapsedSeconds: number | null;
+  awayKind: AwayKind | null;
+  awaySince: number | null;
 }
 
 export interface DraftPatch {
@@ -119,6 +121,7 @@ export function toClientState(
   payload: StatePayload,
   awayEnteredAt: number | null,
   now: number,
+  awayKind: AwayKind | null = null,
 ): ClientState {
   return {
     mode: payload.mode,
@@ -136,6 +139,8 @@ export function toClientState(
       payload.mode === "away" && awayEnteredAt !== null
         ? Math.floor((now - awayEnteredAt) / 1000)
         : null,
+    awayKind: payload.mode === "away" ? awayKind : null,
+    awaySince: payload.mode === "away" ? awayEnteredAt : null,
   };
 }
 
@@ -192,6 +197,7 @@ export function createTimerClient(fetchImpl: FetchLike = fetch): TimerClient {
   let current: ClientState | null = null;
   let shadow: ShadowState | null = null;
   let awayEnteredAt: number | null = null;
+  let awayKindEntered: AwayKind | null = null;
   let loading = true;
   let intervalId: ReturnType<typeof setInterval> | null = null;
 
@@ -230,10 +236,11 @@ export function createTimerClient(fetchImpl: FetchLike = fetch): TimerClient {
       if (prevMode !== "away") awayEnteredAt = now;
     } else {
       awayEnteredAt = null;
+      awayKindEntered = null;
     }
 
     shadow = reconstructShadow(payload, now);
-    current = toClientState(payload, awayEnteredAt, now);
+    current = toClientState(payload, awayEnteredAt, now, awayKindEntered);
     loading = false;
     notifyState();
 
@@ -418,6 +425,7 @@ export function createTimerClient(fetchImpl: FetchLike = fetch): TimerClient {
     },
 
     async awayStart(kind) {
+      awayKindEntered = kind;
       await flushDraft();
       await performAction({ type: "awayStart", kind });
     },
