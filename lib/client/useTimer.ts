@@ -332,17 +332,24 @@ export function createTimerClient(fetchImpl: FetchLike = fetch): TimerClient {
     }
 
     if (wasMode === "running") {
+      const prevRemaining = current.remainingSeconds;
       current = { ...current, remainingSeconds };
-      notifyState();
+      // Re-render only when a displayed value can change: the UI shows
+      // minute-level granularity, so per-second renders of the whole panel
+      // tree were pure idle CPU burn (Chrome flags tabs for less).
+      if (Math.ceil(remainingSeconds / 60) !== Math.ceil(prevRemaining / 60)) {
+        notifyState();
+      }
       return;
     }
 
     if (wasMode === "away" && awayEnteredAt !== null) {
-      current = {
-        ...current,
-        awayElapsedSeconds: Math.floor((now - awayEnteredAt) / 1000),
-      };
-      notifyState();
+      const prevElapsed = current.awayElapsedSeconds ?? 0;
+      const elapsed = Math.floor((now - awayEnteredAt) / 1000);
+      current = { ...current, awayElapsedSeconds: elapsed };
+      if (Math.floor(elapsed / 60) !== Math.floor(prevElapsed / 60)) {
+        notifyState();
+      }
     }
   }
 
