@@ -938,7 +938,7 @@
     {
       "id": "T037",
       "title": "Validation schemas and storage caps (re-attempt with scope covering vitest config)",
-      "status": "pending",
+      "status": "done",
       "dependsOn": [
         "T004"
       ],
