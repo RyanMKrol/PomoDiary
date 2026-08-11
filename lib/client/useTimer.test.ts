@@ -328,6 +328,8 @@ describe("toClientState hourStart", () => {
     remainingSeconds: 1800,
     chimeFrom: null,
     chimeTo: null,
+    awayKind: null,
+    awaySince: null,
     draftBullets: [],
     draftTag: null,
     draftFeel: null,
@@ -346,5 +348,34 @@ describe("toClientState hourStart", () => {
   it("is null when not running", () => {
     const paused = toClientState({ ...basePayload, mode: "paused" }, null, T0);
     expect(paused.hourStart).toBeNull();
+  });
+});
+
+describe("away state survives a reload", () => {
+  it("restores awayKind and awaySince from the server payload in a fresh client", async () => {
+    // First session goes to sleep...
+    const asleep = dispatch(
+      initialState(T0 - 10 * 60 * 1000),
+      toEngineSettings(SETTINGS),
+      { type: "awayStart", kind: "sleep" },
+      T0 - 5 * 60 * 1000,
+    ).state;
+    const server = createFakeServer(asleep, SETTINGS);
+
+    // ...and this is a brand-new client after a page reload: no in-tab memory.
+    const client = createTimerClient(server.fetchImpl);
+    client.start();
+    await flush();
+
+    const state = client.getState();
+    expect(state?.mode).toBe("away");
+    expect(state?.awayKind).toBe("sleep");
+    expect(state?.awaySince).toBe(T0 - 5 * 60 * 1000);
+    expect(state?.awayElapsedSeconds).toBe(5 * 60);
+
+    // And the user can actually leave away mode.
+    await client.awayReturn();
+    expect(client.getState()?.mode).toBe("running");
+    client.stop();
   });
 });

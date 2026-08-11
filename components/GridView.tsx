@@ -25,18 +25,14 @@ export function GridView({ onSelectDay, timerState }: GridViewProps) {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Fetch the FULL history (epoch to end of today): the grid shows every
-    // day since first use, not a fixed window. Refetches keep the previous
-    // rows on screen until fresh data lands (no blank flash).
+    // No range params = the user's full history: the grid shows every day
+    // since first use, not a fixed window. Refetches keep the previous rows
+    // on screen until fresh data lands (no blank flash).
     let cancelled = false;
     const fetchEntries = async () => {
       try {
         setError(null);
-        const to = new Date();
-        to.setHours(0, 0, 0, 0);
-        to.setDate(to.getDate() + 1);
-
-        const response = await fetch(`/api/entries?from=0&to=${to.getTime()}`);
+        const response = await fetch(`/api/entries`);
         if (!response.ok) {
           throw new Error("Failed to fetch entries");
         }

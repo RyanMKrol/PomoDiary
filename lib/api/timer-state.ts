@@ -29,6 +29,10 @@ export interface StatePayload {
   remainingSeconds: number;
   chimeFrom: number | null;
   chimeTo: number | null;
+  /** Which away kind is active and since when — REQUIRED for an away state to
+   *  survive a reload; without them the client can't render the away card. */
+  awayKind: AwayKind | null;
+  awaySince: number | null;
   draftBullets: string[];
   draftTag: string | null;
   draftFeel: string | null;
@@ -118,6 +122,8 @@ export function buildStatePayload(
     remainingSeconds: derived.remainingSeconds,
     chimeFrom: derived.state.chimeFrom,
     chimeTo: derived.state.chimeTo,
+    awayKind: derived.state.awayKind,
+    awaySince: derived.state.awaySince,
     draftBullets: derived.state.draftBullets,
     draftTag: derived.state.draftTag,
     draftFeel: derived.state.draftFeel,

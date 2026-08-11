@@ -89,8 +89,8 @@ export function reconstructShadow(
     pausedRemaining: null,
     chimeFrom: payload.chimeFrom,
     chimeTo: payload.chimeTo,
-    awayKind: null,
-    awaySince: null,
+    awayKind: payload.awayKind ?? null,
+    awaySince: payload.awaySince ?? null,
     draftBullets: payload.draftBullets,
     draftTag: payload.draftTag,
     draftFeel: payload.draftFeel,
@@ -126,6 +126,12 @@ export function toClientState(
   awayKind: AwayKind | null = null,
 ): ClientState {
   const sessionMs = payload.settings.sessionMinutes * 60 * 1000;
+  // The payload's own away fields win: they survive reloads, while the
+  // awayEnteredAt/awayKind arguments only exist in this tab's memory.
+  const awaySince =
+    payload.mode === "away" ? (payload.awaySince ?? awayEnteredAt) : null;
+  const resolvedAwayKind =
+    payload.mode === "away" ? (payload.awayKind ?? awayKind) : null;
   return {
     mode: payload.mode,
     remainingSeconds: payload.remainingSeconds,
@@ -143,11 +149,9 @@ export function toClientState(
     settings: payload.settings,
     hoursToday: payload.count,
     awayElapsedSeconds:
-      payload.mode === "away" && awayEnteredAt !== null
-        ? Math.floor((now - awayEnteredAt) / 1000)
-        : null,
-    awayKind: payload.mode === "away" ? awayKind : null,
-    awaySince: payload.mode === "away" ? awayEnteredAt : null,
+      awaySince !== null ? Math.floor((now - awaySince) / 1000) : null,
+    awayKind: resolvedAwayKind,
+    awaySince,
   };
 }
 
@@ -240,7 +244,10 @@ export function createTimerClient(fetchImpl: FetchLike = fetch): TimerClient {
     const prevMode = current?.mode ?? null;
 
     if (payload.mode === "away") {
-      if (prevMode !== "away") awayEnteredAt = now;
+      // Prefer the server's record (survives reloads); fall back to this
+      // tab's memory of when away mode was entered.
+      awayEnteredAt = payload.awaySince ?? awayEnteredAt ?? now;
+      if (payload.awayKind !== null) awayKindEntered = payload.awayKind;
     } else {
       awayEnteredAt = null;
       awayKindEntered = null;

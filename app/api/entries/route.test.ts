@@ -65,22 +65,31 @@ describe("GET /api/entries", () => {
     expect(res.headers.get("Retry-After")).toBe("42");
   });
 
-  it("returns 400 when 'from' parameter is missing", async () => {
+  it("returns 400 when 'from' parameter is missing but 'to' is given", async () => {
     const req = new NextRequest("http://localhost/api/entries?to=1000");
     const res = await GET(req);
 
     expect(res.status).toBe(400);
     const body = await res.json();
-    expect(body.error).toContain("required");
+    expect(body.error).toContain("Provide both");
   });
 
-  it("returns 400 when 'to' parameter is missing", async () => {
+  it("returns 400 when 'to' parameter is missing but 'from' is given", async () => {
     const req = new NextRequest("http://localhost/api/entries?from=0");
     const res = await GET(req);
 
     expect(res.status).toBe(400);
     const body = await res.json();
-    expect(body.error).toContain("required");
+    expect(body.error).toContain("Provide both");
+  });
+
+  it("returns the user's full history when no range is given (grid view)", async () => {
+    const req = new NextRequest("http://localhost/api/entries");
+    const res = await GET(req);
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(Array.isArray(body)).toBe(true);
   });
 
   it("returns 400 when 'from' is not a valid integer", async () => {
