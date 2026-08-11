@@ -1097,7 +1097,7 @@
     {
       "id": "T043",
       "title": "Visual harness: Playwright driver scripts with fixture APIs (re-attempt on the composed app)",
-      "status": "pending",
+      "status": "done",
       "dependsOn": [
         "T042"
       ],
