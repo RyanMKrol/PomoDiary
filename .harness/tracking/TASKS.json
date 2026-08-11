@@ -887,7 +887,7 @@
     {
       "id": "T035",
       "title": "Non-blocking dependency audit step in CI",
-      "status": "pending",
+      "status": "done",
       "dependsOn": [
         "T001"
       ],
