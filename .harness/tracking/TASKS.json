@@ -676,7 +676,7 @@
     {
       "id": "T027",
       "title": "Responsive stack below ~950px",
-      "status": "pending",
+      "status": "done",
       "dependsOn": [
         "T019",
         "T020",
