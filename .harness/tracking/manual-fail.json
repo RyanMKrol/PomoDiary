@@ -3,5 +3,10 @@
     "failed": true,
     "reason": "review-failed: superseded by T037 — re-attempt widens scope to vitest.config.ts and lib/db/entries.store.ts, the scope gap that blocked the original",
     "at": "2026-08-11T06:35:43Z"
+  },
+  "T014": {
+    "failed": true,
+    "reason": "review-failed: superseded by T038+T039 — split into RTL infra (tsconfig.json now in scope, the original blocker) and the app shell",
+    "at": "2026-08-11T06:35:46Z"
   }
 }
