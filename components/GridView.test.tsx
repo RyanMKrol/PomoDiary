@@ -363,6 +363,96 @@ describe("GridView", () => {
     });
   });
 
+  describe("accessibility", () => {
+    it("gives each cell role=img with an aria-label matching its title", async () => {
+      const now = Date.now();
+      const today = new Date(now);
+      today.setHours(10, 0, 0, 0);
+
+      const entry: Entry = {
+        id: "test-1",
+        userId: "user",
+        from: today,
+        to: new Date(today.getTime() + 3600000),
+        tag: "Comms",
+        feel: "Charged",
+        intent: "yes",
+        bullets: ["Inbox, mostly"],
+        createdAt: new Date(),
+      };
+
+      global.fetch = vi.fn(() => mockFetchResponse([entry])) as any;
+      render(
+        <GridView onSelectDay={() => {}} timerState={{ mode: "running" }} />,
+      );
+
+      const cell = await screen.findByTestId("cell-0-10");
+      expect(cell).toHaveAttribute("role", "img");
+      expect(cell).toHaveAttribute(
+        "aria-label",
+        "10:00 · Comms — Inbox, mostly",
+      );
+    });
+
+    it("gives each day row an aria-label with the day and hours logged", async () => {
+      const now = Date.now();
+      const today = new Date(now);
+      today.setHours(0, 0, 0, 0);
+
+      const entries: Entry[] = Array.from({ length: 3 }, (_, i) => ({
+        id: `entry-${i}`,
+        userId: "user",
+        from: new Date(today.getTime() + i * 3600000),
+        to: new Date(today.getTime() + (i + 1) * 3600000),
+        tag: "Deep work",
+        feel: "Charged",
+        intent: "yes",
+        bullets: [`Entry ${i}`],
+        createdAt: new Date(),
+      }));
+
+      global.fetch = vi.fn(() => mockFetchResponse(entries)) as any;
+      render(
+        <GridView onSelectDay={() => {}} timerState={{ mode: "running" }} />,
+      );
+
+      const row = await screen.findByTestId("day-row-0");
+      expect(row).toHaveAttribute(
+        "aria-label",
+        "Today, 3 hours logged. Open day.",
+      );
+    });
+
+    it("uses singular 'hour' when only one is logged", async () => {
+      const now = Date.now();
+      const today = new Date(now);
+      today.setHours(0, 0, 0, 0);
+
+      const entry: Entry = {
+        id: "entry-1",
+        userId: "user",
+        from: today,
+        to: new Date(today.getTime() + 3600000),
+        tag: "Deep work",
+        feel: "Charged",
+        intent: "yes",
+        bullets: ["Entry"],
+        createdAt: new Date(),
+      };
+
+      global.fetch = vi.fn(() => mockFetchResponse([entry])) as any;
+      render(
+        <GridView onSelectDay={() => {}} timerState={{ mode: "running" }} />,
+      );
+
+      const row = await screen.findByTestId("day-row-0");
+      expect(row).toHaveAttribute(
+        "aria-label",
+        "Today, 1 hour logged. Open day.",
+      );
+    });
+  });
+
   describe("row click interaction", () => {
     it("calls onSelectDay with correct index when row clicked", async () => {
       const user = userEvent.setup();

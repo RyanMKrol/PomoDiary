@@ -14,10 +14,13 @@ export function ChimeOverlay({
   chimeTo,
   onAcknowledge,
 }: ChimeOverlayProps) {
+  const label = `Time's ripe. ${fmtChimeRange(chimeFrom, chimeTo)}. Click anywhere to account for the hour.`;
+
   return (
     <button
       className={styles.overlay}
       onClick={onAcknowledge}
+      aria-label={label}
       data-testid="chime-overlay"
     >
       <div className={styles.pulseBox}>

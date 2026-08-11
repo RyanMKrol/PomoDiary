@@ -138,19 +138,22 @@ export function GridView({ onSelectDay, timerState }: GridViewProps) {
           const hourMap = entriesByHour.get(key) || new Map();
           const dayEntries = entriesByDay.get(key) || [];
           const count = dayEntries.length;
+          const dayLabel = fmtGridDayLabel(day.getTime(), dayIndex);
+          const rowLabel = `${dayLabel}, ${count} hour${count === 1 ? "" : "s"} logged. Open day.`;
 
           return (
             <button
               key={dayIndex}
               className={styles.dayRow}
               onClick={() => handleRowClick(dayIndex)}
+              aria-label={rowLabel}
               data-testid={`day-row-${dayIndex}`}
             >
               <div
                 className={styles.dayLabel}
                 data-testid={`day-label-${dayIndex}`}
               >
-                {fmtGridDayLabel(day.getTime(), dayIndex)}
+                {dayLabel}
               </div>
               <div className={styles.hourCells}>
                 {Array.from({ length: 24 }, (_, hour) => {
@@ -168,6 +171,8 @@ export function GridView({ onSelectDay, timerState }: GridViewProps) {
                       className={styles.cell}
                       style={{ backgroundColor: cellColor }}
                       title={cellTitle}
+                      role="img"
+                      aria-label={cellTitle}
                       data-testid={`cell-${dayIndex}-${hour}`}
                       data-hour={hour}
                       data-has-entry={!!entry}

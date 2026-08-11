@@ -417,6 +417,45 @@ describe("BulletJotter", () => {
     });
   });
 
+  describe("accessibility", () => {
+    it("gives every bullet input an accessible name", () => {
+      const updateDraft = vi.fn();
+      const timerState: Partial<UseTimerResult> = {
+        mode: "running",
+        draftBullets: ["first", "second"],
+        draftTag: null,
+      };
+
+      render(
+        <BulletJotter timerState={timerState} updateDraft={updateDraft} />,
+      );
+
+      expect(
+        screen.getByLabelText("Bullet 1 for this hour"),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByLabelText("Bullet 2 for this hour"),
+      ).toBeInTheDocument();
+    });
+
+    it("groups the bullet list under a labelled group", () => {
+      const updateDraft = vi.fn();
+      const timerState: Partial<UseTimerResult> = {
+        mode: "running",
+        draftBullets: [""],
+        draftTag: null,
+      };
+
+      render(
+        <BulletJotter timerState={timerState} updateDraft={updateDraft} />,
+      );
+
+      expect(
+        screen.getByRole("group", { name: "Bullets for this hour" }),
+      ).toBeInTheDocument();
+    });
+  });
+
   describe("marker color follows active hue", () => {
     it("uses inferred tag color when no explicit tag", () => {
       const updateDraft = vi.fn();

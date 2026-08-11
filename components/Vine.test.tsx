@@ -1,7 +1,13 @@
 // @vitest-environment jsdom
 import "@testing-library/jest-dom/vitest";
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, cleanup } from "@testing-library/react";
+import {
+  render,
+  screen,
+  cleanup,
+  fireEvent,
+  waitFor,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Vine } from "./Vine";
 
@@ -198,6 +204,45 @@ describe("Vine", () => {
       // Panel should now be visible
       expect(screen.getByTestId("settings-panel")).toBeInTheDocument();
       expect(screen.getByTestId("session-minutes-input")).toBeInTheDocument();
+    });
+  });
+
+  describe("focus management", () => {
+    it("returns focus to the settings button when the panel closes", async () => {
+      const user = userEvent.setup();
+      const settings = {
+        sessionMinutes: 60,
+        soundOn: true,
+        chimeVolume: 0.5,
+        pauseAfterLog: false,
+      };
+      const updateSettings = vi.fn();
+
+      render(
+        <Vine
+          timerState={{
+            mode: "running",
+            settings,
+            updateSettings,
+          }}
+        />,
+      );
+
+      await screen.findByText("Nothing in the basket yet.");
+      const settingsButton = screen.getByTestId("vine-settings-button");
+      await user.click(settingsButton);
+      expect(screen.getByTestId("settings-panel")).toBeInTheDocument();
+
+      const outside = document.createElement("div");
+      document.body.appendChild(outside);
+      fireEvent.mouseDown(outside);
+
+      await waitFor(() => {
+        expect(screen.queryByTestId("settings-panel")).not.toBeInTheDocument();
+      });
+      expect(settingsButton).toHaveFocus();
+
+      document.body.removeChild(outside);
     });
   });
 

@@ -103,6 +103,23 @@ describe("ChimeOverlay", () => {
     expect(onAcknowledge).toHaveBeenCalledOnce();
   });
 
+  it("has an aria-label matching its full copy", () => {
+    const onAcknowledge = vi.fn();
+    render(
+      <ChimeOverlay
+        chimeFrom={aug10_214pm}
+        chimeTo={aug10_314pm}
+        onAcknowledge={onAcknowledge}
+      />,
+    );
+
+    const overlay = screen.getByTestId("chime-overlay");
+    expect(overlay).toHaveAttribute(
+      "aria-label",
+      "Time's ripe. 2:14 PM – 3:14 PM. Click anywhere to account for the hour.",
+    );
+  });
+
   it("renders pulse animation box", () => {
     const onAcknowledge = vi.fn();
     const { container } = render(

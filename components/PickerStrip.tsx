@@ -78,7 +78,7 @@ export function PickerStrip({ timerState, updateDraft }: PickerStripProps) {
       </div>
 
       {/* Tag chips */}
-      <div className={styles.chipsContainer}>
+      <div className={styles.chipsContainer} role="group" aria-label="Call it">
         {TAGS.map((tag) => {
           const chipClass = getChipClass(tag.label);
           const isSelected = draftTag === tag.label;
@@ -91,6 +91,7 @@ export function PickerStrip({ timerState, updateDraft }: PickerStripProps) {
               data-testid={`chip-${tag.label}`}
               className={`${styles.chip} ${chipClass}`}
               onClick={() => handleChipClick(tag.label)}
+              aria-pressed={isSelected}
               style={
                 isSelected
                   ? { backgroundColor: color, borderColor: color }
@@ -107,7 +108,11 @@ export function PickerStrip({ timerState, updateDraft }: PickerStripProps) {
 
       {/* Feeling row */}
       <div className={styles.segmentedRow}>
-        <div className={styles.segmentedContainer}>
+        <div
+          className={styles.segmentedContainer}
+          role="group"
+          aria-label="Feeling"
+        >
           {FEELS.map((feel) => (
             <button
               key={feel}
@@ -115,6 +120,7 @@ export function PickerStrip({ timerState, updateDraft }: PickerStripProps) {
                 draftFeel === feel ? styles.feelSelected : ""
               }`}
               onClick={() => handleFeelClick(feel)}
+              aria-pressed={draftFeel === feel}
               data-testid={`feel-${feel}`}
             >
               {feel}
@@ -125,7 +131,11 @@ export function PickerStrip({ timerState, updateDraft }: PickerStripProps) {
 
       {/* Intent row */}
       <div className={styles.segmentedRow}>
-        <div className={styles.segmentedContainer}>
+        <div
+          className={styles.segmentedContainer}
+          role="group"
+          aria-label="Intent"
+        >
           {Object.entries(INTENTS).map(([key, label]) => (
             <button
               key={key}
@@ -133,6 +143,7 @@ export function PickerStrip({ timerState, updateDraft }: PickerStripProps) {
                 draftIntent === key ? styles.intentSelected : ""
               }`}
               onClick={() => handleIntentClick(key)}
+              aria-pressed={draftIntent === key}
               data-testid={`intent-${key}`}
             >
               {label}

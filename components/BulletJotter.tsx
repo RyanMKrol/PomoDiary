@@ -87,7 +87,11 @@ export function BulletJotter({ timerState, updateDraft }: BulletJotterProps) {
         <div className={styles.headingTitle}>{jotHeading}</div>
         <div className={styles.headingHint}>{jotHint}</div>
       </div>
-      <div className={styles.bulletList}>
+      <div
+        className={styles.bulletList}
+        role="group"
+        aria-label="Bullets for this hour"
+      >
         {draftBullets.map((bullet, index) => (
           <div key={index} className={styles.bulletRow}>
             <span
@@ -105,6 +109,7 @@ export function BulletJotter({ timerState, updateDraft }: BulletJotterProps) {
               onKeyDown={(e) => handleBulletKeyDown(index, e)}
               placeholder={getPlaceholder(index)}
               className={styles.input}
+              aria-label={`Bullet ${index + 1} for this hour`}
               data-testid={`bullet-input-${index}`}
             />
           </div>

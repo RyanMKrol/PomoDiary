@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useRef, useState, useMemo } from "react";
 import { fmtDayTitle } from "@/lib/time";
 import { DayView } from "./DayView";
 import { GridView } from "./GridView";
@@ -24,6 +24,12 @@ export function Vine({ timerState }: VineProps) {
   const [view, setView] = useState<"day" | "grid">("day");
   const [selectedDayIndex, setSelectedDayIndex] = useState(0);
   const [settingsPanelOpen, setSettingsPanelOpen] = useState(false);
+  const settingsButtonRef = useRef<HTMLButtonElement>(null);
+
+  const closeSettingsPanel = () => {
+    setSettingsPanelOpen(false);
+    settingsButtonRef.current?.focus();
+  };
 
   const dayInfo = useMemo(() => {
     // eslint-disable-next-line react-hooks/purity
@@ -62,6 +68,7 @@ export function Vine({ timerState }: VineProps) {
         <div className={styles.viewTitle}>{viewTitle}</div>
         <div className={styles.spacer} />
         <button
+          ref={settingsButtonRef}
           className={styles.settingsButton}
           onClick={() => setSettingsPanelOpen(!settingsPanelOpen)}
           data-testid="vine-settings-button"
@@ -92,7 +99,7 @@ export function Vine({ timerState }: VineProps) {
               }
             }
             updateSettings={timerState.updateSettings}
-            onClose={() => setSettingsPanelOpen(false)}
+            onClose={closeSettingsPanel}
             isOpen={settingsPanelOpen}
           />
         )}

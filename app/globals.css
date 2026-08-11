@@ -87,6 +87,30 @@ button {
   color: rgba(32, 30, 29, 0.32);
 }
 
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Suppress the breathe / ringPulse / riseIn / wipeIn / barGrow / popDot
+   keyframe animations for users who asked for reduced motion, without
+   touching ordinary hover/focus transitions. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
+
 /* Keyframe animations */
 @keyframes breathe {
   0%,
