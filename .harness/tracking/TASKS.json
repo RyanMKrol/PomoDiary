@@ -545,7 +545,7 @@
     {
       "id": "T022",
       "title": "Chime notifications: page title/favicon + system Notification",
-      "status": "blocked",
+      "status": "failed",
       "dependsOn": [
         "T015"
       ],
@@ -991,7 +991,7 @@
     {
       "id": "T039",
       "title": "App shell: header and two-panel layout with RTL tests",
-      "status": "blocked",
+      "status": "failed",
       "dependsOn": [
         "T038"
       ],
