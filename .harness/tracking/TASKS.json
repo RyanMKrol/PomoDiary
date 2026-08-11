@@ -493,7 +493,7 @@
     {
       "id": "T020",
       "title": "Chime + away overlays",
-      "status": "pending",
+      "status": "done",
       "dependsOn": [
         "T015",
         "T041"
