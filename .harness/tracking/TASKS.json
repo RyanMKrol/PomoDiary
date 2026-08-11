@@ -394,7 +394,7 @@
       "status": "pending",
       "dependsOn": [
         "T015",
-        "T039"
+        "T041"
       ],
       "gate": null,
       "tags": [
@@ -419,7 +419,7 @@
       "status": "pending",
       "dependsOn": [
         "T015",
-        "T039"
+        "T041"
       ],
       "gate": null,
       "tags": [
@@ -446,7 +446,7 @@
       "dependsOn": [
         "T004",
         "T015",
-        "T039"
+        "T041"
       ],
       "gate": null,
       "tags": [
@@ -471,7 +471,7 @@
       "status": "pending",
       "dependsOn": [
         "T015",
-        "T039"
+        "T041"
       ],
       "gate": null,
       "tags": [
@@ -496,7 +496,7 @@
       "status": "pending",
       "dependsOn": [
         "T015",
-        "T039"
+        "T041"
       ],
       "gate": null,
       "tags": [
@@ -577,7 +577,7 @@
       "dependsOn": [
         "T005",
         "T013",
-        "T039"
+        "T041"
       ],
       "gate": null,
       "tags": [
@@ -1008,6 +1008,60 @@
       "verify": [],
       "expectsTest": true,
       "spec": ".harness/tasks/T039.md",
+      "facets": {
+        "layer": "frontend",
+        "workType": "component",
+        "risk": []
+      }
+    },
+    {
+      "id": "T040",
+      "title": "Chime notifications: page title/favicon + system Notification (re-attempt)",
+      "status": "pending",
+      "dependsOn": [],
+      "gate": null,
+      "tags": [
+        "notifications"
+      ],
+      "scope": [
+        "lib/notify/**",
+        "lib/client/**",
+        "components/**",
+        "app/**",
+        "public/**"
+      ],
+      "design": null,
+      "verify": [],
+      "expectsTest": true,
+      "spec": ".harness/tasks/T040.md",
+      "facets": {
+        "layer": "timer",
+        "workType": "feature",
+        "risk": []
+      }
+    },
+    {
+      "id": "T041",
+      "title": "App shell: header and two-panel layout with RTL tests (third attempt, scope widened to test config)",
+      "status": "pending",
+      "dependsOn": [
+        "T038"
+      ],
+      "gate": null,
+      "tags": [
+        "ui"
+      ],
+      "scope": [
+        "app/**",
+        "components/**",
+        "package.json",
+        "vitest.config.ts",
+        "tsconfig.json"
+      ],
+      "design": null,
+      "verify": [],
+      "expectsTest": true,
+      "spec": ".harness/tasks/T041.md",
       "facets": {
         "layer": "frontend",
         "workType": "component",
