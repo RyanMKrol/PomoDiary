@@ -624,7 +624,7 @@
     {
       "id": "T025",
       "title": "Settings panel (session length, sound, volume, pause-after-log)",
-      "status": "pending",
+      "status": "done",
       "dependsOn": [
         "T012",
         "T019"
