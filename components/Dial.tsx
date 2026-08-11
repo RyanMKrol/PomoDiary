@@ -108,17 +108,27 @@ export function Dial({ timerState }: DialProps = {}) {
           className={styles.svg}
           style={{ overflow: "visible" }}
         >
-          {/* Radial "hour in progress" pulse, swelling out from the centre.
-              Uses the design system's ringPulse keyframes; running mode only. */}
+          {/* "Hour in progress" breathing glow: a soft accent-gradient warmth
+              behind the ring, inhaling and exhaling. Running mode only —
+              the owner picked this over sonar/ripple/heartbeat candidates. */}
           {isRunning && (
-            <circle
-              cx="100"
-              cy="100"
-              r="58"
-              fill="#ec3013"
-              className={styles.pulse}
-              data-testid="dial-pulse"
-            />
+            <>
+              <defs>
+                <radialGradient id="dialGlowGrad">
+                  <stop offset="0%" stopColor="#ec3013" stopOpacity="0.9" />
+                  <stop offset="70%" stopColor="#ec3013" stopOpacity="0.25" />
+                  <stop offset="100%" stopColor="#ec3013" stopOpacity="0" />
+                </radialGradient>
+              </defs>
+              <circle
+                cx="100"
+                cy="100"
+                r="60"
+                fill="url(#dialGlowGrad)"
+                className={styles.pulse}
+                data-testid="dial-pulse"
+              />
+            </>
           )}
 
           {/* Track circle */}
