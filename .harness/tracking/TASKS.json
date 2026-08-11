@@ -391,7 +391,7 @@
     {
       "id": "T016",
       "title": "Dial + phrase block (ring fills, breathe, status copy)",
-      "status": "pending",
+      "status": "done",
       "dependsOn": [
         "T015",
         "T041"
