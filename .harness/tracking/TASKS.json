@@ -1043,7 +1043,7 @@
     {
       "id": "T041",
       "title": "App shell: header and two-panel layout with RTL tests (third attempt, scope widened to test config)",
-      "status": "pending",
+      "status": "done",
       "dependsOn": [
         "T038"
       ],
