@@ -190,7 +190,7 @@
     {
       "id": "T009",
       "title": "Validation schemas and storage caps",
-      "status": "blocked",
+      "status": "failed",
       "dependsOn": [
         "T004"
       ],
@@ -335,7 +335,7 @@
     {
       "id": "T014",
       "title": "App shell: header, two-panel layout, RTL test setup",
-      "status": "blocked",
+      "status": "failed",
       "dependsOn": [
         "T003",
         "T011"
