@@ -1,0 +1,75 @@
+.vineContainer {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow: hidden;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  height: 54px;
+  border-bottom: 2px solid rgba(32, 30, 29, 0.4);
+  padding-left: 26px;
+  gap: 12px;
+}
+
+.headerLeft {
+  display: flex;
+  align-items: center;
+}
+
+.label {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--text);
+}
+
+.viewTitle {
+  font-size: 19px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--text);
+}
+
+.spacer {
+  flex: 1;
+}
+
+.zoomButton {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 100%;
+  padding: 0 22px;
+  border: none;
+  border-left: 2px solid rgba(32, 30, 29, 0.4);
+  background: transparent;
+  cursor: pointer;
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease;
+}
+
+.zoomButton:hover {
+  background-color: var(--surface);
+}
+
+.zoomLabel {
+  white-space: nowrap;
+}
+
+.zoomSquare {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border: 1px solid currentColor;
+  flex-shrink: 0;
+}
