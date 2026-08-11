@@ -734,7 +734,7 @@
     {
       "id": "T029",
       "title": "Visual harness: Playwright driver scripts with fixture APIs",
-      "status": "blocked",
+      "status": "failed",
       "dependsOn": [
         "T011",
         "T020",
