@@ -34,7 +34,10 @@ export function DayView({ dayStart, dayEnd, timerState }: DayViewProps) {
     // (undefined -> running) for no new data.
     const prev = prevRef.current;
     prevRef.current = { dayStart, dayEnd, mode: timerState.mode };
-    if (prev !== null) {
+    // A failed fetch must never be sticky: while in the error state, ANY
+    // effect trigger retries — otherwise one flaky request blanks the vine
+    // until the day changes.
+    if (prev !== null && error === null) {
       const dayChanged = prev.dayStart !== dayStart || prev.dayEnd !== dayEnd;
       const leftEntryCreatingMode =
         prev.mode !== timerState.mode &&
@@ -71,6 +74,10 @@ export function DayView({ dayStart, dayEnd, timerState }: DayViewProps) {
     return () => {
       cancelled = true;
     };
+    // `error` is deliberately NOT a dependency: it gates the early return so
+    // day/mode changes retry a failed fetch, but including it would make the
+    // effect refire on its own setError and hammer a persistently-down API.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dayStart, dayEnd, timerState.mode]);
 
   if (loading) {

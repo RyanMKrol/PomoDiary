@@ -32,7 +32,9 @@ export function GridView({ onSelectDay, timerState }: GridViewProps) {
     // which doubled the network calls at page load.
     const prevMode = prevModeRef.current;
     prevModeRef.current = timerState.mode;
-    if (prevMode !== null) {
+    // Retry on any trigger while in the error state — a failed fetch must
+    // never be sticky (see DayView).
+    if (prevMode !== null && error === null) {
       const leftEntryCreatingMode =
         prevMode !== timerState.mode &&
         (prevMode === "recap" || prevMode === "away" || prevMode === "chime");
@@ -64,6 +66,8 @@ export function GridView({ onSelectDay, timerState }: GridViewProps) {
     return () => {
       cancelled = true;
     };
+    // `error` deliberately excluded — see DayView's matching comment.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [timerState.mode]);
 
   const days = useMemo(() => {
