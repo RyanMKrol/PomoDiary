@@ -10,6 +10,11 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { SettingsPanel } from "./SettingsPanel";
+
+const signOutMock = vi.fn();
+vi.mock("@clerk/nextjs", () => ({
+  useClerk: () => ({ signOut: signOutMock }),
+}));
 import type { ApiSettings } from "@/lib/api/timer-state";
 
 describe("SettingsPanel", () => {
@@ -414,6 +419,37 @@ describe("SettingsPanel", () => {
 
       const selectedButton = screen.getByTestId("sound-on-button");
       expect(selectedButton.className).toMatch(/segmentSelected/);
+    });
+  });
+
+  describe("log out", () => {
+    it("renders a Log out button in the Account section", () => {
+      render(
+        <SettingsPanel
+          settings={defaultSettings}
+          updateSettings={vi.fn()}
+          onClose={vi.fn()}
+          isOpen={true}
+        />,
+      );
+      expect(screen.getByText("Account")).toBeInTheDocument();
+      expect(screen.getByTestId("settings-logout-button")).toHaveTextContent(
+        "Log out",
+      );
+    });
+
+    it("signs out via Clerk with a redirect to sign-in", async () => {
+      const user = userEvent.setup();
+      render(
+        <SettingsPanel
+          settings={defaultSettings}
+          updateSettings={vi.fn()}
+          onClose={vi.fn()}
+          isOpen={true}
+        />,
+      );
+      await user.click(screen.getByTestId("settings-logout-button"));
+      expect(signOutMock).toHaveBeenCalledWith({ redirectUrl: "/sign-in" });
     });
   });
 });

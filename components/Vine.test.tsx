@@ -12,6 +12,10 @@ import userEvent from "@testing-library/user-event";
 import { Vine } from "./Vine";
 import { invalidateEntriesCache } from "@/lib/client/entriesCache";
 
+vi.mock("@clerk/nextjs", () => ({
+  useClerk: () => ({ signOut: vi.fn() }),
+}));
+
 function mockFetchResponse(data: unknown) {
   return Promise.resolve({
     ok: true,
