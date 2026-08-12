@@ -2,6 +2,7 @@
 
 import { fmtClock } from "@/lib/time";
 import { PHRASES } from "@/lib/domain";
+import { HOUR_MS } from "@/lib/timer/engine";
 import { type UseTimerResult } from "@/lib/client/useTimer";
 import styles from "./Dial.module.css";
 
@@ -52,14 +53,25 @@ export function Dial({ timerState }: DialProps) {
   const isRunning = mode === "running";
   const isPaused = mode === "paused";
 
-  // The arc drains over the real block, which can be shorter than an hour
-  // when the block started mid-hour (blocks end on the wall-clock :00).
-  const blockSeconds =
-    hourStart != null && blockEnd != null
-      ? Math.max(1, Math.round((blockEnd - hourStart) / 1000))
-      : SESSION_SECONDS;
-  const remaining = remainingSeconds ?? blockSeconds;
-  const dashOffset = 552.92 * (remaining / blockSeconds);
+  // While running, the ring mirrors the wall clock's minute hand: filled in
+  // proportion to how far through the CURRENT HOUR we are (not through the
+  // block), so it always lines up with the actual time and completes exactly
+  // at :00 — a block started at 12:21 shows 21 minutes already swept.
+  // blockEnd is always an epoch-hour multiple, so current wall time is
+  // blockEnd - remaining and its offset into the hour falls out by modulo.
+  let dashOffset: number;
+  if (isRunning && hourStart != null && blockEnd != null) {
+    const wallNow = blockEnd - (remainingSeconds ?? 0) * 1000;
+    const secondsIntoHour = Math.floor(
+      (((wallNow % HOUR_MS) + HOUR_MS) % HOUR_MS) / 1000,
+    );
+    dashOffset = 552.92 * (1 - secondsIntoHour / SESSION_SECONDS);
+  } else {
+    // Chime/recap show a completed ring (remaining 0); the pause hold sits
+    // behind its overlay so its value is never visible.
+    dashOffset =
+      552.92 * ((remainingSeconds ?? SESSION_SECONDS) / SESSION_SECONDS);
+  }
 
   // The progress arc is core branding — always accent red, never tag-colored.
   const arcColor = "#ec3013";

@@ -119,8 +119,10 @@ describe("Dial", () => {
   });
 
   describe("dashoffset calculations", () => {
-    it("calculates dashoffset as 552.92 at 100% remaining of a full-hour block", () => {
-      const hourStart = Date.now();
+    it("calculates dashoffset as 552.92 at the top of the hour (nothing swept)", () => {
+      // blockEnd is always an epoch-hour multiple in real payloads; the
+      // clock-face arc math depends on it.
+      const hourStart = Math.floor(Date.now() / 3_600_000) * 3_600_000;
       const { container } = render(
         <Dial
           timerState={{
@@ -149,8 +151,10 @@ describe("Dial", () => {
       expect(offset).toBeCloseTo(552.92, 1);
     });
 
-    it("calculates dashoffset as 276.46 at 50% remaining of a full-hour block", () => {
-      const hourStart = Date.now() - 1800 * 1000;
+    it("calculates dashoffset as 276.46 at half past the hour", () => {
+      // Aligned full-hour block with 30 minutes remaining: wall time is
+      // half past, so half the ring is swept.
+      const hourStart = Math.floor(Date.now() / 3_600_000) * 3_600_000;
       const { container } = render(
         <Dial
           timerState={{
@@ -179,18 +183,21 @@ describe("Dial", () => {
       expect(offset).toBeCloseTo(276.46, 1);
     });
 
-    it("scales the arc by the real block length when the block is shorter than an hour", () => {
-      // A block picked up mid-hour: 30 minutes long, 15 minutes remain,
-      // so the arc sits at half of the block, not a quarter of an hour.
-      const hourStart = Date.now() - 900 * 1000;
+    it("mirrors the wall clock for a block started mid-hour (21 past shows 21 min swept)", () => {
+      // Block began at :21 and ends on the next :00. The ring must read
+      // like a clock face: 21 minutes already filled, NOT an empty ring.
+      const boundary = Math.floor(Date.now() / 3_600_000) * 3_600_000;
+      const hourStart = boundary + 21 * 60 * 1000;
+      const blockEnd = boundary + 3_600_000;
+      const remainingSeconds = 39 * 60;
       const { container } = render(
         <Dial
           timerState={{
             loading: false,
             mode: "running",
-            remainingSeconds: 900,
+            remainingSeconds,
             hourStart,
-            blockEnd: hourStart + 1800 * 1000,
+            blockEnd,
             settings: {
               soundOn: true,
               chimeVolume: 0.8,
@@ -208,7 +215,8 @@ describe("Dial", () => {
       const offset = parseFloat(
         progressArc.getAttribute("stroke-dashoffset") || "0",
       );
-      expect(offset).toBeCloseTo(276.46, 1);
+      // 21 of 60 minutes swept: offset = 552.92 * (1 - 1260/3600)
+      expect(offset).toBeCloseTo(552.92 * (1 - 1260 / 3600), 1);
     });
 
     it("falls back to a 3600s block when hourStart/blockEnd are null", () => {
