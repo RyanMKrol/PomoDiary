@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createTestDb, type TestDb } from "../../../lib/db/test-db";
-import { blockEndFor } from "../../../lib/timer/engine";
+import { blockEndFor, floorHourBoundary } from "../../../lib/timer/engine";
 
 vi.mock("@clerk/nextjs/server", () => ({
   auth: vi.fn(),
@@ -77,16 +77,23 @@ describe("GET /api/state", () => {
     expect(body.mode).toBe("running");
     expect(body.draftBullets).toEqual([]);
     expect(body.phraseIdx).toBe(0);
-    // A fresh block starts at "now" and ends at the next wall-clock hour.
-    expect(body.hourStart).toBeGreaterThanOrEqual(before);
-    expect(body.hourStart).toBeLessThanOrEqual(after);
+    // A fresh block snaps to the wall-clock hour bucket enclosing "now"
+    // and ends at the next :00.
+    expect(body.hourStart).toBeGreaterThanOrEqual(floorHourBoundary(before));
+    expect(body.hourStart).toBeLessThanOrEqual(floorHourBoundary(after));
+    expect(body.hourStart).toBe(floorHourBoundary(body.hourStart));
     expect(body.blockEnd).toBe(blockEndFor(body.hourStart));
-    expect(body.remainingSeconds).toBe(
-      Math.floor((body.blockEnd - body.hourStart) / 1000),
+    // remainingSeconds counts down from "now" (somewhere inside the bucket),
+    // not from the floored hourStart.
+    expect(body.remainingSeconds).toBeLessThanOrEqual(
+      Math.floor((body.blockEnd - before) / 1000),
+    );
+    expect(body.remainingSeconds).toBeGreaterThanOrEqual(
+      Math.floor((body.blockEnd - after) / 1000),
     );
     expect(body.settings).toEqual({
       soundOn: true,
-      chimeVolume: 0.8,
+      chimeVolume: 1,
       pauseAfterLog: false,
       recentAwayLabels: [],
     });

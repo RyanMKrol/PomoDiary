@@ -28,7 +28,7 @@ export function PickerStrip({ timerState, updateDraft }: PickerStripProps) {
     draftIntent = null,
   } = timerState;
 
-  // Accordion: the "Call it" header toggles the pickers; short viewports
+  // Accordion: the "Call the hour" header toggles the pickers; short viewports
   // start (and re-)collapse them automatically, and a manual toggle holds
   // until the viewport crosses the threshold again.
   const [collapsed, setCollapsed] = useState(false);
@@ -98,7 +98,7 @@ export function PickerStrip({ timerState, updateDraft }: PickerStripProps) {
         aria-expanded={!isCollapsed}
         data-testid="picker-strip-toggle"
       >
-        <div className={styles.label}>Call it</div>
+        <div className={styles.label}>Call the hour</div>
         {showInference && (
           <div
             className={styles.inferenceHint}
@@ -113,10 +113,13 @@ export function PickerStrip({ timerState, updateDraft }: PickerStripProps) {
       {isCollapsed ? null : (
         <>
           {/* Tag chips */}
+          <div className={`${styles.miniLabel} ${styles.sentenceLabel}`}>
+            It was mostly…
+          </div>
           <div
             className={styles.chipsContainer}
             role="group"
-            aria-label="Call it"
+            aria-label="It was mostly…"
           >
             {TAGS.map((tag) => {
               const chipClass = getChipClass(tag.label);
@@ -146,7 +149,9 @@ export function PickerStrip({ timerState, updateDraft }: PickerStripProps) {
           </div>
 
           {/* Feeling row */}
-          <div className={styles.miniLabel}>How it felt</div>
+          <div className={`${styles.miniLabel} ${styles.sentenceLabel}`}>
+            It felt…
+          </div>
           <div className={styles.segmentedRow}>
             <div
               className={styles.segmentedContainer}
@@ -170,7 +175,9 @@ export function PickerStrip({ timerState, updateDraft }: PickerStripProps) {
           </div>
 
           {/* Intent row */}
-          <div className={styles.miniLabel}>Meant to?</div>
+          <div className={`${styles.miniLabel} ${styles.sentenceLabel}`}>
+            And it was…
+          </div>
           <div className={styles.segmentedRow}>
             <div
               className={styles.segmentedContainer}

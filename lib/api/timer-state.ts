@@ -111,7 +111,7 @@ export async function loadSettings(
   const result = await getSettings(db, userId);
   return {
     soundOn: result.soundOn ?? true,
-    chimeVolume: result.chimeVolume ?? 0.8,
+    chimeVolume: result.chimeVolume ?? 1,
     pauseAfterLog: result.pauseAfterLog ?? false,
     recentAwayLabels: result.recentAwayLabels ?? [],
   };

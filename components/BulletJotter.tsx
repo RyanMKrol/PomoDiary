@@ -11,10 +11,15 @@ export interface BulletJotterProps {
 
 export function BulletJotter({ timerState, updateDraft }: BulletJotterProps) {
   const { mode = "running" } = timerState;
-  // The server's draft starts (and resets to) an empty array — always render
-  // at least one input, or the jotter vanishes the moment real state loads.
-  const rawBullets = timerState.draftBullets ?? [""];
-  const draftBullets = rawBullets.length > 0 ? rawBullets : [""];
+  // The composer invariant: the last row is ALWAYS an empty input inviting
+  // the next bullet. A seeded draft (an away bullet, an unaccounted-gap
+  // note) used to fill the only row, leaving no visible way to add more —
+  // you had to know to click in and press Enter.
+  const rawBullets = timerState.draftBullets ?? [];
+  const draftBullets =
+    rawBullets.length > 0 && rawBullets[rawBullets.length - 1].trim() === ""
+      ? rawBullets
+      : [...rawBullets, ""];
 
   const isRecap = mode === "recap";
 
@@ -78,9 +83,11 @@ export function BulletJotter({ timerState, updateDraft }: BulletJotterProps) {
   const jotHint = isRecap ? "Tidy it up" : "Enter for the next bullet";
 
   const getPlaceholder = (index: number): string => {
-    if (index === 0) {
+    // The composer (always the last, always empty) carries the invitation;
+    // filled rows above it need no prompt.
+    if (index === draftBullets.length - 1) {
       return isRecap
-        ? "Wrote the pricing page copy"
+        ? "Anything else worth noting?"
         : "Jot it down while it's fresh…";
     }
     return "…";

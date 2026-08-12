@@ -22,7 +22,7 @@ describe("EntryEditor", () => {
     userId: "user-1",
     from: new Date("2024-01-15T10:00:00Z"),
     to: new Date("2024-01-15T11:00:00Z"),
-    tag: "Deep work",
+    tag: "Learning",
     feel: "Charged",
     intent: "yes",
     bullets: ["Wrote the report", "Fixed a bug"],
@@ -50,10 +50,10 @@ describe("EntryEditor", () => {
         <EntryEditor entry={mockEntry} onSave={onSave} onCancel={onCancel} />,
       );
 
-      const deepWorkChip = screen.getByTestId(
-        "editor-chip-test-1-Deep work",
+      const learningChip = screen.getByTestId(
+        "editor-chip-test-1-Learning",
       ) as HTMLButtonElement;
-      expect(deepWorkChip.className).toContain("tagChipSelected");
+      expect(learningChip.className).toContain("tagChipSelected");
     });
 
     it("renders feel chips with current selection", () => {
@@ -175,8 +175,8 @@ describe("EntryEditor", () => {
       await user.click(adminChip);
 
       expect(adminChip.className).toContain("tagChipSelected");
-      const deepWorkChip = screen.getByTestId("editor-chip-test-1-Deep work");
-      expect(deepWorkChip.className).not.toContain("tagChipSelected");
+      const learningChip = screen.getByTestId("editor-chip-test-1-Learning");
+      expect(learningChip.className).not.toContain("tagChipSelected");
     });
   });
 
@@ -200,6 +200,25 @@ describe("EntryEditor", () => {
   });
 
   describe("intent editing", () => {
+    it("renders all three intent chips with their display labels", () => {
+      const onSave = vi.fn();
+      const onCancel = vi.fn();
+
+      render(
+        <EntryEditor entry={mockEntry} onSave={onSave} onCancel={onCancel} />,
+      );
+
+      expect(screen.getByTestId("editor-intent-test-1-yes")).toHaveTextContent(
+        "Planned",
+      );
+      expect(screen.getByTestId("editor-intent-test-1-no")).toHaveTextContent(
+        "Unplanned",
+      );
+      expect(
+        screen.getByTestId("editor-intent-test-1-mixed"),
+      ).toHaveTextContent("Mixed");
+    });
+
     it("changes intent on chip click", async () => {
       const user = userEvent.setup();
       const onSave = vi.fn();
@@ -213,6 +232,23 @@ describe("EntryEditor", () => {
       await user.click(noChip);
 
       expect(noChip.className).toContain("intentChipSelected");
+      const yesChip = screen.getByTestId("editor-intent-test-1-yes");
+      expect(yesChip.className).not.toContain("intentChipSelected");
+    });
+
+    it("selects the mixed intent on chip click", async () => {
+      const user = userEvent.setup();
+      const onSave = vi.fn();
+      const onCancel = vi.fn();
+
+      render(
+        <EntryEditor entry={mockEntry} onSave={onSave} onCancel={onCancel} />,
+      );
+
+      const mixedChip = screen.getByTestId("editor-intent-test-1-mixed");
+      await user.click(mixedChip);
+
+      expect(mixedChip.className).toContain("intentChipSelected");
       const yesChip = screen.getByTestId("editor-intent-test-1-yes");
       expect(yesChip.className).not.toContain("intentChipSelected");
     });

@@ -9,7 +9,7 @@ import {
   invalidateEntriesCache,
 } from "@/lib/client/entriesCache";
 import { fmtClock, gridCellTitle, gridCellEmptyTitle } from "@/lib/time";
-import { tagColor } from "@/lib/domain";
+import { tagColor, INTENTS } from "@/lib/domain";
 import { EntryEditor } from "./EntryEditor";
 import styles from "./DayView.module.css";
 
@@ -249,7 +249,9 @@ export function DayView({ dayStart, dayEnd, timerState }: DayViewProps) {
                           {entry.feel}
                         </div>
                       )}
-                      {(entry.intent === "yes" || entry.intent === "no") && (
+                      {(entry.intent === "yes" ||
+                        entry.intent === "no" ||
+                        entry.intent === "mixed") && (
                         <div
                           className={`${styles.intentChip} ${
                             entry.intent === "no" ? styles.intentNo : ""
@@ -261,7 +263,7 @@ export function DayView({ dayStart, dayEnd, timerState }: DayViewProps) {
                           }
                           data-testid={`chip-intent-${entry.id}`}
                         >
-                          {entry.intent === "yes" ? "Intentional" : "Got away"}
+                          {INTENTS[entry.intent]}
                         </div>
                       )}
                     </div>

@@ -101,6 +101,13 @@
   margin: 10px 0 6px;
 }
 
+/* Sentence-builder labels ("It was mostly…") read as quiet lowercase-ish
+   fragments — same weight and colour as .miniLabel, without the shout. */
+.sentenceLabel {
+  text-transform: none;
+  letter-spacing: 0.04em;
+}
+
 .segmentedRow {
   display: grid;
   grid-template-columns: minmax(0, 1fr);

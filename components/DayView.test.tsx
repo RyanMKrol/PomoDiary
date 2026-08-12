@@ -75,7 +75,7 @@ describe("DayView", () => {
       userId: "user-1",
       from: new Date("2024-01-15T10:00:00Z"),
       to: new Date("2024-01-15T11:00:00Z"),
-      tag: "Deep work",
+      tag: "Learning",
       feel: "Charged",
       intent: "yes",
       bullets: ["Wrote the report", "Fixed a bug"],
@@ -113,7 +113,7 @@ describe("DayView", () => {
         userId: "user-1",
         from: new Date("2024-01-15T11:00:00Z"),
         to: new Date("2024-01-15T12:00:00Z"),
-        tag: "Meetings",
+        tag: "Social",
         feel: "Charged",
         intent: "yes",
         bullets: ["Team sync"],
@@ -171,9 +171,9 @@ describe("DayView", () => {
       const feelChip = await screen.findByTestId("chip-feel-test-1");
       const intentChip = await screen.findByTestId("chip-intent-test-1");
 
-      expect(tagChip).toHaveTextContent("Deep work");
+      expect(tagChip).toHaveTextContent("Learning");
       expect(feelChip).toHaveTextContent("Charged");
-      expect(intentChip).toHaveTextContent("Intentional");
+      expect(intentChip).toHaveTextContent("Planned");
     });
 
     it("renders intent chip with correct variants", async () => {
@@ -187,6 +187,11 @@ describe("DayView", () => {
         id: "intent-no",
         intent: "no",
       };
+      const intentMixed: Entry = {
+        ...mockEntry,
+        id: "intent-mixed",
+        intent: "mixed",
+      };
       const intentNull: Entry = {
         ...mockEntry,
         id: "intent-null",
@@ -196,7 +201,8 @@ describe("DayView", () => {
       global.fetch = vi.fn(() =>
         Promise.resolve({
           ok: true,
-          json: () => Promise.resolve([intentYes, intentNo, intentNull]),
+          json: () =>
+            Promise.resolve([intentYes, intentNo, intentMixed, intentNull]),
         }),
       ) as any;
 
@@ -206,10 +212,16 @@ describe("DayView", () => {
 
       const yesChip = await screen.findByTestId("chip-intent-intent-yes");
       const noChip = await screen.findByTestId("chip-intent-intent-no");
+      const mixedChip = await screen.findByTestId("chip-intent-intent-mixed");
 
-      expect(yesChip).toHaveTextContent("Intentional");
-      expect(noChip).toHaveTextContent("Got away");
+      expect(yesChip).toHaveTextContent("Planned");
+      expect(noChip).toHaveTextContent("Unplanned");
       expect(noChip).toHaveStyle({
+        backgroundColor: "oklch(0.42 0.012 40)",
+      });
+      // Mixed gets the neutral chip style, not the darker "no" treatment.
+      expect(mixedChip).toHaveTextContent("Mixed");
+      expect(mixedChip).not.toHaveStyle({
         backgroundColor: "oklch(0.42 0.012 40)",
       });
       // No intent picked = no chip at all (no placeholder).
@@ -377,7 +389,7 @@ describe("DayView", () => {
       userId: "user-1",
       from: new Date("2024-01-15T10:00:00Z"),
       to: new Date("2024-01-15T11:00:00Z"),
-      tag: "Deep work",
+      tag: "Learning",
       feel: "Charged",
       intent: "yes",
       bullets: ["Cached work"],
@@ -500,7 +512,7 @@ describe("DayView", () => {
       userId: "user-1",
       from: new Date("2024-01-15T10:00:00Z"),
       to: new Date("2024-01-15T11:00:00Z"),
-      tag: "Deep work",
+      tag: "Learning",
       feel: "Charged",
       intent: "yes",
       bullets: ["Wrote the report"],
@@ -512,7 +524,7 @@ describe("DayView", () => {
       userId: "user-1",
       from: new Date("2024-01-15T11:00:00Z"),
       to: new Date("2024-01-15T12:00:00Z"),
-      tag: "Meetings",
+      tag: "Social",
       feel: "Steady",
       intent: "no",
       bullets: ["Team sync"],
@@ -668,7 +680,7 @@ describe("DayView", () => {
 
       // Verify tag is unchanged
       expect(screen.getByTestId("chip-tag-test-1")).toHaveTextContent(
-        "Deep work",
+        "Learning",
       );
     });
 
@@ -765,7 +777,7 @@ describe("React StrictMode", () => {
       userId: "user-1",
       from: new Date(100),
       to: new Date(900),
-      tag: "Deep work",
+      tag: "Learning",
       feel: "Steady",
       intent: "yes",
       bullets: ["strict mode entry"],

@@ -87,6 +87,32 @@ export function blockEndFor(start: number): number {
   return boundary - start < MIN_BLOCK_MS ? boundary + HOUR_MS : boundary;
 }
 
+/** The :00 that begins the hour containing t. */
+export function floorHourBoundary(t: number): number {
+  return t - (t % HOUR_MS);
+}
+
+/** Gaps at a bucket's start shorter than this stay silent — a couple of
+ *  minutes dwelling at the recap is part of the hour's story, not a hole
+ *  worth a bullet. */
+export const GAP_BULLET_MIN_MS = 5 * 60_000;
+
+/** Every entry is a wall-clock hour bucket, so a fresh block snaps its
+ *  start back to the enclosing :00. The stretch between the boundary and
+ *  the actual start is accounted inside the bucket with a bullet when it
+ *  is long enough to matter (a wait-for-me hold, a long recap dwell). */
+function bucketStart(now: number): { hourStart: number; gapBullets: string[] } {
+  const hourStart = floorHourBoundary(now);
+  const gapMs = now - hourStart;
+  return {
+    hourStart,
+    gapBullets:
+      gapMs >= GAP_BULLET_MIN_MS
+        ? [`(first ${Math.round(gapMs / 60_000)} min unaccounted)`]
+        : [],
+  };
+}
+
 function runningRemainingSeconds(hourStart: number, now: number): number {
   return Math.max(0, Math.floor((blockEndFor(hourStart) - now) / 1000));
 }
@@ -94,7 +120,7 @@ function runningRemainingSeconds(hourStart: number, now: number): number {
 export function initialState(now: number): TimerState {
   return {
     mode: "running",
-    hourStart: now,
+    hourStart: floorHourBoundary(now),
     chimeFrom: null,
     chimeTo: null,
     awayKind: null,
@@ -139,17 +165,19 @@ function resetForNextBlock(
   now: number,
   mode: "running" | "paused",
   phraseIdx: number,
+  seedBullets: string[] = [],
 ): TimerState {
+  const { hourStart, gapBullets } = bucketStart(now);
   return {
     ...state,
     mode,
-    hourStart: now,
+    hourStart,
     chimeFrom: null,
     chimeTo: null,
     awayKind: null,
     awaySince: null,
     awayLabel: null,
-    draftBullets: [],
+    draftBullets: seedBullets.length > 0 ? seedBullets : gapBullets,
     draftTag: null,
     draftFeel: null,
     draftIntent: null,
@@ -186,10 +214,17 @@ export function dispatch(
   switch (action.type) {
     case "resume": {
       if (state.mode !== "paused") return NOOP(state);
-      // The paused hold sits between blocks, so resuming starts a fresh
-      // block from now to the next hour boundary — nothing to rebase.
+      // The paused hold sits between blocks; resuming starts the hour
+      // bucket that contains now, with the held stretch accounted as an
+      // unaccounted-gap bullet when it is long enough to matter.
+      const { hourStart, gapBullets } = bucketStart(now);
       return {
-        state: { ...state, mode: "running", hourStart: now },
+        state: {
+          ...state,
+          mode: "running",
+          hourStart,
+          draftBullets: gapBullets,
+        },
         entriesToInsert: [],
       };
     }
@@ -289,9 +324,10 @@ export function dispatch(
 
       // The away crossed the interrupted block's end, so that hour is over:
       // auto-push it spanning the WHOLE block, carrying the pre-away drafts
-      // plus the away bullet. Whole aligned hours follow with just the away
-      // bullet; the final block ends at the return time (a trailing sliver
-      // under a minute is dropped, matching the running-block floor).
+      // plus the away bullet. WHOLE aligned hours follow with just the away
+      // bullet. The trailing partial hour is NOT its own entry: entries are
+      // hour buckets, so it seeds the resumed hour's draft as an away
+      // bullet with its duration instead (no more 8:00-8:01 slivers).
       const blocks: EntryToInsert[] = [
         {
           from: state.hourStart,
@@ -302,9 +338,10 @@ export function dispatch(
           bullets: [...keptDraft, cfg.bullet],
         },
       ];
+      const lastBoundary = floorHourBoundary(now);
       let from = interruptedBlockEnd;
-      while (now - from >= MIN_BLOCK_MS && blocks.length < MAX_AWAY_BLOCKS) {
-        const to = Math.min(blockEndFor(from), now);
+      while (from < lastBoundary && blocks.length < MAX_AWAY_BLOCKS) {
+        const to = Math.min(blockEndFor(from), lastBoundary);
         blocks.push({
           from,
           to,
@@ -317,11 +354,17 @@ export function dispatch(
       }
       blocks.reverse();
 
+      const trailingMs = now - lastBoundary;
+      const seedBullets =
+        trailingMs >= MIN_BLOCK_MS
+          ? [`${cfg.bullet} (${Math.round(trailingMs / 60_000)} min)`]
+          : [];
       const nextState = resetForNextBlock(
         state,
         now,
         "running",
         state.phraseIdx,
+        seedBullets,
       );
       return { state: nextState, entriesToInsert: blocks };
     }

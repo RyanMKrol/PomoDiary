@@ -32,7 +32,7 @@ export interface UserSettingsInput {
 
 const DEFAULT_SETTINGS = {
   soundOn: true,
-  chimeVolume: 0.8,
+  chimeVolume: 1,
   pauseAfterLog: false,
   recentAwayLabels: [] as string[],
 };

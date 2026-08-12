@@ -31,6 +31,7 @@ export const feelSchema = z.enum(FEEL_LABELS);
 export const intentSchema = z.union([
   z.literal("yes"),
   z.literal("no"),
+  z.literal("mixed"),
   z.null(),
 ]);
 

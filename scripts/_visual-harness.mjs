@@ -156,42 +156,42 @@ export function seedEntries(now) {
   });
 
   return [
-    mk(2, "Comms", "Scattered", "no", [
-      "Slack backlog — 40 min of it",
-      "Two calls I didn't need to be on",
-      "Started the pricing doc, got three lines in",
+    mk(2, "Admin", "Scattered", "no", [
+      "Expenses backlog — 40 min of it",
+      "Two forms I didn't need to fill in twice",
+      "Started the insurance renewal, got three fields in",
     ]),
-    mk(3, "Deep work", "Charged", "yes", [
-      "Rewrote the onboarding empty states",
-      "Finally cut the second modal",
+    mk(3, "Chores", "Charged", "yes", [
+      "Cleaned the kitchen properly",
+      "Finally cleared the airing cupboard",
     ]),
-    mk(4, "Meetings", "Drained", "yes", [
-      "Roadmap review",
-      "Follow-up with Priya about Q3 scope",
+    mk(4, "Social", "Drained", "yes", [
+      "Lunch with Priya",
+      "Caught up with Sam about the trip",
     ]),
-    mk(5, "Deep work", "Steady", "yes", [
-      "Bug triage — closed 6",
-      "Paired with Sam on the auth redirect",
+    mk(5, "Learning", "Steady", "yes", [
+      "Worked through the OKLCH tutorial",
+      "Read two chapters of the stats book",
     ]),
     mk(6, "Errands", "Steady", "yes", [
       "Walked to the post office",
       "Picked up the parcel",
     ]),
-    mk(28, "Deep work", "Charged", "yes", ["Drafted the Q3 plan"]),
-    mk(29, "Meetings", "Steady", "yes", ["Design review"]),
-    mk(30, "Comms", "Scattered", "no", ["Inbox, mostly"]),
+    mk(28, "Leisure", "Charged", "yes", ["Finished the novel"]),
+    mk(29, "Social", "Steady", "yes", ["Called Mum"]),
+    mk(30, "Admin", "Scattered", "no", ["Paperwork, mostly"]),
     mk(31, "At work", "—", "yes", ["At work"]),
     mk(32, "At work", "—", "yes", ["At work"]),
     mk(40, "Asleep", "—", "yes", ["Asleep"]),
     mk(41, "Asleep", "—", "yes", ["Asleep"]),
     mk(42, "Asleep", "—", "yes", ["Asleep"]),
     // Days 5-8 ago, so the grid shows a real multi-day spread (day 3 stays empty).
-    mk(5 * 24 + 2, "Deep work", "Steady", "yes", ["Shipped the settings page"]),
+    mk(5 * 24 + 2, "Chores", "Steady", "yes", ["Sorted the garage shelves"]),
     mk(6 * 24 + 5, "Rest", "Steady", "yes", ["Sat in the garden"]),
     mk(7 * 24 + 3, "Learning", "Charged", "yes", [
       "Read the OKLCH paper properly",
     ]),
-    mk(8 * 24 + 4, "Lost it", "Drained", "no", ["Scrolling. No excuse."]),
+    mk(8 * 24 + 4, "Leisure", "Drained", "no", ["Scrolling. No excuse."]),
   ];
 }
 
@@ -227,7 +227,7 @@ export const EMPTY_DAY_INDEX = 3;
 export function createFixtureState(now) {
   return {
     mode: "running",
-    hourStart: now,
+    hourStart: floorHour(now),
     chimeFrom: null,
     chimeTo: null,
     awayKind: null,
@@ -238,7 +238,7 @@ export function createFixtureState(now) {
     draftFeel: null,
     draftIntent: null,
     phraseIdx: 0,
-    remainingSeconds: secondsToBlockEnd(now, now),
+    remainingSeconds: secondsToBlockEnd(floorHour(now), now),
     settings: seedSettings(),
     entries: seedEntries(now),
     lastBatchId: null,
@@ -283,13 +283,20 @@ function resetDraft(state) {
   state.chimeTo = null;
 }
 
+/** Fresh blocks snap to the enclosing wall-clock :00 (mirrors the engine's
+ *  floorHourBoundary) so the dial's payload stays consistent with the real
+ *  hour-bucket semantics. */
+function floorHour(t) {
+  return t - (t % HOUR_MS);
+}
+
 function applyAction(state, action, now) {
   switch (action.type) {
     case "resume":
       if (state.mode === "paused") {
         state.mode = "running";
-        state.hourStart = now;
-        state.remainingSeconds = secondsToBlockEnd(now, now);
+        state.hourStart = floorHour(now);
+        state.remainingSeconds = secondsToBlockEnd(state.hourStart, now);
       }
       break;
     case "ringNow":
@@ -308,21 +315,21 @@ function applyAction(state, action, now) {
         id: `logged-${state.entries.length}`,
         from: new Date(state.chimeFrom ?? now - HOUR_MS).toISOString(),
         to: new Date(state.chimeTo ?? now).toISOString(),
-        tag: action.payload?.tag || "Deep work",
+        tag: action.payload?.tag || "Unfiled",
         feel: action.payload?.feel || "Steady",
         intent: action.payload?.intent ?? null,
         bullets: bullets.length ? bullets : ["(nothing written down)"],
       });
       state.mode = state.settings.pauseAfterLog ? "paused" : "running";
-      state.hourStart = now;
-      state.remainingSeconds = secondsToBlockEnd(now, now);
+      state.hourStart = floorHour(now);
+      state.remainingSeconds = secondsToBlockEnd(state.hourStart, now);
       resetDraft(state);
       break;
     }
     case "skip":
       state.mode = state.settings.pauseAfterLog ? "paused" : "running";
-      state.hourStart = now;
-      state.remainingSeconds = secondsToBlockEnd(now, now);
+      state.hourStart = floorHour(now);
+      state.remainingSeconds = secondsToBlockEnd(state.hourStart, now);
       resetDraft(state);
       break;
     case "awayStart":
@@ -337,8 +344,8 @@ function applyAction(state, action, now) {
       state.awayKind = null;
       state.awaySince = null;
       state.awayLabel = null;
-      state.hourStart = now;
-      state.remainingSeconds = secondsToBlockEnd(now, now);
+      state.hourStart = floorHour(now);
+      state.remainingSeconds = secondsToBlockEnd(state.hourStart, now);
       break;
     case "draftUpdate": {
       const patch = action.patch ?? {};
@@ -459,16 +466,16 @@ export const FLOWS = [
     async run(page) {
       await page
         .getByTestId("bullet-input-0")
-        .fill("Wrote the pricing page copy");
+        .fill("Folded the laundry, cooked the curry");
     },
   },
   {
     name: "02-picked-tag",
     description: "A tag chip picked explicitly in the picker strip.",
     covers: ["PickerStrip"],
-    waitFor: '[data-testid="chip-Deep work"][aria-pressed="true"]',
+    waitFor: '[data-testid="chip-Leisure"][aria-pressed="true"]',
     async run(page) {
-      await page.getByTestId("chip-Deep work").click();
+      await page.getByTestId("chip-Leisure").click();
     },
   },
   {

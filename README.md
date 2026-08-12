@@ -14,10 +14,11 @@ classic 25/5 pomodoro timer; the point is the hourly check-in and the record it 
 - Every click and keystroke applies instantly: changes queue in a local write-ahead log and a
   background sync persists them in batches every few seconds, so the UI never waits on the
   database and unsaved work survives a closed tab.
-- A ring fills on screen as the hour passes; you can jot bullets at any point during the hour.
-- Blocks line up with the clock on the wall: whenever a block starts, it runs until the next
-  :00, so a block begun at 10:27 chimes at 11:00 and is logged as 10:27 to 11:00.
-- When the block chimes you tidy the bullets up, tag the hour, and log it; the next one starts.
+- A ring sweeps like a minute hand as the hour passes; you can jot bullets at any point.
+- Every entry is a wall-clock hour bucket, :00 to :00. Whatever happens partway through an
+  hour is accounted inside its bucket: a gym trip becomes a bullet with its duration, a long
+  hold shows up as unaccounted minutes. No ragged 8:01-to-9:00 slivers.
+- When the hour chimes you tidy the bullets up, tag the hour, and log it; the next one starts.
 - Sleep, Work and Gym away modes back-fill absences as hour blocks, also aligned to the
   clock. A custom option lets you type anything else ("Travelling", say) and remembers your
   recent labels as quick picks.

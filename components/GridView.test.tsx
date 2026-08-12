@@ -27,7 +27,7 @@ function entryDaysAgo(n: number) {
     id: `anchor-${n}`,
     from: from.toISOString(),
     to: to.toISOString(),
-    tag: "Deep work",
+    tag: "Learning",
     feel: "Steady",
     intent: "yes",
     bullets: ["anchor"],
@@ -166,7 +166,7 @@ describe("GridView", () => {
           userId: "user",
           from: today,
           to: new Date(today.getTime() + 3600000),
-          tag: "Deep work",
+          tag: "Admin",
           feel: "Charged",
           intent: "yes",
           bullets: ["Entry 1"],
@@ -177,7 +177,7 @@ describe("GridView", () => {
           userId: "user",
           from: new Date(today.getTime() + 3600000),
           to: new Date(today.getTime() + 7200000),
-          tag: "Comms",
+          tag: "Learning",
           feel: "Steady",
           intent: "yes",
           bullets: ["Entry 2"],
@@ -188,7 +188,7 @@ describe("GridView", () => {
           userId: "user",
           from: new Date(today.getTime() + 7200000),
           to: new Date(today.getTime() + 10800000),
-          tag: "Meetings",
+          tag: "Errands",
           feel: "Scattered",
           intent: "no",
           bullets: ["Entry 3"],
@@ -217,7 +217,7 @@ describe("GridView", () => {
         userId: "user",
         from: today,
         to: new Date(today.getTime() + 3600000),
-        tag: "Deep work",
+        tag: "Leisure",
         feel: "Charged",
         intent: "yes",
         bullets: ["Test entry"],
@@ -231,7 +231,7 @@ describe("GridView", () => {
 
       const cell = await screen.findByTestId("cell-0-10");
       expect(cell).toHaveStyle({
-        backgroundColor: "oklch(0.58 0.20 30)",
+        backgroundColor: "oklch(0.58 0.15 305)",
       });
     });
 
@@ -245,7 +245,7 @@ describe("GridView", () => {
         userId: "user",
         from: today,
         to: new Date(today.getTime() + 3600000),
-        tag: "Comms",
+        tag: "Admin",
         feel: "Charged",
         intent: "yes",
         bullets: ["Inbox, mostly"],
@@ -258,7 +258,7 @@ describe("GridView", () => {
       );
 
       const cell = await screen.findByTestId("cell-0-10");
-      expect(cell).toHaveAttribute("title", "10:00 · Comms — Inbox, mostly");
+      expect(cell).toHaveAttribute("title", "10:00 · Admin — Inbox, mostly");
     });
 
     it("sets correct title for empty cell", async () => {
@@ -295,7 +295,7 @@ describe("GridView", () => {
         userId: "user",
         from: today,
         to: new Date(today.getTime() + 1800000),
-        tag: "Deep work",
+        tag: "Leisure",
         feel: "Charged",
         intent: "yes",
         bullets: ["First"],
@@ -307,7 +307,7 @@ describe("GridView", () => {
         userId: "user",
         from: today,
         to: new Date(today.getTime() + 1800000),
-        tag: "Comms",
+        tag: "Social",
         feel: "Steady",
         intent: "yes",
         bullets: ["Second"],
@@ -320,16 +320,16 @@ describe("GridView", () => {
       );
 
       const cell = await screen.findByTestId("cell-0-10");
-      // Should have Deep work color, not Comms
+      // Should have Leisure color, not Social
       expect(cell).toHaveStyle({
-        backgroundColor: "oklch(0.58 0.20 30)",
+        backgroundColor: "oklch(0.58 0.15 305)",
       });
-      expect(cell).toHaveAttribute("title", "10:00 · Deep work — First");
+      expect(cell).toHaveAttribute("title", "10:00 · Leisure — First");
     });
   });
 
   describe("legend", () => {
-    it("renders exactly 12 legend items", async () => {
+    it("renders exactly 11 legend items", async () => {
       global.fetch = vi.fn(() => mockFetchResponse([])) as any;
       render(
         <GridView onSelectDay={() => {}} timerState={{ mode: "running" }} />,
@@ -338,33 +338,28 @@ describe("GridView", () => {
       // Wait for content to load
       await screen.findByTestId("day-row-0");
 
-      // Check all 12 legend items are present: 8 tags, 3 fixed away
+      // Check all 11 legend items are present: 7 tags, 3 fixed away
       // kinds, and the custom-away swatch.
-      const deepWorkLabel = screen.getByText("Deep work");
-      const adminLabel = screen.getByText("Admin");
-      const meetingsLabel = screen.getByText("Meetings");
-      const commsLabel = screen.getByText("Comms");
-      const learningLabel = screen.getByText("Learning");
-      const errandsLabel = screen.getByText("Errands");
-      const restLabel = screen.getByText("Rest");
-      const lostItLabel = screen.getByText("Lost it");
-      const asleepLabel = screen.getByText("Asleep");
-      const atWorkLabel = screen.getByText("At work");
-      const atTheGymLabel = screen.getByText("At the gym");
-      const awayCustomLabel = screen.getByText("Away (custom)");
+      for (const label of [
+        "Admin",
+        "Learning",
+        "Errands",
+        "Rest",
+        "Leisure",
+        "Social",
+        "Chores",
+        "Asleep",
+        "At work",
+        "At the gym",
+        "Away (custom)",
+      ]) {
+        expect(screen.getByText(label)).toBeInTheDocument();
+      }
 
-      expect(deepWorkLabel).toBeInTheDocument();
-      expect(adminLabel).toBeInTheDocument();
-      expect(meetingsLabel).toBeInTheDocument();
-      expect(commsLabel).toBeInTheDocument();
-      expect(learningLabel).toBeInTheDocument();
-      expect(errandsLabel).toBeInTheDocument();
-      expect(restLabel).toBeInTheDocument();
-      expect(lostItLabel).toBeInTheDocument();
-      expect(asleepLabel).toBeInTheDocument();
-      expect(atWorkLabel).toBeInTheDocument();
-      expect(atTheGymLabel).toBeInTheDocument();
-      expect(awayCustomLabel).toBeInTheDocument();
+      // The retired work-hours vocabulary is gone from the legend.
+      for (const removed of ["Deep work", "Meetings", "Comms", "Lost it"]) {
+        expect(screen.queryByText(removed)).not.toBeInTheDocument();
+      }
     });
 
     it("does not render Unfiled in legend", async () => {
@@ -403,7 +398,7 @@ describe("GridView", () => {
         userId: "user",
         from: today,
         to: new Date(today.getTime() + 3600000),
-        tag: "Comms",
+        tag: "Admin",
         feel: "Charged",
         intent: "yes",
         bullets: ["Inbox, mostly"],
@@ -419,7 +414,7 @@ describe("GridView", () => {
       expect(cell).toHaveAttribute("role", "img");
       expect(cell).toHaveAttribute(
         "aria-label",
-        "10:00 · Comms — Inbox, mostly",
+        "10:00 · Admin — Inbox, mostly",
       );
     });
 
@@ -433,7 +428,7 @@ describe("GridView", () => {
         userId: "user",
         from: new Date(today.getTime() + i * 3600000),
         to: new Date(today.getTime() + (i + 1) * 3600000),
-        tag: "Deep work",
+        tag: "Learning",
         feel: "Charged",
         intent: "yes",
         bullets: [`Entry ${i}`],
@@ -462,7 +457,7 @@ describe("GridView", () => {
         userId: "user",
         from: today,
         to: new Date(today.getTime() + 3600000),
-        tag: "Deep work",
+        tag: "Learning",
         feel: "Charged",
         intent: "yes",
         bullets: ["Entry"],
@@ -751,7 +746,7 @@ describe("GridView", () => {
         userId: "user",
         from: new Date(today.getTime() + i * 3600000),
         to: new Date(today.getTime() + (i + 1) * 3600000),
-        tag: ["Deep work", "Comms", "Meetings", "Admin", "Learning"][i],
+        tag: ["Admin", "Learning", "Errands", "Social", "Chores"][i],
         feel: "Charged",
         intent: "yes",
         bullets: [`Entry ${i}`],
@@ -780,7 +775,7 @@ describe("history growth", () => {
       id: "old-1",
       from: from.toISOString(),
       to: to.toISOString(),
-      tag: "Deep work",
+      tag: "Learning",
       feel: "Steady",
       intent: "yes",
       bullets: ["ancient history"],
