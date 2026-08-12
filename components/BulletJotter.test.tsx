@@ -77,7 +77,7 @@ describe("BulletJotter", () => {
       const timerState: Partial<UseTimerResult> = {
         mode: "running",
         draftBullets: ["test"],
-        draftTag: "Deep work",
+        draftTag: "Learning",
       };
 
       const { container } = render(
@@ -133,14 +133,14 @@ describe("BulletJotter", () => {
       );
 
       const input = screen.getByTestId("bullet-input-0") as HTMLInputElement;
-      expect(input.placeholder).toBe("Wrote the pricing page copy");
+      expect(input.placeholder).toBe("Anything else worth noting?");
     });
 
-    it("renders ellipsis placeholder for non-first bullets", () => {
+    it("renders ellipsis placeholders above the composer, the invitation on it", () => {
       const updateDraft = vi.fn();
       const timerState: Partial<UseTimerResult> = {
         mode: "running",
-        draftBullets: ["first", ""],
+        draftBullets: ["first", "second", ""],
         draftTag: null,
       };
 
@@ -148,8 +148,27 @@ describe("BulletJotter", () => {
         <BulletJotter timerState={timerState} updateDraft={updateDraft} />,
       );
 
-      const input = screen.getByTestId("bullet-input-1") as HTMLInputElement;
-      expect(input.placeholder).toBe("…");
+      const middle = screen.getByTestId("bullet-input-1") as HTMLInputElement;
+      expect(middle.placeholder).toBe("…");
+      const composer = screen.getByTestId("bullet-input-2") as HTMLInputElement;
+      expect(composer.placeholder).toBe("Jot it down while it's fresh…");
+    });
+
+    it("always renders an empty composer row after a seeded draft", () => {
+      const updateDraft = vi.fn();
+      const timerState: Partial<UseTimerResult> = {
+        mode: "running",
+        draftBullets: ["At the gym (2 min)"],
+        draftTag: null,
+      };
+
+      render(
+        <BulletJotter timerState={timerState} updateDraft={updateDraft} />,
+      );
+
+      const composer = screen.getByTestId("bullet-input-1") as HTMLInputElement;
+      expect(composer.value).toBe("");
+      expect(composer.placeholder).toBe("Jot it down while it's fresh…");
     });
 
     it("renders multiple bullets", () => {
@@ -232,7 +251,8 @@ describe("BulletJotter", () => {
 
       const lastCall =
         updateDraft.mock.calls[updateDraft.mock.calls.length - 1];
-      expect(lastCall[0].bullets).toEqual(["first", ""]);
+      // Display always carries the trailing composer row.
+      expect(lastCall[0].bullets).toEqual(["first", "", ""]);
     });
 
     it("inserts after middle bullet, not at the end", async () => {
@@ -253,7 +273,7 @@ describe("BulletJotter", () => {
 
       const lastCall =
         updateDraft.mock.calls[updateDraft.mock.calls.length - 1];
-      expect(lastCall[0].bullets).toEqual(["first", "second", "", "third"]);
+      expect(lastCall[0].bullets).toEqual(["first", "second", "", "third", ""]);
     });
 
     it("does not propagate form submission on Enter", async () => {
@@ -274,7 +294,7 @@ describe("BulletJotter", () => {
 
       const lastCall =
         updateDraft.mock.calls[updateDraft.mock.calls.length - 1];
-      expect(lastCall[0].bullets?.length).toBe(2);
+      expect(lastCall[0].bullets?.length).toBe(3);
     });
   });
 
@@ -340,7 +360,7 @@ describe("BulletJotter", () => {
 
       const lastCall =
         updateDraft.mock.calls[updateDraft.mock.calls.length - 1];
-      expect(lastCall[0].bullets).toEqual(["first", "third"]);
+      expect(lastCall[0].bullets).toEqual(["first", "third", ""]);
     });
 
     it("does not remove non-empty bullet on Backspace", async () => {
@@ -387,13 +407,14 @@ describe("BulletJotter", () => {
         draftBullets: ["first", "second", "third"],
         draftTag: null,
       };
+      // The focus target is the composer row appended after the bullets.
 
       render(
         <BulletJotter timerState={timerState} updateDraft={updateDraft} />,
       );
 
       await waitFor(() => {
-        const lastInput = screen.getByTestId("bullet-input-2");
+        const lastInput = screen.getByTestId("bullet-input-3");
         expect(lastInput).toHaveFocus();
       });
     });
@@ -478,7 +499,7 @@ describe("BulletJotter", () => {
       const timerState: Partial<UseTimerResult> = {
         mode: "running",
         draftBullets: ["had meeting"],
-        draftTag: "Deep work",
+        draftTag: "Learning",
       };
 
       const { container } = render(
@@ -494,7 +515,7 @@ describe("BulletJotter", () => {
       const timerState: Partial<UseTimerResult> = {
         mode: "running",
         draftBullets: ["test"],
-        draftTag: "Deep work",
+        draftTag: "Learning",
       };
 
       const { container, rerender } = render(
@@ -507,7 +528,7 @@ describe("BulletJotter", () => {
       const updatedState: Partial<UseTimerResult> = {
         mode: "running",
         draftBullets: ["test"],
-        draftTag: "Comms",
+        draftTag: "Social",
       };
 
       rerender(
@@ -563,6 +584,8 @@ describe("empty bullet guard", () => {
 
     getByTestId("bullet-input-0").focus();
     await user.keyboard("{Enter}");
-    expect(updateDraft).toHaveBeenCalledWith({ bullets: ["did a thing", ""] });
+    expect(updateDraft).toHaveBeenCalledWith({
+      bullets: ["did a thing", "", ""],
+    });
   });
 });
