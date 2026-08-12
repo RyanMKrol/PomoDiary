@@ -583,7 +583,6 @@ describe("timer-state.store", () => {
       await upsertTimerState(db, "user_1", {
         mode: "paused",
         hourStart: newHourStart,
-        pausedRemaining: 1800,
         draftBullets: ["new draft"],
         phraseIdx: 1,
       });
@@ -591,7 +590,7 @@ describe("timer-state.store", () => {
       const state = await getTimerState(db, "user_1");
       expect(state).not.toBeNull();
       expect(state!.mode).toBe("paused");
-      expect(state!.pausedRemaining).toBe(1800);
+      expect(state!.hourStart).toEqual(newHourStart);
       expect(state!.draftBullets).toEqual(["new draft"]);
     });
 
@@ -618,7 +617,6 @@ describe("timer-state.store", () => {
   describe("getSettings", () => {
     it("returns default settings when none exist", async () => {
       const settings = await getSettings(db, "user_1");
-      expect(settings.sessionMinutes).toBe(60);
       expect(settings.soundOn).toBe(true);
       expect(settings.chimeVolume).toBe(0.8);
       expect(settings.pauseAfterLog).toBe(false);
@@ -626,12 +624,10 @@ describe("timer-state.store", () => {
 
     it("returns persisted settings", async () => {
       await upsertSettings(db, "user_1", {
-        sessionMinutes: 45,
         soundOn: false,
       });
 
       const settings = await getSettings(db, "user_1");
-      expect(settings.sessionMinutes).toBe(45);
       expect(settings.soundOn).toBe(false);
       expect(settings.chimeVolume).toBe(0.8);
     });
@@ -640,18 +636,17 @@ describe("timer-state.store", () => {
   describe("upsertSettings", () => {
     it("inserts new settings", async () => {
       await upsertSettings(db, "user_1", {
-        sessionMinutes: 30,
         chimeVolume: 0.5,
+        pauseAfterLog: true,
       });
 
       const settings = await getSettings(db, "user_1");
-      expect(settings.sessionMinutes).toBe(30);
+      expect(settings.pauseAfterLog).toBe(true);
       expect(settings.chimeVolume).toBe(0.5);
     });
 
     it("patches existing settings", async () => {
       await upsertSettings(db, "user_1", {
-        sessionMinutes: 45,
         soundOn: false,
       });
 
@@ -660,7 +655,6 @@ describe("timer-state.store", () => {
       });
 
       const settings = await getSettings(db, "user_1");
-      expect(settings.sessionMinutes).toBe(45);
       expect(settings.soundOn).toBe(false);
       expect(settings.chimeVolume).toBe(0.3);
     });
@@ -682,11 +676,11 @@ describe("timer-state.store", () => {
 
     it("settings are per-user", async () => {
       await upsertSettings(db, "user_1", {
-        sessionMinutes: 30,
+        chimeVolume: 0.3,
       });
 
       const settings2 = await getSettings(db, "user_2");
-      expect(settings2.sessionMinutes).toBe(60);
+      expect(settings2.chimeVolume).toBe(0.8);
     });
   });
 });

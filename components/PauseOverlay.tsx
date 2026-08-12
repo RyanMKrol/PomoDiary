@@ -3,16 +3,10 @@
 import styles from "./PauseOverlay.module.css";
 
 export interface PauseOverlayProps {
-  remainingSeconds: number;
   onResume: () => void;
 }
 
-export function PauseOverlay({
-  remainingSeconds,
-  onResume,
-}: PauseOverlayProps) {
-  const minutesLeft = Math.max(1, Math.round(remainingSeconds / 60));
-
+export function PauseOverlay({ onResume }: PauseOverlayProps) {
   return (
     // Clicking anywhere on the card resumes — same interaction contract as
     // the away cards; the labeled button stays as the keyboard affordance.
@@ -26,10 +20,11 @@ export function PauseOverlay({
 
         <div className={styles.rule} />
 
-        <p className={styles.elapsed}>{minutesLeft} min still on the clock</p>
+        <p className={styles.elapsed}>Holding between hours</p>
 
         <p className={styles.note}>
-          The clock waits for you. Click anywhere to pick the hour back up.
+          The clock waits for you. Click anywhere to start a block that runs to
+          the next :00.
         </p>
       </div>
 

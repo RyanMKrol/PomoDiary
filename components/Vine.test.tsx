@@ -124,7 +124,6 @@ describe("Vine", () => {
   describe("settings panel", () => {
     it("does not render settings panel initially", async () => {
       const settings = {
-        sessionMinutes: 60,
         soundOn: true,
         chimeVolume: 0.5,
         pauseAfterLog: false,
@@ -148,7 +147,6 @@ describe("Vine", () => {
     it("opens settings panel when settings button clicked", async () => {
       const user = userEvent.setup();
       const settings = {
-        sessionMinutes: 60,
         soundOn: true,
         chimeVolume: 0.5,
         pauseAfterLog: false,
@@ -175,7 +173,6 @@ describe("Vine", () => {
     it("shows settings panel when settings button is clicked with settings provided", async () => {
       const user = userEvent.setup();
       const settings = {
-        sessionMinutes: 60,
         soundOn: true,
         chimeVolume: 0.5,
         pauseAfterLog: false,
@@ -201,9 +198,9 @@ describe("Vine", () => {
       // Click to open
       await user.click(settingsButton);
 
-      // Panel should now be visible
+      // Panel should now be visible, with its controls rendered
       expect(screen.getByTestId("settings-panel")).toBeInTheDocument();
-      expect(screen.getByTestId("session-minutes-input")).toBeInTheDocument();
+      expect(screen.getByTestId("sound-on-button")).toBeInTheDocument();
     });
   });
 
@@ -211,7 +208,6 @@ describe("Vine", () => {
     it("returns focus to the settings button when the panel closes", async () => {
       const user = userEvent.setup();
       const settings = {
-        sessionMinutes: 60,
         soundOn: true,
         chimeVolume: 0.5,
         pauseAfterLog: false,

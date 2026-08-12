@@ -43,6 +43,8 @@ export function Dial({ timerState }: DialProps = {}) {
     remainingSeconds = SESSION_SECONDS,
     chimeFrom,
     phraseIdx = 0,
+    hourStart,
+    blockEnd,
   } = state;
 
   const isChime = mode === "chime";
@@ -50,11 +52,14 @@ export function Dial({ timerState }: DialProps = {}) {
   const isRunning = mode === "running";
   const isPaused = mode === "paused";
 
-  const sessionSeconds = state.settings?.sessionMinutes
-    ? state.settings.sessionMinutes * 60
-    : SESSION_SECONDS;
-  const remaining = remainingSeconds ?? sessionSeconds;
-  const dashOffset = 552.92 * (remaining / sessionSeconds);
+  // The arc drains over the real block, which can be shorter than an hour
+  // when the block started mid-hour (blocks end on the wall-clock :00).
+  const blockSeconds =
+    hourStart != null && blockEnd != null
+      ? Math.max(1, Math.round((blockEnd - hourStart) / 1000))
+      : SESSION_SECONDS;
+  const remaining = remainingSeconds ?? blockSeconds;
+  const dashOffset = 552.92 * (remaining / blockSeconds);
 
   // The progress arc is core branding — always accent red, never tag-colored.
   const arcColor = "#ec3013";
@@ -82,13 +87,8 @@ export function Dial({ timerState }: DialProps = {}) {
       ? "The clock waits for you"
       : subPhrase;
 
-  const hourStartDisplay =
-    isRecap || isChime
-      ? chimeFrom
-      : (state as Record<string, unknown>).hourStart;
-  const hourStartLabel = hourStartDisplay
-    ? fmtClock(hourStartDisplay as number)
-    : "—";
+  const hourStartDisplay = isRecap || isChime ? chimeFrom : hourStart;
+  const hourStartLabel = hourStartDisplay ? fmtClock(hourStartDisplay) : "—";
 
   const ticks = generateTicks();
 

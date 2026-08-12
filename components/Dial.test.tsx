@@ -42,6 +42,8 @@ describe("Dial", () => {
             Promise.resolve({
               mode: "running",
               remainingSeconds: 1800,
+              hourStart: Date.now() - 1800 * 1000,
+              blockEnd: Date.now() + 1800 * 1000,
               chimeFrom: null,
               chimeTo: null,
               draftBullets: [],
@@ -50,7 +52,6 @@ describe("Dial", () => {
               draftIntent: null,
               phraseIdx: 0,
               settings: {
-                sessionMinutes: 60,
                 soundOn: true,
                 chimeVolume: 0.8,
                 pauseAfterLog: false,
@@ -114,16 +115,17 @@ describe("Dial", () => {
   });
 
   describe("dashoffset calculations", () => {
-    it("calculates dashoffset as 552.92 at 100% remaining", () => {
-      const sessionSeconds = 3600;
+    it("calculates dashoffset as 552.92 at 100% remaining of a full-hour block", () => {
+      const hourStart = Date.now();
       const { container } = render(
         <Dial
           timerState={{
             loading: false,
             mode: "running",
-            remainingSeconds: sessionSeconds,
+            remainingSeconds: 3600,
+            hourStart,
+            blockEnd: hourStart + 3600 * 1000,
             settings: {
-              sessionMinutes: 60,
               soundOn: true,
               chimeVolume: 0.8,
               pauseAfterLog: false,
@@ -142,16 +144,76 @@ describe("Dial", () => {
       expect(offset).toBeCloseTo(552.92, 1);
     });
 
-    it("calculates dashoffset as 276.46 at 50% remaining", () => {
-      const sessionSeconds = 3600;
+    it("calculates dashoffset as 276.46 at 50% remaining of a full-hour block", () => {
+      const hourStart = Date.now() - 1800 * 1000;
       const { container } = render(
         <Dial
           timerState={{
             loading: false,
             mode: "running",
-            remainingSeconds: sessionSeconds / 2,
+            remainingSeconds: 1800,
+            hourStart,
+            blockEnd: hourStart + 3600 * 1000,
             settings: {
-              sessionMinutes: 60,
+              soundOn: true,
+              chimeVolume: 0.8,
+              pauseAfterLog: false,
+            },
+            draftBullets: [],
+            draftTag: null,
+            phraseIdx: 0,
+          }}
+        />,
+      );
+      const circles = container.querySelectorAll("circle");
+      const progressArc = circles[circles.length - 1];
+      const offset = parseFloat(
+        progressArc.getAttribute("stroke-dashoffset") || "0",
+      );
+      expect(offset).toBeCloseTo(276.46, 1);
+    });
+
+    it("scales the arc by the real block length when the block is shorter than an hour", () => {
+      // A block picked up mid-hour: 30 minutes long, 15 minutes remain,
+      // so the arc sits at half of the block, not a quarter of an hour.
+      const hourStart = Date.now() - 900 * 1000;
+      const { container } = render(
+        <Dial
+          timerState={{
+            loading: false,
+            mode: "running",
+            remainingSeconds: 900,
+            hourStart,
+            blockEnd: hourStart + 1800 * 1000,
+            settings: {
+              soundOn: true,
+              chimeVolume: 0.8,
+              pauseAfterLog: false,
+            },
+            draftBullets: [],
+            draftTag: null,
+            phraseIdx: 0,
+          }}
+        />,
+      );
+      const circles = container.querySelectorAll("circle");
+      const progressArc = circles[circles.length - 1];
+      const offset = parseFloat(
+        progressArc.getAttribute("stroke-dashoffset") || "0",
+      );
+      expect(offset).toBeCloseTo(276.46, 1);
+    });
+
+    it("falls back to a 3600s block when hourStart/blockEnd are null", () => {
+      const { container } = render(
+        <Dial
+          timerState={{
+            loading: false,
+            mode: "running",
+            remainingSeconds: 1800,
+            hourStart: null,
+            blockEnd: null,
+            settings: {
               soundOn: true,
               chimeVolume: 0.8,
               pauseAfterLog: false,
@@ -178,7 +240,6 @@ describe("Dial", () => {
             mode: "chime",
             remainingSeconds: 0,
             settings: {
-              sessionMinutes: 60,
               soundOn: true,
               chimeVolume: 0.8,
               pauseAfterLog: false,
@@ -209,7 +270,6 @@ describe("Dial", () => {
             mode: "running",
             remainingSeconds: 1800,
             settings: {
-              sessionMinutes: 60,
               soundOn: true,
               chimeVolume: 0.8,
               pauseAfterLog: false,
@@ -231,7 +291,6 @@ describe("Dial", () => {
             mode: "paused",
             remainingSeconds: 1800,
             settings: {
-              sessionMinutes: 60,
               soundOn: true,
               chimeVolume: 0.8,
               pauseAfterLog: false,
@@ -253,7 +312,6 @@ describe("Dial", () => {
             mode: "chime",
             remainingSeconds: 0,
             settings: {
-              sessionMinutes: 60,
               soundOn: true,
               chimeVolume: 0.8,
               pauseAfterLog: false,
@@ -277,7 +335,6 @@ describe("Dial", () => {
             mode: "recap",
             remainingSeconds: 0,
             settings: {
-              sessionMinutes: 60,
               soundOn: true,
               chimeVolume: 0.8,
               pauseAfterLog: false,
@@ -305,7 +362,6 @@ describe("Dial", () => {
             mode: "running",
             remainingSeconds: 1800,
             settings: {
-              sessionMinutes: 60,
               soundOn: true,
               chimeVolume: 0.8,
               pauseAfterLog: false,
@@ -329,7 +385,6 @@ describe("Dial", () => {
             mode: "running",
             remainingSeconds: 1800,
             settings: {
-              sessionMinutes: 60,
               soundOn: true,
               chimeVolume: 0.8,
               pauseAfterLog: false,
@@ -351,7 +406,6 @@ describe("Dial", () => {
             mode: "recap",
             remainingSeconds: 0,
             settings: {
-              sessionMinutes: 60,
               soundOn: true,
               chimeVolume: 0.8,
               pauseAfterLog: false,
@@ -375,7 +429,6 @@ describe("Dial", () => {
             mode: "recap",
             remainingSeconds: 0,
             settings: {
-              sessionMinutes: 60,
               soundOn: true,
               chimeVolume: 0.8,
               pauseAfterLog: false,
@@ -399,7 +452,6 @@ describe("Dial", () => {
             mode: "paused",
             remainingSeconds: 1800,
             settings: {
-              sessionMinutes: 60,
               soundOn: true,
               chimeVolume: 0.8,
               pauseAfterLog: false,
@@ -421,7 +473,6 @@ describe("Dial", () => {
             mode: "paused",
             remainingSeconds: 1800,
             settings: {
-              sessionMinutes: 60,
               soundOn: true,
               chimeVolume: 0.8,
               pauseAfterLog: false,
@@ -445,7 +496,6 @@ describe("Dial", () => {
             mode: "running",
             remainingSeconds: 1800,
             settings: {
-              sessionMinutes: 60,
               soundOn: true,
               chimeVolume: 0.8,
               pauseAfterLog: false,
@@ -469,7 +519,6 @@ describe("Dial", () => {
             mode: "running",
             remainingSeconds: 1800,
             settings: {
-              sessionMinutes: 60,
               soundOn: true,
               chimeVolume: 0.8,
               pauseAfterLog: false,
@@ -493,7 +542,6 @@ describe("Dial", () => {
             mode: "running",
             remainingSeconds: 1800,
             settings: {
-              sessionMinutes: 60,
               soundOn: true,
               chimeVolume: 0.8,
               pauseAfterLog: false,
@@ -519,7 +567,6 @@ describe("Dial", () => {
             mode: "running",
             remainingSeconds: 1800,
             settings: {
-              sessionMinutes: 60,
               soundOn: true,
               chimeVolume: 0.8,
               pauseAfterLog: false,
@@ -543,7 +590,6 @@ describe("Dial", () => {
             mode: "running",
             remainingSeconds: 1800,
             settings: {
-              sessionMinutes: 60,
               soundOn: true,
               chimeVolume: 0.8,
               pauseAfterLog: false,
@@ -568,7 +614,6 @@ describe("Dial", () => {
             mode: "running",
             remainingSeconds: 1800,
             settings: {
-              sessionMinutes: 60,
               soundOn: true,
               chimeVolume: 0.8,
               pauseAfterLog: false,
@@ -594,7 +639,6 @@ describe("Dial", () => {
             mode: "running",
             remainingSeconds: 1800,
             settings: {
-              sessionMinutes: 60,
               soundOn: true,
               chimeVolume: 0.8,
               pauseAfterLog: false,
@@ -612,22 +656,25 @@ describe("Dial", () => {
   describe("time display", () => {
     it("displays hourStart time when running", () => {
       const now = Date.now();
-      const timerStateWithHourStart = {
-        loading: false,
-        mode: "running" as const,
-        remainingSeconds: 1800,
-        settings: {
-          sessionMinutes: 60,
-          soundOn: true,
-          chimeVolume: 0.8,
-          pauseAfterLog: false,
-        },
-        draftBullets: [],
-        draftTag: null,
-        phraseIdx: 0,
-        hourStart: now,
-      } as Partial<Record<string, unknown>>;
-      render(<Dial timerState={timerStateWithHourStart as any} />); // eslint-disable-line @typescript-eslint/no-explicit-any
+      render(
+        <Dial
+          timerState={{
+            loading: false,
+            mode: "running",
+            remainingSeconds: 1800,
+            settings: {
+              soundOn: true,
+              chimeVolume: 0.8,
+              pauseAfterLog: false,
+            },
+            draftBullets: [],
+            draftTag: null,
+            phraseIdx: 0,
+            hourStart: now - 1800 * 1000,
+            blockEnd: now + 1800 * 1000,
+          }}
+        />,
+      );
       // Just verify the "Since" text is present
       expect(screen.getByText(/Since /)).toBeInTheDocument();
     });
@@ -641,7 +688,6 @@ describe("Dial", () => {
             mode: "recap",
             remainingSeconds: 0,
             settings: {
-              sessionMinutes: 60,
               soundOn: true,
               chimeVolume: 0.8,
               pauseAfterLog: false,
@@ -666,7 +712,6 @@ describe("Dial", () => {
             mode: "chime",
             remainingSeconds: 0,
             settings: {
-              sessionMinutes: 60,
               soundOn: true,
               chimeVolume: 0.8,
               pauseAfterLog: false,

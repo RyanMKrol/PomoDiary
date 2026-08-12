@@ -14,7 +14,6 @@ import type { ApiSettings } from "@/lib/api/timer-state";
 
 describe("SettingsPanel", () => {
   const defaultSettings: ApiSettings = {
-    sessionMinutes: 60,
     soundOn: true,
     chimeVolume: 0.5,
     pauseAfterLog: false,
@@ -76,111 +75,6 @@ describe("SettingsPanel", () => {
       fireEvent.mouseDown(outsideElement);
 
       expect(mockOnClose).toHaveBeenCalled();
-    });
-  });
-
-  describe("session minutes input", () => {
-    it("reflects current session minutes value", () => {
-      render(
-        <SettingsPanel
-          settings={{ ...defaultSettings, sessionMinutes: 75 }}
-          updateSettings={mockUpdateSettings}
-          onClose={mockOnClose}
-          isOpen={true}
-        />,
-      );
-
-      const input = screen.getByTestId(
-        "session-minutes-input",
-      ) as HTMLInputElement;
-      expect(input.value).toBe("75");
-    });
-
-    it("clamps input below 1 to 1", async () => {
-      render(
-        <SettingsPanel
-          settings={defaultSettings}
-          updateSettings={mockUpdateSettings}
-          onClose={mockOnClose}
-          isOpen={true}
-        />,
-      );
-
-      const input = screen.getByTestId("session-minutes-input");
-      await userEvent.clear(input);
-      await userEvent.type(input, "0");
-      fireEvent.blur(input);
-
-      await waitFor(() => {
-        expect(mockUpdateSettings).toHaveBeenCalledWith({
-          sessionMinutes: 1,
-        });
-      });
-    });
-
-    it("clamps input above 180 to 180", async () => {
-      render(
-        <SettingsPanel
-          settings={defaultSettings}
-          updateSettings={mockUpdateSettings}
-          onClose={mockOnClose}
-          isOpen={true}
-        />,
-      );
-
-      const input = screen.getByTestId("session-minutes-input");
-      await userEvent.clear(input);
-      await userEvent.type(input, "200");
-      fireEvent.blur(input);
-
-      await waitFor(() => {
-        expect(mockUpdateSettings).toHaveBeenCalledWith({
-          sessionMinutes: 180,
-        });
-      });
-    });
-
-    it("accepts valid minutes in range", async () => {
-      render(
-        <SettingsPanel
-          settings={defaultSettings}
-          updateSettings={mockUpdateSettings}
-          onClose={mockOnClose}
-          isOpen={true}
-        />,
-      );
-
-      const input = screen.getByTestId("session-minutes-input");
-      await userEvent.clear(input);
-      await userEvent.type(input, "90");
-      fireEvent.blur(input);
-
-      await waitFor(() => {
-        expect(mockUpdateSettings).toHaveBeenCalledWith({
-          sessionMinutes: 90,
-        });
-      });
-    });
-
-    it("calls updateSettings with correct payload", async () => {
-      render(
-        <SettingsPanel
-          settings={defaultSettings}
-          updateSettings={mockUpdateSettings}
-          onClose={mockOnClose}
-          isOpen={true}
-        />,
-      );
-
-      const input = screen.getByTestId("session-minutes-input");
-      await userEvent.clear(input);
-      await userEvent.type(input, "45");
-
-      await waitFor(() => {
-        expect(mockUpdateSettings).toHaveBeenCalledWith({
-          sessionMinutes: 45,
-        });
-      });
     });
   });
 
@@ -426,36 +320,35 @@ describe("SettingsPanel", () => {
     it("updates when settings prop changes", () => {
       const { rerender } = render(
         <SettingsPanel
-          settings={{ ...defaultSettings, sessionMinutes: 60 }}
+          settings={{ ...defaultSettings, chimeVolume: 0.5 }}
           updateSettings={mockUpdateSettings}
           onClose={mockOnClose}
           isOpen={true}
         />,
       );
 
-      let input = screen.getByTestId(
-        "session-minutes-input",
-      ) as HTMLInputElement;
-      expect(input.value).toBe("60");
+      expect(screen.getByTestId("volume-0.5-button").className).toMatch(
+        /segmentSelected/,
+      );
 
       rerender(
         <SettingsPanel
-          settings={{ ...defaultSettings, sessionMinutes: 90 }}
+          settings={{ ...defaultSettings, chimeVolume: 1 }}
           updateSettings={mockUpdateSettings}
           onClose={mockOnClose}
           isOpen={true}
         />,
       );
 
-      input = screen.getByTestId("session-minutes-input") as HTMLInputElement;
-      expect(input.value).toBe("90");
+      expect(screen.getByTestId("volume-1-button").className).toMatch(
+        /segmentSelected/,
+      );
     });
 
     it("syncs all settings when they change externally", () => {
       const { rerender } = render(
         <SettingsPanel
           settings={{
-            sessionMinutes: 60,
             soundOn: true,
             chimeVolume: 0.5,
             pauseAfterLog: false,
@@ -469,7 +362,6 @@ describe("SettingsPanel", () => {
       rerender(
         <SettingsPanel
           settings={{
-            sessionMinutes: 75,
             soundOn: false,
             chimeVolume: 0.75,
             pauseAfterLog: true,
@@ -488,11 +380,6 @@ describe("SettingsPanel", () => {
 
       const pauseButton = screen.getByTestId("pause-wait-for-me-button");
       expect(pauseButton.className).toMatch(/segmentSelected/);
-
-      const input = screen.getByTestId(
-        "session-minutes-input",
-      ) as HTMLInputElement;
-      expect(input.value).toBe("75");
     });
   });
 

@@ -197,11 +197,20 @@ export function seedEntries(now) {
 
 export function seedSettings() {
   return {
-    sessionMinutes: 60,
     soundOn: true,
     chimeVolume: 0.8,
     pauseAfterLog: false,
   };
+}
+
+/** Blocks end on the wall-clock :00 (mirrors lib/timer/engine.ts blockEndFor). */
+function blockEndOf(start) {
+  const boundary = (Math.floor(start / HOUR_MS) + 1) * HOUR_MS;
+  return boundary - start < 60_000 ? boundary + HOUR_MS : boundary;
+}
+
+function secondsToBlockEnd(start, now) {
+  return Math.max(0, Math.floor((blockEndOf(start) - now) / 1000));
 }
 
 /** The empty grid day (see seedEntries) — used by the day-view-empty step. */
@@ -216,6 +225,7 @@ export const EMPTY_DAY_INDEX = 3;
 export function createFixtureState(now) {
   return {
     mode: "running",
+    hourStart: now,
     chimeFrom: null,
     chimeTo: null,
     awayKind: null,
@@ -225,7 +235,7 @@ export function createFixtureState(now) {
     draftFeel: null,
     draftIntent: null,
     phraseIdx: 0,
-    remainingSeconds: seedSettings().sessionMinutes * 60,
+    remainingSeconds: secondsToBlockEnd(now, now),
     settings: seedSettings(),
     entries: seedEntries(now),
   };
@@ -241,6 +251,8 @@ function buildStatePayload(state, now) {
   return {
     mode: state.mode,
     remainingSeconds: state.remainingSeconds,
+    hourStart: state.hourStart,
+    blockEnd: blockEndOf(state.hourStart),
     chimeFrom: state.chimeFrom,
     chimeTo: state.chimeTo,
     awayKind: state.awayKind,
@@ -266,15 +278,16 @@ function resetDraft(state) {
 
 function applyAction(state, action, now) {
   switch (action.type) {
-    case "pause":
-      if (state.mode === "running") state.mode = "paused";
-      break;
     case "resume":
-      if (state.mode === "paused") state.mode = "running";
+      if (state.mode === "paused") {
+        state.mode = "running";
+        state.hourStart = now;
+        state.remainingSeconds = secondsToBlockEnd(now, now);
+      }
       break;
     case "ringNow":
       state.mode = "chime";
-      state.chimeFrom = now - state.settings.sessionMinutes * 60_000;
+      state.chimeFrom = state.hourStart;
       state.chimeTo = now;
       break;
     case "acknowledge":
@@ -294,13 +307,15 @@ function applyAction(state, action, now) {
         bullets: bullets.length ? bullets : ["(nothing written down)"],
       });
       state.mode = state.settings.pauseAfterLog ? "paused" : "running";
-      state.remainingSeconds = state.settings.sessionMinutes * 60;
+      state.hourStart = now;
+      state.remainingSeconds = secondsToBlockEnd(now, now);
       resetDraft(state);
       break;
     }
     case "skip":
       state.mode = state.settings.pauseAfterLog ? "paused" : "running";
-      state.remainingSeconds = state.settings.sessionMinutes * 60;
+      state.hourStart = now;
+      state.remainingSeconds = secondsToBlockEnd(now, now);
       resetDraft(state);
       break;
     case "awayStart":
@@ -312,7 +327,8 @@ function applyAction(state, action, now) {
       state.mode = "running";
       state.awayKind = null;
       state.awaySince = null;
-      state.remainingSeconds = state.settings.sessionMinutes * 60;
+      state.hourStart = now;
+      state.remainingSeconds = secondsToBlockEnd(now, now);
       break;
     case "draftUpdate": {
       const patch = action.patch ?? {};

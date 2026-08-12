@@ -161,7 +161,6 @@ describe("GET /api/export", () => {
     const settings = await getSettings(db, userId);
 
     expect(settings).toBeDefined();
-    expect(settings).toHaveProperty("sessionMinutes");
     expect(settings).toHaveProperty("soundOn");
     expect(settings).toHaveProperty("chimeVolume");
     expect(settings).toHaveProperty("pauseAfterLog");

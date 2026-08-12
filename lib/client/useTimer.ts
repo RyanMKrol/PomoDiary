@@ -9,11 +9,7 @@ import {
   requestNotifyPermission,
   notifyChime as postNotification,
 } from "../notify";
-import {
-  deriveNow,
-  type AwayKind,
-  type Settings as EngineSettings,
-} from "../timer/engine";
+import { deriveNow, type AwayKind } from "../timer/engine";
 import type { ApiSettings, StatePayload } from "../api/timer-state";
 
 const DRAFT_DEBOUNCE_MS = 800;
@@ -22,8 +18,10 @@ const TICK_MS = 1000;
 export interface ClientState {
   mode: StatePayload["mode"];
   remainingSeconds: number;
-  /** Start of the running hour (ms), reconstructed from the payload; null unless running. */
+  /** Start of the running block (ms), straight from the payload; null unless running. */
   hourStart: number | null;
+  /** When the running block ends (the next wall-clock :00); null unless running. */
+  blockEnd: number | null;
   chimeFrom: number | null;
   chimeTo: number | null;
   draftBullets: string[];
@@ -56,7 +54,6 @@ export interface LogPayload {
 interface ShadowState {
   mode: StatePayload["mode"];
   hourStart: number;
-  pausedRemaining: number | null;
   chimeFrom: number | null;
   chimeTo: number | null;
   awayKind: AwayKind | null;
@@ -78,15 +75,10 @@ export function todayBoundsFor(now: number): {
   return { todayStart, todayEnd: todayStart + 24 * 60 * 60 * 1000 };
 }
 
-export function reconstructShadow(
-  payload: StatePayload,
-  now: number,
-): ShadowState {
-  const sessionMs = payload.settings.sessionMinutes * 60 * 1000;
-  const base: ShadowState = {
+export function reconstructShadow(payload: StatePayload): ShadowState {
+  return {
     mode: payload.mode,
-    hourStart: now,
-    pausedRemaining: null,
+    hourStart: payload.hourStart,
     chimeFrom: payload.chimeFrom,
     chimeTo: payload.chimeTo,
     awayKind: payload.awayKind ?? null,
@@ -97,26 +89,6 @@ export function reconstructShadow(
     draftIntent: payload.draftIntent,
     phraseIdx: payload.phraseIdx,
   };
-
-  if (payload.mode === "running") {
-    return {
-      ...base,
-      hourStart: now - sessionMs + payload.remainingSeconds * 1000,
-    };
-  }
-
-  if (payload.mode === "paused") {
-    return { ...base, pausedRemaining: payload.remainingSeconds };
-  }
-
-  return base;
-}
-
-export function toEngineSettings(settings: ApiSettings): EngineSettings {
-  return {
-    sessionMinutes: settings.sessionMinutes,
-    pauseAfterLog: settings.pauseAfterLog,
-  };
 }
 
 export function toClientState(
@@ -125,7 +97,6 @@ export function toClientState(
   now: number,
   awayKind: AwayKind | null = null,
 ): ClientState {
-  const sessionMs = payload.settings.sessionMinutes * 60 * 1000;
   // The payload's own away fields win: they survive reloads, while the
   // awayEnteredAt/awayKind arguments only exist in this tab's memory.
   const awaySince =
@@ -135,10 +106,8 @@ export function toClientState(
   return {
     mode: payload.mode,
     remainingSeconds: payload.remainingSeconds,
-    hourStart:
-      payload.mode === "running"
-        ? now - sessionMs + payload.remainingSeconds * 1000
-        : null,
+    hourStart: payload.mode === "running" ? payload.hourStart : null,
+    blockEnd: payload.mode === "running" ? payload.blockEnd : null,
     chimeFrom: payload.chimeFrom,
     chimeTo: payload.chimeTo,
     draftBullets: payload.draftBullets,
@@ -170,7 +139,6 @@ export function applyDraftPatchLocally(
 }
 
 type TimerAction =
-  | { type: "pause" }
   | { type: "resume" }
   | { type: "ringNow" }
   | { type: "acknowledge" }
@@ -187,7 +155,6 @@ export interface TimerClient {
   onChime(listener: () => void): () => void;
   start(): void;
   stop(): void;
-  pause(): Promise<void>;
   resume(): Promise<void>;
   ringNow(): Promise<void>;
   acknowledge(): Promise<void>;
@@ -251,7 +218,7 @@ export function createTimerClient(fetchImpl: FetchLike = fetch): TimerClient {
       awayKindEntered = null;
     }
 
-    shadow = reconstructShadow(payload, now);
+    shadow = reconstructShadow(payload);
     current = toClientState(payload, awayEnteredAt, now, awayKindEntered);
     loading = false;
     notifyState();
@@ -315,12 +282,7 @@ export function createTimerClient(fetchImpl: FetchLike = fetch): TimerClient {
     if (shadow === null || current === null) return;
 
     const wasMode = shadow.mode;
-    const engineSettings = toEngineSettings(current.settings);
-    const { state: nextShadow, remainingSeconds } = deriveNow(
-      shadow,
-      engineSettings,
-      now,
-    );
+    const { state: nextShadow, remainingSeconds } = deriveNow(shadow, now);
     shadow = nextShadow;
 
     if (wasMode !== "chime" && nextShadow.mode === "chime") {
@@ -435,7 +397,6 @@ export function createTimerClient(fetchImpl: FetchLike = fetch): TimerClient {
       clearDraftTimer();
     },
 
-    pause: () => performAction({ type: "pause" }),
     resume: () => performAction({ type: "resume" }),
     ringNow: () => performAction({ type: "ringNow" }),
     acknowledge: () => performAction({ type: "acknowledge" }),
@@ -470,7 +431,6 @@ export interface UseTimerOptions {
 
 export interface UseTimerResult extends Partial<ClientState> {
   loading: boolean;
-  pause(): Promise<void>;
   resume(): Promise<void>;
   ringNow(): Promise<void>;
   acknowledge(): Promise<void>;
@@ -508,7 +468,6 @@ export function useTimer(options: UseTimerOptions = {}): UseTimerResult {
   return {
     ...(state ?? {}),
     loading: state === null,
-    pause: client.pause,
     resume: client.resume,
     ringNow: client.ringNow,
     acknowledge: client.acknowledge,

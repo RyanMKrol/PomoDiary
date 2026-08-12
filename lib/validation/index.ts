@@ -6,8 +6,6 @@ export const LIMITS = {
   MAX_BULLETS_PER_ENTRY: 30,
   MAX_BULLET_LENGTH: 500,
   MAX_ENTRIES_PER_DAY: 100,
-  SESSION_MINUTES_MIN: 1,
-  SESSION_MINUTES_MAX: 180,
 };
 
 const TAG_LABELS = [
@@ -50,7 +48,6 @@ const draftPatchSchema = z.object({
 });
 
 export const timerActionSchema = z.discriminatedUnion("type", [
-  z.object({ type: z.literal("pause") }),
   z.object({ type: z.literal("resume") }),
   z.object({ type: z.literal("ringNow") }),
   z.object({ type: z.literal("acknowledge") }),
@@ -66,11 +63,6 @@ export const timerActionSchema = z.discriminatedUnion("type", [
 
 export const settingsPatchSchema = z
   .object({
-    sessionMinutes: z
-      .number()
-      .int()
-      .min(LIMITS.SESSION_MINUTES_MIN)
-      .max(LIMITS.SESSION_MINUTES_MAX),
     soundOn: z.boolean(),
     chimeVolume: z.number().min(0).max(1),
     pauseAfterLog: z.boolean(),

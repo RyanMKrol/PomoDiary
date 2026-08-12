@@ -1,31 +1,64 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  blockEndFor,
   deriveNow,
   dispatch,
   initialState,
+  nextHourBoundary,
+  HOUR_MS,
+  MAX_AWAY_BLOCKS,
+  MIN_BLOCK_MS,
   type Settings,
   type TimerState,
 } from "./engine";
 
 const HOUR = 3600000;
-const SETTINGS: Settings = { sessionMinutes: 60, pauseAfterLog: false };
-const SETTINGS_PAUSE_AFTER_LOG: Settings = {
-  sessionMinutes: 60,
-  pauseAfterLog: true,
-};
+const SETTINGS: Settings = { pauseAfterLog: false };
+const SETTINGS_PAUSE_AFTER_LOG: Settings = { pauseAfterLog: true };
+
+// Deliberately NOT hour-aligned: 13m20s past the hour, so tests exercise the
+// ragged-block math. T0_BOUNDARY is the wall-clock :00 that follows it.
 const T0 = 1_700_000_000_000;
+const T0_BOUNDARY = 1_700_002_800_000;
+// An exactly-aligned instant for tests that want whole-hour blocks.
+const T0H = 1_699_999_200_000;
 
 function running(overrides: Partial<TimerState> = {}): TimerState {
   return { ...initialState(T0), ...overrides };
 }
+
+describe("boundary helpers", () => {
+  it("T0 fixtures are what they claim to be", () => {
+    expect(T0H % HOUR_MS).toBe(0);
+    expect(T0 % HOUR_MS).toBe(800_000);
+    expect(nextHourBoundary(T0)).toBe(T0_BOUNDARY);
+  });
+
+  it("nextHourBoundary is strictly after t, even on an exact boundary", () => {
+    expect(nextHourBoundary(T0H)).toBe(T0H + HOUR);
+    expect(nextHourBoundary(T0H + 1)).toBe(T0H + HOUR);
+    expect(nextHourBoundary(T0H + HOUR - 1)).toBe(T0H + HOUR);
+  });
+
+  it("blockEndFor ends a block on the next :00", () => {
+    expect(blockEndFor(T0H)).toBe(T0H + HOUR);
+    expect(blockEndFor(T0)).toBe(T0_BOUNDARY);
+  });
+
+  it("blockEndFor rolls forward when the block would be under a minute", () => {
+    const justBefore = T0H + HOUR - MIN_BLOCK_MS + 1;
+    expect(blockEndFor(justBefore)).toBe(T0H + 2 * HOUR);
+    // Exactly one minute before the boundary still ends on it.
+    expect(blockEndFor(T0H + HOUR - MIN_BLOCK_MS)).toBe(T0H + HOUR);
+  });
+});
 
 describe("initialState", () => {
   it("starts a first-time user running with empty drafts and phrase 0", () => {
     const s = initialState(T0);
     expect(s.mode).toBe("running");
     expect(s.hourStart).toBe(T0);
-    expect(s.pausedRemaining).toBeNull();
     expect(s.chimeFrom).toBeNull();
     expect(s.chimeTo).toBeNull();
     expect(s.awayKind).toBeNull();
@@ -39,74 +72,47 @@ describe("initialState", () => {
 });
 
 describe("deriveNow", () => {
-  it("computes remaining seconds mid-hour while running", () => {
+  it("counts down to the next :00, not to sixty minutes from the start", () => {
     const s = running({ hourStart: T0 });
-    const { state, remainingSeconds } = deriveNow(
-      s,
-      SETTINGS,
-      T0 + 10 * 60 * 1000,
-    );
+    const { state, remainingSeconds } = deriveNow(s, T0 + 10 * 60 * 1000);
     expect(state.mode).toBe("running");
-    expect(remainingSeconds).toBe(50 * 60);
+    // The block T0 -> T0_BOUNDARY is 46m40s long; 10min in, 36m40s remain.
+    expect(remainingSeconds).toBe(36 * 60 + 40);
   });
 
-  it("floors remaining at 0 rather than going negative", () => {
-    const s = running({ hourStart: T0, mode: "paused", pausedRemaining: 0 });
-    const { remainingSeconds } = deriveNow(s, SETTINGS, T0 + HOUR + 5000);
-    expect(remainingSeconds).toBe(0);
+  it("gives a full hour to a block that starts exactly on a boundary", () => {
+    const s = running({ hourStart: T0H });
+    const { remainingSeconds } = deriveNow(s, T0H);
+    expect(remainingSeconds).toBe(3600);
   });
 
-  it("derives chime from a running state whose hour has elapsed (closed laptop)", () => {
+  it("derives chime from a running state whose block has elapsed (closed laptop)", () => {
     const s = running({ hourStart: T0 });
     const threeHoursLater = T0 + 3 * HOUR;
-    const { state, remainingSeconds } = deriveNow(s, SETTINGS, threeHoursLater);
+    const { state, remainingSeconds } = deriveNow(s, threeHoursLater);
     expect(state.mode).toBe("chime");
-    // The chime keeps the ORIGINAL hour span, not "now".
+    // The chime keeps the ORIGINAL block span, ending on its :00.
     expect(state.chimeFrom).toBe(T0);
-    expect(state.chimeTo).toBe(T0 + HOUR);
+    expect(state.chimeTo).toBe(T0_BOUNDARY);
     expect(remainingSeconds).toBe(0);
   });
 
-  it("returns paused remaining verbatim while paused", () => {
-    const s = running({ mode: "paused", pausedRemaining: 42 });
-    const { remainingSeconds } = deriveNow(s, SETTINGS, T0 + HOUR * 5);
-    expect(remainingSeconds).toBe(42);
+  it("returns zero remaining while paused", () => {
+    const s = running({ mode: "paused" });
+    const { remainingSeconds } = deriveNow(s, T0 + HOUR * 5);
+    expect(remainingSeconds).toBe(0);
   });
 
   it("does not lazily chime a state that is already paused", () => {
-    const s = running({ mode: "paused", pausedRemaining: 10 });
-    const { state } = deriveNow(s, SETTINGS, T0 + 10 * HOUR);
+    const s = running({ mode: "paused" });
+    const { state } = deriveNow(s, T0 + 10 * HOUR);
     expect(state.mode).toBe("paused");
-  });
-});
-
-describe("pause", () => {
-  it("freezes remaining seconds and switches to paused", () => {
-    const s = running({ hourStart: T0 });
-    const { state, entriesToInsert } = dispatch(
-      s,
-      SETTINGS,
-      { type: "pause" },
-      T0 + 20 * 60 * 1000,
-    );
-    expect(state.mode).toBe("paused");
-    expect(state.pausedRemaining).toBe(40 * 60);
-    expect(entriesToInsert).toEqual([]);
-  });
-
-  it("is a no-op outside running", () => {
-    for (const mode of ["paused", "chime", "recap", "away"] as const) {
-      const s = running({ mode });
-      const { state } = dispatch(s, SETTINGS, { type: "pause" }, T0 + 1000);
-      expect(state).toBe(s);
-    }
   });
 });
 
 describe("resume", () => {
-  it("rebases hourStart so the wall-clock derivation stays correct", () => {
-    // Paused with 40 minutes remaining out of 60.
-    const s = running({ mode: "paused", pausedRemaining: 40 * 60 });
+  it("starts a fresh block from now to the next :00", () => {
+    const s = running({ mode: "paused" });
     const resumeAt = T0 + 5 * HOUR;
     const { state, entriesToInsert } = dispatch(
       s,
@@ -115,14 +121,13 @@ describe("resume", () => {
       resumeAt,
     );
     expect(state.mode).toBe("running");
-    expect(state.pausedRemaining).toBeNull();
-    // hourStart = now - (sessionMs - pausedRemaining*1000)
-    expect(state.hourStart).toBe(resumeAt - (HOUR - 40 * 60 * 1000));
+    expect(state.hourStart).toBe(resumeAt);
     expect(entriesToInsert).toEqual([]);
 
-    // Deriving remaining right after resume should still be ~40 minutes.
-    const { remainingSeconds } = deriveNow(state, SETTINGS, resumeAt);
-    expect(remainingSeconds).toBe(40 * 60);
+    const { remainingSeconds } = deriveNow(state, resumeAt);
+    expect(remainingSeconds).toBe(
+      Math.floor((blockEndFor(resumeAt) - resumeAt) / 1000),
+    );
   });
 
   it("is a no-op outside paused", () => {
@@ -151,7 +156,7 @@ describe("ringNow", () => {
   });
 
   it("works from paused", () => {
-    const s = running({ mode: "paused", hourStart: T0, pausedRemaining: 10 });
+    const s = running({ mode: "paused", hourStart: T0 });
     const { state } = dispatch(s, SETTINGS, { type: "ringNow" }, T0 + 5000);
     expect(state.mode).toBe("chime");
   });
@@ -370,7 +375,6 @@ describe("log", () => {
       now,
     );
     expect(state.mode).toBe("paused");
-    expect(state.pausedRemaining).toBe(60 * 60);
   });
 
   it("is a no-op outside recap/chime", () => {
@@ -392,7 +396,7 @@ describe("log", () => {
 });
 
 describe("skip", () => {
-  it("resets the hour with no entry, but still advances phraseIdx", () => {
+  it("resets the block with no entry, but still advances phraseIdx", () => {
     const s = running({
       mode: "recap",
       hourStart: T0,
@@ -446,7 +450,7 @@ describe("awayStart", () => {
   });
 
   it("works from paused", () => {
-    const s = running({ mode: "paused", pausedRemaining: 10 });
+    const s = running({ mode: "paused" });
     const { state } = dispatch(
       s,
       SETTINGS,
@@ -471,11 +475,11 @@ describe("awayStart", () => {
 });
 
 describe("awayReturn", () => {
-  function away(sinceOffsetMs: number, kind: "sleep" | "work" = "sleep") {
+  function away(since: number, kind: "sleep" | "work" = "sleep") {
     return running({
       mode: "away",
       awayKind: kind,
-      awaySince: T0 + sinceOffsetMs,
+      awaySince: since,
       phraseIdx: 1,
     });
   }
@@ -493,8 +497,9 @@ describe("awayReturn", () => {
     }
   });
 
-  it("90 minutes away backfills a 1h block plus a 30min block, newest first", () => {
-    const s = away(0);
+  it("backfills a ragged first block to the :00, then to the return time, newest first", () => {
+    // Away from T0 (13m20s past the hour) for 90 minutes.
+    const s = away(T0);
     const now = T0 + 90 * 60 * 1000;
     const { entriesToInsert } = dispatch(
       s,
@@ -503,18 +508,19 @@ describe("awayReturn", () => {
       now,
     );
     expect(entriesToInsert).toHaveLength(2);
-    // Newest first.
+    // Newest first: the final block runs from the boundary to the return.
     expect(entriesToInsert[0]).toEqual({
-      from: T0 + HOUR,
+      from: T0_BOUNDARY,
       to: now,
       tag: "Asleep",
       feel: "—",
       intent: "yes",
       bullets: ["Asleep"],
     });
+    // Oldest: the ragged lead-in ends on the wall-clock :00.
     expect(entriesToInsert[1]).toEqual({
       from: T0,
-      to: T0 + HOUR,
+      to: T0_BOUNDARY,
       tag: "Asleep",
       feel: "—",
       intent: "yes",
@@ -522,9 +528,9 @@ describe("awayReturn", () => {
     });
   });
 
-  it("60min30s away backfills exactly one 1h block", () => {
-    const s = away(0, "work");
-    const now = T0 + 60 * 60 * 1000 + 30 * 1000;
+  it("drops a trailing sliver under a minute", () => {
+    const s = away(T0H, "work");
+    const now = T0H + HOUR + 30 * 1000;
     const { entriesToInsert } = dispatch(
       s,
       SETTINGS,
@@ -533,8 +539,8 @@ describe("awayReturn", () => {
     );
     expect(entriesToInsert).toHaveLength(1);
     expect(entriesToInsert[0]).toEqual({
-      from: T0,
-      to: T0 + HOUR,
+      from: T0H,
+      to: T0H + HOUR,
       tag: "At work",
       feel: "—",
       intent: "yes",
@@ -542,8 +548,25 @@ describe("awayReturn", () => {
     });
   });
 
+  it("a leading sliver rolls into the first full hour instead of logging seconds", () => {
+    // Away began 30 seconds before a boundary; the first block absorbs the
+    // sliver and runs to the NEXT boundary.
+    const since = T0H + HOUR - 30 * 1000;
+    const s = away(since);
+    const now = T0H + 2 * HOUR;
+    const { entriesToInsert } = dispatch(
+      s,
+      SETTINGS,
+      { type: "awayReturn" },
+      now,
+    );
+    expect(entriesToInsert).toHaveLength(1);
+    expect(entriesToInsert[0].from).toBe(since);
+    expect(entriesToInsert[0].to).toBe(now);
+  });
+
   it("45s away backfills nothing", () => {
-    const s = away(0);
+    const s = away(T0);
     const now = T0 + 45 * 1000;
     const { entriesToInsert } = dispatch(
       s,
@@ -554,25 +577,25 @@ describe("awayReturn", () => {
     expect(entriesToInsert).toEqual([]);
   });
 
-  it("30h away backfills exactly 24 blocks (hard cap)", () => {
-    const s = away(0);
-    const now = T0 + 30 * HOUR;
+  it("caps at MAX_AWAY_BLOCKS whole hours, oldest kept", () => {
+    const s = away(T0H);
+    const now = T0H + 50 * HOUR;
     const { entriesToInsert } = dispatch(
       s,
       SETTINGS,
       { type: "awayReturn" },
       now,
     );
-    expect(entriesToInsert).toHaveLength(24);
-    // Oldest block (last, since newest-first) starts at T0.
-    expect(entriesToInsert[23].from).toBe(T0);
-    expect(entriesToInsert[23].to).toBe(T0 + HOUR);
-    // Newest block ends 24h after T0 (6h of the 30h away span is dropped).
-    expect(entriesToInsert[0].to).toBe(T0 + 24 * HOUR);
+    expect(entriesToInsert).toHaveLength(MAX_AWAY_BLOCKS);
+    // Oldest block (last, since newest-first) starts at the away start.
+    expect(entriesToInsert[MAX_AWAY_BLOCKS - 1].from).toBe(T0H);
+    expect(entriesToInsert[MAX_AWAY_BLOCKS - 1].to).toBe(T0H + HOUR);
+    // Newest block ends 48h in; the remaining 2h of the span is dropped.
+    expect(entriesToInsert[0].to).toBe(T0H + MAX_AWAY_BLOCKS * HOUR);
   });
 
   it("always returns to running (ignores pauseAfterLog) and does not advance phraseIdx", () => {
-    const s = away(0);
+    const s = away(T0);
     const now = T0 + 2 * HOUR;
     const { state } = dispatch(
       s,

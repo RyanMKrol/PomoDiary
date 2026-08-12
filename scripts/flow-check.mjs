@@ -8,7 +8,12 @@
 //
 // Run with: npm run flow:check   (no env vars needed; not part of CI)
 import { PHRASES } from "../lib/domain/index.ts";
-import { deriveNow, dispatch, initialState } from "../lib/timer/engine.ts";
+import {
+  blockEndFor,
+  deriveNow,
+  dispatch,
+  initialState,
+} from "../lib/timer/engine.ts";
 import { fmtChimeRange } from "../lib/time/index.ts";
 import {
   BASE_URL,
@@ -29,7 +34,6 @@ function createFlowFixture(t0) {
     now: t0,
     state: initialState(t0),
     settings: {
-      sessionMinutes: 60,
       soundOn: false,
       chimeVolume: 0.5,
       pauseAfterLog: false,
@@ -40,14 +44,13 @@ function createFlowFixture(t0) {
 
 function engineSettings(fx) {
   return {
-    sessionMinutes: fx.settings.sessionMinutes,
     pauseAfterLog: fx.settings.pauseAfterLog,
   };
 }
 
 /** Rolls the stored state forward to fx.now (running -> chime etc.) and persists it. */
 function derive(fx) {
-  const result = deriveNow(fx.state, engineSettings(fx), fx.now);
+  const result = deriveNow(fx.state, fx.now);
   fx.state = result.state;
   return result.remainingSeconds;
 }
@@ -71,6 +74,8 @@ function statePayload(fx, todayStart, todayEnd) {
   const payload = {
     mode: fx.state.mode,
     remainingSeconds,
+    hourStart: fx.state.hourStart,
+    blockEnd: blockEndFor(fx.state.hourStart),
     chimeFrom: fx.state.chimeFrom,
     chimeTo: fx.state.chimeTo,
     awayKind: fx.state.awayKind,
@@ -232,18 +237,20 @@ async function main() {
     await page.getByTestId("chime-overlay").waitFor();
 
     // Wait a further 30 minutes AT the chime: the shown range's end must be
-    // hourStart + session length, not "now".
+    // the block's own :00 boundary, not "now". T0 is 09:00 local, which is
+    // hour-aligned in any whole-hour-offset timezone, so the boundary is
+    // exactly one hour after the start.
     await tick(page, fx, 30 * MIN);
-    const expectedRange = fmtChimeRange(T0, T0 + 60 * MIN);
+    const expectedRange = fmtChimeRange(T0, blockEndFor(T0));
     const overlayText = await page.getByTestId("chime-overlay").innerText();
     if (!overlayText.includes(expectedRange)) {
       fail(
         "1-rollover",
-        `chime overlay should show "${expectedRange}" (hourStart + session), got: ${overlayText.replace(/\n/g, " | ")}`,
+        `chime overlay should show "${expectedRange}" (the block's :00), got: ${overlayText.replace(/\n/g, " | ")}`,
       );
     }
     assertEqual("1-rollover", "fixture mode", fx.state.mode, "chime");
-    pass("1-rollover: chime raised; range end pinned to hourStart + session");
+    pass("1-rollover: chime raised; range end pinned to the block's :00");
 
     // ---- 2. Recap + log with tag inference ---------------------------------
     await page.getByTestId("chime-overlay").click();
@@ -275,9 +282,15 @@ async function main() {
       );
     }
 
-    // Ring reset: engine is running again with a full session ahead of it.
+    // Ring reset: engine is running again, counting down to the next :00
+    // (the log landed mid-hour, so the new block is shorter than an hour).
     assertEqual("2-log", "mode after log", fx.state.mode, "running");
-    assertEqual("2-log", "remaining after log", derive(fx), 60 * 60);
+    assertEqual(
+      "2-log",
+      "remaining after log",
+      derive(fx),
+      Math.floor((blockEndFor(fx.now) - fx.now) / 1000),
+    );
 
     // The header fetches its count once on mount, so the increment is observed
     // on reload (fixture state lives in this process and survives it).
@@ -313,18 +326,47 @@ async function main() {
     await page.getByTestId("control-sleep").click();
     await page.getByTestId("away-overlay").waitFor();
     const entriesBeforeAway = fx.entries.length;
+    const awayStartAt = fx.now;
 
     await tick(page, fx, 3 * 60 * MIN + 20 * MIN); // 3h20m
     await page.getByTestId("away-return-button").click();
     await page.getByTestId("away-overlay").waitFor({ state: "hidden" });
 
+    // Aligned backfill: a ragged lead-in to the next :00, whole hours after,
+    // and a final block ending at the return time. Compute the expectation
+    // from the same boundary walk the engine does.
+    const expectedBlocks = (() => {
+      let from = awayStartAt;
+      let count = 0;
+      while (fx.now - from >= MIN) {
+        from = Math.min(blockEndFor(from), fx.now);
+        count += 1;
+      }
+      return count;
+    })();
     const newBlocks = fx.entries.slice(entriesBeforeAway);
-    assertEqual("4-away", "backfilled blocks", newBlocks.length, 4);
+    assertEqual(
+      "4-away",
+      "backfilled blocks",
+      newBlocks.length,
+      expectedBlocks,
+    );
     for (const block of newBlocks) {
       assertEqual("4-away", "backfilled tag", block.tag, "Asleep");
     }
+    // Blocks after the first must start on a wall-clock :00.
+    const sorted = [...newBlocks].sort(
+      (a, b) => new Date(a.from).getTime() - new Date(b.from).getTime(),
+    );
+    for (const block of sorted.slice(1)) {
+      if (new Date(block.from).getTime() % (60 * MIN) !== 0) {
+        fail("4-away", `block ${block.from} does not start on a :00`);
+      }
+    }
     assertEqual("4-away", "mode after return", fx.state.mode, "running");
-    pass("4-away: 3h20m sleep backfilled as 4 Asleep blocks, timer running");
+    pass(
+      `4-away: 3h20m sleep backfilled as ${newBlocks.length} aligned Asleep blocks, timer running`,
+    );
 
     // ---- 5. "Wait for me" hold survives reload -------------------------------
     // Mid-hour pause was removed from the UI (hours are honest wall-clock
@@ -337,24 +379,22 @@ async function main() {
     await page.getByTestId("recap-bar").waitFor();
     await page.getByTestId("recap-log-it").click();
     await page.getByTestId("pause-overlay").waitFor();
-    const remainingWhilePaused = fx.state.pausedRemaining;
-    if (remainingWhilePaused === null || remainingWhilePaused === undefined) {
-      fail("5-pause", "engine should be holding a pausedRemaining");
-    }
+    assertEqual("5-pause", "mode while holding", fx.state.mode, "paused");
 
     await page.reload({ waitUntil: "domcontentloaded" });
     await page.getByTestId("pause-overlay").waitFor();
     assertEqual("5-pause", "mode after reload", fx.state.mode, "paused");
-    assertEqual(
-      "5-pause",
-      "remaining after reload",
-      fx.state.pausedRemaining,
-      remainingWhilePaused,
-    );
-    // And the hold is escapable: click anywhere on the overlay to start.
+    // And the hold is escapable: click anywhere on the overlay to start a
+    // fresh block running to the next :00.
     await page.getByTestId("pause-overlay").click();
     await page.getByTestId("pause-overlay").waitFor({ state: "hidden" });
     assertEqual("5-pause", "mode after resume", fx.state.mode, "running");
+    assertEqual(
+      "5-pause",
+      "block starts at resume",
+      fx.state.hourStart,
+      fx.now,
+    );
     pass("5-pause: wait-for-me hold survives reload and resumes on click");
 
     if (pageErrors.length > 0) {

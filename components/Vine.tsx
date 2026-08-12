@@ -11,7 +11,6 @@ interface VineProps {
   timerState: {
     mode?: string;
     settings?: {
-      sessionMinutes?: number;
       soundOn?: boolean;
       chimeVolume?: number;
       pauseAfterLog?: boolean;
@@ -101,7 +100,6 @@ export function Vine({ timerState }: VineProps) {
           <SettingsPanel
             settings={
               timerState.settings as Record<string, unknown> & {
-                sessionMinutes: number;
                 soundOn: boolean;
                 chimeVolume: number;
                 pauseAfterLog: boolean;

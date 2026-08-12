@@ -17,9 +17,6 @@ export function SettingsPanel({
   onClose,
   isOpen,
 }: SettingsPanelProps) {
-  const [sessionMinutes, setSessionMinutes] = useState<number | string>(
-    settings.sessionMinutes,
-  );
   const [soundOn, setSoundOn] = useState(settings.soundOn);
   const [chimeVolume, setChimeVolume] = useState(settings.chimeVolume);
   const [pauseAfterLog, setPauseAfterLog] = useState(settings.pauseAfterLog);
@@ -27,7 +24,6 @@ export function SettingsPanel({
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setSessionMinutes(settings.sessionMinutes);
     setSoundOn(settings.soundOn);
     setChimeVolume(settings.chimeVolume);
     setPauseAfterLog(settings.pauseAfterLog);
@@ -45,17 +41,6 @@ export function SettingsPanel({
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [isOpen, onClose]);
-
-  const handleSessionMinutesChange = async (value: string) => {
-    const parsed = parseInt(value, 10);
-    if (isNaN(parsed)) {
-      setSessionMinutes(value);
-      return;
-    }
-    const clamped = Math.max(1, Math.min(180, parsed));
-    setSessionMinutes(clamped);
-    await updateSettings({ sessionMinutes: clamped });
-  };
 
   const handleSoundToggle = async (value: boolean) => {
     setSoundOn(value);
@@ -81,19 +66,6 @@ export function SettingsPanel({
       data-testid="settings-panel"
     >
       <div className={styles.panelContent}>
-        <div className={styles.section}>
-          <label className={styles.sectionLabel}>Session length</label>
-          <input
-            type="number"
-            value={sessionMinutes}
-            onChange={(e) => handleSessionMinutesChange(e.target.value)}
-            min="1"
-            max="180"
-            className={styles.numberInput}
-            data-testid="session-minutes-input"
-          />
-        </div>
-
         <div className={styles.section}>
           <label className={styles.sectionLabel}>Sound</label>
           <div className={styles.segmentedRow}>
