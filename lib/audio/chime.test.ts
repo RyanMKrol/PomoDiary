@@ -1,6 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { buildChimeSchedule, playChime } from "./chime";
+import {
+  buildChimeSchedule,
+  playChime,
+  resetChimeAudio,
+  unlockAudio,
+} from "./chime";
 
 describe("buildChimeSchedule", () => {
   it("returns 8 notes spaced 0.17s apart", () => {
@@ -63,22 +68,24 @@ class FakeOscillatorNode {
 class FakeAudioContext {
   currentTime = 0;
   destination = {};
+  state = "running";
   close = vi.fn();
+  resume = vi.fn();
   createOscillator = vi.fn(() => new FakeOscillatorNode());
   createGain = vi.fn(() => new FakeGainNode());
 }
 
 describe("playChime", () => {
   beforeEach(() => {
-    vi.useFakeTimers();
+    resetChimeAudio();
   });
 
   afterEach(() => {
+    resetChimeAudio();
     vi.unstubAllGlobals();
-    vi.useRealTimers();
   });
 
-  it("constructs an AudioContext, schedules every oscillator, and closes after 3s", () => {
+  it("schedules every oscillator on one shared AudioContext, reused across chimes", () => {
     const instances: FakeAudioContext[] = [];
     class TrackedAudioContext extends FakeAudioContext {
       constructor() {
@@ -89,15 +96,36 @@ describe("playChime", () => {
     vi.stubGlobal("AudioContext", TrackedAudioContext);
 
     playChime({ soundOn: true, chimeVolume: 0.8 });
+    playChime({ soundOn: true, chimeVolume: 0.8 });
 
+    // One context for both chimes: a fresh context minted in a hidden tab
+    // would start suspended and play nothing, so the context is shared.
     expect(instances).toHaveLength(1);
     const ctx = instances[0];
-    // 8 notes * 2 oscillators (fundamental + partial) each.
-    expect(ctx.createOscillator).toHaveBeenCalledTimes(16);
+    // 8 notes * 2 oscillators (fundamental + partial) each, twice.
+    expect(ctx.createOscillator).toHaveBeenCalledTimes(32);
     expect(ctx.close).not.toHaveBeenCalled();
+  });
 
-    vi.advanceTimersByTime(3000);
-    expect(ctx.close).toHaveBeenCalledTimes(1);
+  it("resumes a suspended context before scheduling", () => {
+    class SuspendedAudioContext extends FakeAudioContext {
+      state = "suspended";
+    }
+    const instances: SuspendedAudioContext[] = [];
+    vi.stubGlobal(
+      "AudioContext",
+      class extends SuspendedAudioContext {
+        constructor() {
+          super();
+          instances.push(this);
+        }
+      },
+    );
+
+    playChime({ soundOn: true });
+
+    expect(instances[0].resume).toHaveBeenCalledTimes(1);
+    expect(instances[0].createOscillator).toHaveBeenCalled();
   });
 
   it("is a no-op when soundOn is false", () => {
@@ -118,5 +146,61 @@ describe("playChime", () => {
     vi.stubGlobal("AudioContext", ThrowingAudioContext);
 
     expect(() => playChime({ soundOn: true })).not.toThrow();
+  });
+});
+
+describe("unlockAudio", () => {
+  beforeEach(() => {
+    resetChimeAudio();
+  });
+
+  afterEach(() => {
+    resetChimeAudio();
+    vi.unstubAllGlobals();
+  });
+
+  it("creates the shared context and resumes it when suspended", () => {
+    const instances: FakeAudioContext[] = [];
+    vi.stubGlobal(
+      "AudioContext",
+      class extends FakeAudioContext {
+        state = "suspended";
+        constructor() {
+          super();
+          instances.push(this);
+        }
+      },
+    );
+
+    unlockAudio();
+
+    expect(instances).toHaveLength(1);
+    expect(instances[0].resume).toHaveBeenCalledTimes(1);
+
+    // A later chime rides the same, now-unlocked context.
+    playChime({ soundOn: true });
+    expect(instances).toHaveLength(1);
+  });
+
+  it("does not resume a context that is already running", () => {
+    const instances: FakeAudioContext[] = [];
+    vi.stubGlobal(
+      "AudioContext",
+      class extends FakeAudioContext {
+        constructor() {
+          super();
+          instances.push(this);
+        }
+      },
+    );
+
+    unlockAudio();
+
+    expect(instances[0].resume).not.toHaveBeenCalled();
+  });
+
+  it("is safe without an AudioContext implementation", () => {
+    vi.stubGlobal("AudioContext", undefined);
+    expect(() => unlockAudio()).not.toThrow();
   });
 });

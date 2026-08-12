@@ -639,3 +639,98 @@ describe("StrictMode double-start (dev)", () => {
     }
   });
 });
+
+describe("hidden-tab worker ticker", () => {
+  class FakeWorker {
+    onmessage: ((e: { data: unknown }) => void) | null = null;
+    terminated = false;
+    terminate() {
+      this.terminated = true;
+    }
+  }
+
+  let workers: FakeWorker[] = [];
+
+  function stubWorkerGlobals(): () => void {
+    workers = [];
+    vi.stubGlobal(
+      "Worker",
+      class extends FakeWorker {
+        constructor() {
+          super();
+          workers.push(this);
+        }
+      },
+    );
+    // jsdom's URL lacks the object-URL statics the ticker needs.
+    const url = URL as unknown as Record<string, unknown>;
+    url.createObjectURL = vi.fn(() => "blob:fake-ticker");
+    url.revokeObjectURL = vi.fn();
+    return () => {
+      vi.unstubAllGlobals();
+      delete url.createObjectURL;
+      delete url.revokeObjectURL;
+    };
+  }
+
+  function setVisibility(state: "visible" | "hidden"): void {
+    Object.defineProperty(document, "visibilityState", {
+      configurable: true,
+      value: state,
+    });
+    document.dispatchEvent(new Event("visibilitychange"));
+  }
+
+  afterEach(() => {
+    setVisibility("visible");
+  });
+
+  it("starts a worker on hide whose messages drive the tick, and terminates it on return", async () => {
+    const restore = stubWorkerGlobals();
+    try {
+      const server = createFakeSyncServer(initialState(T0));
+      const client = createTimerClient(server.fetchImpl);
+      client.start();
+      await settle();
+      expect(client.getState()?.mode).toBe("running");
+
+      // Foreground: no worker — the plain interval owns the tick.
+      expect(workers).toHaveLength(0);
+
+      setVisibility("hidden");
+      expect(workers).toHaveLength(1);
+
+      // Cross the block's end in wall-clock time WITHOUT firing main-thread
+      // timers (a hidden tab's throttled interval may simply never run) —
+      // the worker's message alone must surface the chime.
+      vi.setSystemTime(T0 + HOUR + 5000);
+      workers[0].onmessage?.({ data: 0 });
+      expect(client.getState()?.mode).toBe("chime");
+
+      setVisibility("visible");
+      expect(workers[0].terminated).toBe(true);
+
+      client.stop();
+    } finally {
+      restore();
+    }
+  });
+
+  it("stop() terminates a live hidden-tab worker", async () => {
+    const restore = stubWorkerGlobals();
+    try {
+      const server = createFakeSyncServer(initialState(T0));
+      const client = createTimerClient(server.fetchImpl);
+      client.start();
+      await settle();
+
+      setVisibility("hidden");
+      expect(workers).toHaveLength(1);
+
+      client.stop();
+      expect(workers[0].terminated).toBe(true);
+    } finally {
+      restore();
+    }
+  });
+});

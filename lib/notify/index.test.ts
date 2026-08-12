@@ -189,12 +189,24 @@ describe("notify module", () => {
         value: notif,
       });
     });
+
+    it("does not re-prompt when the browser already answered", async () => {
+      (window.Notification as any).permission = "granted";
+
+      await requestNotifyPermission();
+
+      expect(
+        (window.Notification as any).requestPermission,
+      ).not.toHaveBeenCalled();
+    });
   });
 
   describe("notifyChime", () => {
     it("creates a notification when permission is granted and page is hidden", async () => {
-      // Set permission to granted
-      await requestNotifyPermission();
+      // Grant directly on the browser API — notifyChime reads the live
+      // permission, never a session cache, so a grant from a previous
+      // visit counts without any prompt this session.
+      (window.Notification as any).permission = "granted";
 
       // Mock visibility state
       Object.defineProperty(document, "visibilityState", {
@@ -220,8 +232,7 @@ describe("notify module", () => {
     });
 
     it("does not create a notification when page is visible", async () => {
-      // Set permission to granted
-      await requestNotifyPermission();
+      (window.Notification as any).permission = "granted";
 
       // Mock visibility state - page is visible
       Object.defineProperty(document, "visibilityState", {
@@ -241,8 +252,7 @@ describe("notify module", () => {
     });
 
     it("sets onclick handler to focus window", async () => {
-      // Set permission to granted
-      await requestNotifyPermission();
+      (window.Notification as any).permission = "granted";
 
       // Mock visibility state
       Object.defineProperty(document, "visibilityState", {

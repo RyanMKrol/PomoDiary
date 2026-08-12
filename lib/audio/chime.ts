@@ -55,14 +55,56 @@ function resolveAudioContextCtor(): AudioContextCtor | undefined {
   return g.AudioContext ?? g.webkitAudioContext;
 }
 
+// One long-lived context, shared by every chime. A context constructed at
+// chime time in a hidden tab starts "suspended" under Chrome's autoplay
+// policy and plays nothing; one unlocked during a user gesture keeps its
+// right to sound for the page's lifetime, including from background tabs.
+let sharedCtx: AudioContext | null = null;
+
+function sharedContext(): AudioContext | null {
+  if (sharedCtx === null) {
+    const AudioContextImpl = resolveAudioContextCtor();
+    if (!AudioContextImpl) return null;
+    sharedCtx = new AudioContextImpl();
+  }
+  return sharedCtx;
+}
+
+/** Call from a user-gesture handler (click, keydown) to create and resume
+ *  the shared context while the browser will allow it. Best-effort. */
+export function unlockAudio(): void {
+  try {
+    const ctx = sharedContext();
+    if (ctx !== null && ctx.state === "suspended") {
+      void ctx.resume();
+    }
+  } catch {
+    // Autoplay policy / unsupported environment — chime is best-effort.
+  }
+}
+
+/** Drop the shared context (tests; not used in the app itself). */
+export function resetChimeAudio(): void {
+  try {
+    void sharedCtx?.close();
+  } catch {
+    // A stubbed or already-closed context — nothing to release.
+  }
+  sharedCtx = null;
+}
+
 export function playChime(settings: ChimePlaySettings): void {
   if (settings.soundOn === false) return;
 
   try {
-    const AudioContextImpl = resolveAudioContextCtor();
-    if (!AudioContextImpl) return;
+    const ctx = sharedContext();
+    if (ctx === null) return;
+    // Suspended means the unlock never happened (or the browser re-suspended
+    // us); resume is async, and scheduling below is against the context's
+    // own clock, which only advances once running — so the melody plays
+    // intact from the resume, or stays silent if the browser refuses.
+    if (ctx.state === "suspended") void ctx.resume();
 
-    const ctx = new AudioContextImpl();
     const schedule = buildChimeSchedule(settings.chimeVolume ?? 0.8);
     const now = ctx.currentTime;
 
@@ -86,8 +128,6 @@ export function playChime(settings: ChimePlaySettings): void {
         oscillator.stop(now + osc.stopTime);
       }
     }
-
-    setTimeout(() => ctx.close(), 3000);
   } catch {
     // Autoplay policy / unsupported environment — chime is best-effort.
   }
