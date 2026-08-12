@@ -49,6 +49,9 @@ export function BulletJotter({ timerState, updateDraft }: BulletJotterProps) {
   ) => {
     if (e.key === "Enter") {
       e.preventDefault();
+      // No stacking empties: an empty bullet can't spawn another (Enter-spam
+      // was persisting rows of empty strings into the draft).
+      if (draftBullets[index].trim() === "") return;
       const newBullets = [...draftBullets];
       newBullets.splice(index + 1, 0, "");
       inputRefs.current.splice(index + 1, 0, null);

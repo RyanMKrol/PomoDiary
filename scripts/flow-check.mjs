@@ -294,8 +294,7 @@ async function main() {
     const phraseBefore = PHRASES[fx.state.phraseIdx][0];
     await page.getByText(phraseBefore).waitFor();
 
-    // The dial's arc animates continuously, so force the click (same as visual-check).
-    await page.getByTitle("Ring it now").click({ force: true });
+    await page.getByTestId("control-end-early").click();
     await page.getByTestId("chime-overlay").waitFor();
     await page.getByTestId("chime-overlay").click();
     await page.getByTestId("recap-bar").waitFor();
@@ -327,22 +326,24 @@ async function main() {
     assertEqual("4-away", "mode after return", fx.state.mode, "running");
     pass("4-away: 3h20m sleep backfilled as 4 Asleep blocks, timer running");
 
-    // ---- 5. Pause survives reload --------------------------------------------
-    await page.getByTestId("control-pause-resume").click();
-    await page
-      .getByTestId("control-pause-resume")
-      .filter({ hasText: "Resume" })
-      .waitFor();
+    // ---- 5. "Wait for me" hold survives reload -------------------------------
+    // Mid-hour pause was removed from the UI (hours are honest wall-clock
+    // blocks); the paused state is now only reachable as the between-hours
+    // hold from the pauseAfterLog setting.
+    fx.settings.pauseAfterLog = true;
+    await page.getByTestId("control-end-early").click();
+    await page.getByTestId("chime-overlay").waitFor();
+    await page.getByTestId("chime-overlay").click();
+    await page.getByTestId("recap-bar").waitFor();
+    await page.getByTestId("recap-log-it").click();
+    await page.getByTestId("pause-overlay").waitFor();
     const remainingWhilePaused = fx.state.pausedRemaining;
     if (remainingWhilePaused === null || remainingWhilePaused === undefined) {
       fail("5-pause", "engine should be holding a pausedRemaining");
     }
 
     await page.reload({ waitUntil: "domcontentloaded" });
-    await page
-      .getByTestId("control-pause-resume")
-      .filter({ hasText: "Resume" })
-      .waitFor();
+    await page.getByTestId("pause-overlay").waitFor();
     assertEqual("5-pause", "mode after reload", fx.state.mode, "paused");
     assertEqual(
       "5-pause",
@@ -350,7 +351,11 @@ async function main() {
       fx.state.pausedRemaining,
       remainingWhilePaused,
     );
-    pass("5-pause: still paused after reload with the same remaining");
+    // And the hold is escapable: click anywhere on the overlay to start.
+    await page.getByTestId("pause-overlay").click();
+    await page.getByTestId("pause-overlay").waitFor({ state: "hidden" });
+    assertEqual("5-pause", "mode after resume", fx.state.mode, "running");
+    pass("5-pause: wait-for-me hold survives reload and resumes on click");
 
     if (pageErrors.length > 0) {
       fail("page-errors", `\n${pageErrors.join("\n")}`);

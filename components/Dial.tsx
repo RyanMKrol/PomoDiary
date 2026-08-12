@@ -43,7 +43,6 @@ export function Dial({ timerState }: DialProps = {}) {
     remainingSeconds = SESSION_SECONDS,
     chimeFrom,
     phraseIdx = 0,
-    ringNow = async () => {},
   } = state;
 
   const isChime = mode === "chime";
@@ -95,11 +94,7 @@ export function Dial({ timerState }: DialProps = {}) {
 
   return (
     <div className={styles.row}>
-      <div
-        className={styles.dialWrapper}
-        onClick={() => ringNow()}
-        title="Ring it now"
-      >
+      <div className={styles.dialWrapper}>
         <svg
           viewBox="0 0 200 200"
           className={styles.svg}
@@ -173,9 +168,7 @@ export function Dial({ timerState }: DialProps = {}) {
         <div className={styles.statusLabel}>{statusLabel}</div>
         <div className={styles.phrase}>{displayPhrase}</div>
         <div className={styles.subPhrase}>{displaySubPhrase}</div>
-        <div className={styles.timeSince}>
-          Since {hourStartLabel} · click the dial to ring it now
-        </div>
+        <div className={styles.timeSince}>Since {hourStartLabel}</div>
       </div>
     </div>
   );
