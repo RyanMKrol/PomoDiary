@@ -16,6 +16,7 @@ export interface GridViewProps {
   onSelectDay: (dayIndex: number) => void;
   timerState: {
     mode?: string;
+    entriesVersion?: number;
   };
 }
 
@@ -24,21 +25,21 @@ export function GridView({ onSelectDay, timerState }: GridViewProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const prevModeRef = useRef<string | undefined | null>(null);
+  const entriesVersion = timerState.entriesVersion ?? 0;
+
+  const prevVersionRef = useRef<number | null>(null);
 
   useEffect(() => {
-    // Refetch on first load or when the timer LEAVES an entry-creating mode
-    // (log from recap/chime, backfill from away) — not on every mode change,
-    // which doubled the network calls at page load.
-    const prevMode = prevModeRef.current;
-    prevModeRef.current = timerState.mode;
+    // Refetch on first load or when entriesVersion bumps (a flush ack
+    // confirmed new entries in the database) — mode transitions are local
+    // under the optimistic client and precede the insert, so they no longer
+    // signal fresh data.
+    const prevVersion = prevVersionRef.current;
+    prevVersionRef.current = entriesVersion;
     // Never early-return while the first load hasn't settled (StrictMode
     // cancels the first fetch), nor while in the error state — see DayView.
-    if (prevMode !== null && !loading && error === null) {
-      const leftEntryCreatingMode =
-        prevMode !== timerState.mode &&
-        (prevMode === "recap" || prevMode === "away" || prevMode === "chime");
-      if (!leftEntryCreatingMode) return;
+    if (prevVersion !== null && !loading && error === null) {
+      if (prevVersion === entriesVersion) return;
     }
 
     // No range params = the user's full history: the grid shows every day
@@ -68,7 +69,7 @@ export function GridView({ onSelectDay, timerState }: GridViewProps) {
     };
     // `error` deliberately excluded — see DayView's matching comment.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [timerState.mode]);
+  }, [entriesVersion]);
 
   const days = useMemo(() => {
     // eslint-disable-next-line react-hooks/purity

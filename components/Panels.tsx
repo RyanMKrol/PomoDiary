@@ -1,6 +1,6 @@
 "use client";
 
-import { useTimer } from "@/lib/client/useTimer";
+import type { UseTimerResult } from "@/lib/client/useTimer";
 import { Dial } from "./Dial";
 import { BulletJotter } from "./BulletJotter";
 import { PickerStrip } from "./PickerStrip";
@@ -12,8 +12,11 @@ import { PauseOverlay } from "./PauseOverlay";
 import { Vine } from "./Vine";
 import styles from "./Panels.module.css";
 
-export function Panels() {
-  const timerState = useTimer();
+export interface PanelsProps {
+  timerState: UseTimerResult;
+}
+
+export function Panels({ timerState }: PanelsProps) {
   const {
     mode,
     remainingSeconds,

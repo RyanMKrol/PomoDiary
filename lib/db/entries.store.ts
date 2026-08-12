@@ -83,7 +83,9 @@ export async function insertEntry<T extends Db>(
   });
 }
 
-export async function insertEntries<T extends Db>(
+/** The bullets + per-day cap validation insertEntries runs, exposed so the
+ *  sync path can validate BEFORE its atomic state+entries batch write. */
+export async function assertEntryCaps<T extends Db>(
   db: T,
   userId: string,
   entryList: EntryInput[],
@@ -91,6 +93,7 @@ export async function insertEntries<T extends Db>(
   for (const entry of entryList) {
     validateBullets(entry.bullets);
   }
+  if (entryList.length === 0) return;
 
   const minFrom = Math.min(...entryList.map((e) => e.from.getTime()));
   const dayStart = new Date(minFrom);
@@ -104,6 +107,14 @@ export async function insertEntries<T extends Db>(
       `Cannot add more than ${CAPS.ENTRIES_PER_DAY} entries per day (currently ${existingCount}, trying to add ${entryList.length})`,
     );
   }
+}
+
+export async function insertEntries<T extends Db>(
+  db: T,
+  userId: string,
+  entryList: EntryInput[],
+): Promise<void> {
+  await assertEntryCaps(db, userId, entryList);
 
   await db.insert(entries).values(
     entryList.map((entry) => ({

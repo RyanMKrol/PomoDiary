@@ -49,5 +49,7 @@ export async function getStateHandler(
     countPromise,
   ]);
 
-  return NextResponse.json(buildStatePayload(state, settings, now, count));
+  return NextResponse.json(
+    buildStatePayload(state, settings, now, userId, count),
+  );
 }

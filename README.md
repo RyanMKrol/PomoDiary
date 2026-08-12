@@ -11,6 +11,9 @@ classic 25/5 pomodoro timer; the point is the hourly check-in and the record it 
 ## How it works (planned)
 
 - A multi-user web app deployed on Vercel, with accounts (Clerk) and a Postgres entry log (Neon).
+- Every click and keystroke applies instantly: changes queue in a local write-ahead log and a
+  background sync persists them in batches every few seconds, so the UI never waits on the
+  database and unsaved work survives a closed tab.
 - A ring fills on screen as the hour passes; you can jot bullets at any point during the hour.
 - Blocks line up with the clock on the wall: whenever a block starts, it runs until the next
   :00, so a block begun at 10:27 chimes at 11:00 and is logged as 10:27 to 11:00.

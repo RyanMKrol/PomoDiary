@@ -241,6 +241,7 @@ export function createFixtureState(now) {
     remainingSeconds: secondsToBlockEnd(now, now),
     settings: seedSettings(),
     entries: seedEntries(now),
+    lastBatchId: null,
   };
 }
 
@@ -267,6 +268,8 @@ function buildStatePayload(state, now) {
     draftIntent: state.draftIntent,
     phraseIdx: state.phraseIdx,
     settings: state.settings,
+    serverNow: now,
+    userKey: "visual",
     count,
   };
 }
@@ -363,15 +366,27 @@ export async function routeApi(page, state) {
       return route.fulfill({ json: buildStatePayload(state, now) });
     }
 
-    if (pathname === "/api/timer" && method === "POST") {
-      let action = {};
+    if (pathname === "/api/timer/sync" && method === "POST") {
+      let body = {};
       try {
-        action = req.postDataJSON();
+        body = req.postDataJSON();
       } catch {
-        action = {};
+        body = {};
       }
-      applyAction(state, action, now);
-      return route.fulfill({ json: buildStatePayload(state, now) });
+      if (state.lastBatchId && state.lastBatchId === body.batchId) {
+        return route.fulfill({
+          json: { applied: false, state: buildStatePayload(state, now) },
+        });
+      }
+      // Each record applies at its own client timestamp, like the real
+      // sync handler — not at arrival time.
+      for (const rec of body.actions ?? []) {
+        applyAction(state, rec.action, rec.at);
+      }
+      state.lastBatchId = body.batchId;
+      return route.fulfill({
+        json: { applied: true, state: buildStatePayload(state, now) },
+      });
     }
 
     if (pathname === "/api/entries" && method === "GET") {

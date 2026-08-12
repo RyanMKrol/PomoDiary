@@ -9,16 +9,26 @@ import {
   requestNotifyPermission,
   notifyChime as postNotification,
 } from "../notify";
-import { deriveNow, type AwayKind } from "../timer/engine";
+import {
+  blockEndFor,
+  deriveNow,
+  dispatch,
+  type Action,
+  type AwayKind,
+  type Settings as EngineSettings,
+  type TimerState as EngineTimerState,
+} from "../timer/engine";
 import type { ApiSettings, StatePayload } from "../api/timer-state";
+import { createWalStore, type WalStore, type FrozenBatch } from "./wal";
+import { createFlusher, type Flusher } from "./flusher";
 
-const DRAFT_DEBOUNCE_MS = 800;
 const TICK_MS = 1000;
+const LOAD_RETRY_MS = 3000;
 
 export interface ClientState {
   mode: StatePayload["mode"];
   remainingSeconds: number;
-  /** Start of the running block (ms), straight from the payload; null unless running. */
+  /** Start of the running block (ms); null unless running. */
   hourStart: number | null;
   /** When the running block ends (the next wall-clock :00); null unless running. */
   blockEnd: number | null;
@@ -31,6 +41,10 @@ export interface ClientState {
   phraseIdx: number;
   settings: ApiSettings;
   hoursToday: number | undefined;
+  /** Bumps whenever a flush lands that inserted entries — the vine and grid
+   *  refetch on this instead of on mode transitions (which are now local and
+   *  happen BEFORE the server insert). */
+  entriesVersion: number;
   awayElapsedSeconds: number | null;
   awayKind: AwayKind | null;
   awaySince: number | null;
@@ -51,22 +65,6 @@ export interface LogPayload {
   intent: string | null;
 }
 
-/** Minimal shadow of the engine's TimerState, rebuilt from each server payload, used only to drive local ticking via deriveNow. */
-interface ShadowState {
-  mode: StatePayload["mode"];
-  hourStart: number;
-  chimeFrom: number | null;
-  chimeTo: number | null;
-  awayKind: AwayKind | null;
-  awaySince: number | null;
-  awayLabel: string | null;
-  draftBullets: string[];
-  draftTag: string | null;
-  draftFeel: string | null;
-  draftIntent: string | null;
-  phraseIdx: number;
-}
-
 export function todayBoundsFor(now: number): {
   todayStart: number;
   todayEnd: number;
@@ -77,7 +75,9 @@ export function todayBoundsFor(now: number): {
   return { todayStart, todayEnd: todayStart + 24 * 60 * 60 * 1000 };
 }
 
-export function reconstructShadow(payload: StatePayload): ShadowState {
+/** The payload now carries every raw engine field, so the client's engine
+ *  state is a straight copy — no inversion, no reconstruction. */
+export function payloadToEngineState(payload: StatePayload): EngineTimerState {
   return {
     mode: payload.mode,
     hourStart: payload.hourStart,
@@ -94,66 +94,7 @@ export function reconstructShadow(payload: StatePayload): ShadowState {
   };
 }
 
-export function toClientState(
-  payload: StatePayload,
-  awayEnteredAt: number | null,
-  now: number,
-  awayKind: AwayKind | null = null,
-  awayLabel: string | null = null,
-): ClientState {
-  // The payload's own away fields win: they survive reloads, while the
-  // awayEnteredAt/awayKind arguments only exist in this tab's memory.
-  const awaySince =
-    payload.mode === "away" ? (payload.awaySince ?? awayEnteredAt) : null;
-  const resolvedAwayKind =
-    payload.mode === "away" ? (payload.awayKind ?? awayKind) : null;
-  const resolvedAwayLabel =
-    payload.mode === "away" ? (payload.awayLabel ?? awayLabel) : null;
-  return {
-    mode: payload.mode,
-    remainingSeconds: payload.remainingSeconds,
-    hourStart: payload.mode === "running" ? payload.hourStart : null,
-    blockEnd: payload.mode === "running" ? payload.blockEnd : null,
-    chimeFrom: payload.chimeFrom,
-    chimeTo: payload.chimeTo,
-    draftBullets: payload.draftBullets,
-    draftTag: payload.draftTag,
-    draftFeel: payload.draftFeel,
-    draftIntent: payload.draftIntent,
-    phraseIdx: payload.phraseIdx,
-    settings: payload.settings,
-    hoursToday: payload.count,
-    awayElapsedSeconds:
-      awaySince !== null ? Math.floor((now - awaySince) / 1000) : null,
-    awayKind: resolvedAwayKind,
-    awaySince,
-    awayLabel: resolvedAwayLabel,
-  };
-}
-
-export function applyDraftPatchLocally(
-  state: ClientState,
-  patch: DraftPatch,
-): ClientState {
-  return {
-    ...state,
-    draftBullets:
-      patch.bullets !== undefined ? patch.bullets : state.draftBullets,
-    draftTag: patch.tag !== undefined ? patch.tag : state.draftTag,
-    draftFeel: patch.feel !== undefined ? patch.feel : state.draftFeel,
-    draftIntent: patch.intent !== undefined ? patch.intent : state.draftIntent,
-  };
-}
-
-type TimerAction =
-  | { type: "resume" }
-  | { type: "ringNow" }
-  | { type: "acknowledge" }
-  | { type: "log"; payload: LogPayload }
-  | { type: "skip" }
-  | { type: "awayStart"; kind: AwayKind; label?: string }
-  | { type: "awayReturn" }
-  | { type: "draftUpdate"; patch: DraftPatch };
+type TimerAction = Action;
 
 export interface TimerClient {
   getState(): ClientState | null;
@@ -170,27 +111,42 @@ export interface TimerClient {
   awayStart(kind: AwayKind, label?: string): Promise<void>;
   awayReturn(): Promise<void>;
   updateDraft(patch: DraftPatch): void;
-  flushDraft(): Promise<void>;
   updateSettings(patch: Partial<ApiSettings>): Promise<void>;
 }
 
 type FetchLike = typeof fetch;
 
+/**
+ * The optimistic client. The LOCAL engine state is the source of truth:
+ * every action dispatches through the pure engine immediately (instant UI),
+ * is appended to a per-user write-ahead log in localStorage, and a
+ * background flusher batches the log to POST /api/timer/sync every few
+ * seconds. On each ack the client REBASES: adopt the server's authoritative
+ * state, then replay the still-unflushed WAL records on top — keystrokes
+ * typed while a flush was in flight can never be clobbered by the response.
+ */
 export function createTimerClient(fetchImpl: FetchLike = fetch): TimerClient {
+  let local: EngineTimerState | null = null;
+  let settings: ApiSettings | null = null;
+  let wal: WalStore | null = null;
+  let flusher: Flusher | null = null;
+  let hoursToday: number | undefined;
+  let entriesVersion = 0;
+
   let current: ClientState | null = null;
-  let shadow: ShadowState | null = null;
-  let awayEnteredAt: number | null = null;
-  let awayKindEntered: AwayKind | null = null;
-  let awayLabelEntered: string | null = null;
   let loading = true;
   let intervalId: ReturnType<typeof setInterval> | null = null;
+  let loadRetryId: ReturnType<typeof setTimeout> | null = null;
+  let stopped = false;
+  let hasRequestedNotifyPermission = false;
+  let releaseFlushLock: (() => void) | null = null;
 
   const stateListeners = new Set<(state: ClientState) => void>();
   const chimeListeners = new Set<() => void>();
 
-  let pendingDraftPatch: DraftPatch = {};
-  let draftTimer: ReturnType<typeof setTimeout> | null = null;
-  let hasRequestedNotifyPermission = false;
+  function engineSettings(): EngineSettings {
+    return { pauseAfterLog: settings?.pauseAfterLog ?? false };
+  }
 
   function notifyState(): void {
     if (current === null) return;
@@ -203,7 +159,6 @@ export function createTimerClient(fetchImpl: FetchLike = fetch): TimerClient {
         soundOn: current.settings.soundOn,
         chimeVolume: current.settings.chimeVolume,
       });
-      // Fire title/favicon/notification alongside the sound
       setChimeTitle(true);
       setChimeFavicon(true);
       if (current.chimeFrom !== null && current.chimeTo !== null) {
@@ -213,41 +168,109 @@ export function createTimerClient(fetchImpl: FetchLike = fetch): TimerClient {
     for (const listener of chimeListeners) listener();
   }
 
-  function applyState(payload: StatePayload, now: number): void {
+  /** Projects the local engine state (derived at `now`) into a ClientState. */
+  function project(now: number): ClientState {
+    const derived = deriveNow(local!, now);
+    const s = derived.state;
+    const isAway = s.mode === "away";
+    return {
+      mode: s.mode,
+      remainingSeconds: derived.remainingSeconds,
+      hourStart: s.mode === "running" ? s.hourStart : null,
+      blockEnd: s.mode === "running" ? blockEndFor(s.hourStart) : null,
+      chimeFrom: s.chimeFrom,
+      chimeTo: s.chimeTo,
+      draftBullets: s.draftBullets,
+      draftTag: s.draftTag,
+      draftFeel: s.draftFeel,
+      draftIntent: s.draftIntent,
+      phraseIdx: s.phraseIdx,
+      settings: settings!,
+      hoursToday,
+      entriesVersion,
+      awayElapsedSeconds:
+        isAway && s.awaySince !== null
+          ? Math.floor((now - s.awaySince) / 1000)
+          : null,
+      awayKind: isAway ? s.awayKind : null,
+      awaySince: isAway ? s.awaySince : null,
+      awayLabel: isAway ? s.awayLabel : null,
+    };
+  }
+
+  /** Re-projects and notifies, firing chime side-effects on transitions. */
+  function publish(now: number): void {
+    if (local === null || settings === null) return;
     const prevMode = current?.mode ?? null;
-
-    if (payload.mode === "away") {
-      // Prefer the server's record (survives reloads); fall back to this
-      // tab's memory of when away mode was entered.
-      awayEnteredAt = payload.awaySince ?? awayEnteredAt ?? now;
-      if (payload.awayKind !== null) awayKindEntered = payload.awayKind;
-      if (payload.awayLabel !== null) awayLabelEntered = payload.awayLabel;
-    } else {
-      awayEnteredAt = null;
-      awayKindEntered = null;
-      awayLabelEntered = null;
-    }
-
-    shadow = reconstructShadow(payload);
-    current = toClientState(
-      payload,
-      awayEnteredAt,
-      now,
-      awayKindEntered,
-      awayLabelEntered,
-    );
+    current = project(now);
     loading = false;
     notifyState();
 
-    if (prevMode !== null && prevMode !== "chime" && payload.mode === "chime") {
+    if (prevMode !== null && prevMode !== "chime" && current.mode === "chime") {
       notifyChime();
     }
-
-    // Clear title and favicon when chime mode ends
-    if (prevMode === "chime" && payload.mode !== "chime") {
+    if (prevMode === "chime" && current.mode !== "chime") {
       setChimeTitle(false);
       setChimeFavicon(false);
     }
+  }
+
+  function dispatchLocal(action: TimerAction): void {
+    if (local === null || wal === null || flusher === null) return;
+
+    if (!hasRequestedNotifyPermission) {
+      hasRequestedNotifyPermission = true;
+      void requestNotifyPermission();
+    }
+
+    const at = Date.now();
+    local = deriveNow(local, at).state;
+    const result = dispatch(local, engineSettings(), action, at);
+    local = result.state;
+
+    if (result.entriesToInsert.length > 0 && hoursToday !== undefined) {
+      const { todayStart, todayEnd } = todayBoundsFor(at);
+      hoursToday += result.entriesToInsert.filter(
+        (e) => e.from >= todayStart && e.from < todayEnd,
+      ).length;
+    }
+
+    wal.append({ id: crypto.randomUUID(), at, action });
+    publish(at);
+
+    // Entry-producing actions flush immediately — the vine wants them; all
+    // the rest ride the normal cadence.
+    if (action.type === "log" || action.type === "awayReturn") {
+      flusher.flushNow();
+    } else {
+      flusher.notifyAppend();
+    }
+  }
+
+  function batchProducesEntries(batch: FrozenBatch): boolean {
+    return batch.records.some(
+      (r) => r.action.type === "log" || r.action.type === "awayReturn",
+    );
+  }
+
+  /** Adopt an authoritative server payload, then replay whatever the server
+   *  has not seen yet on top of it. */
+  function rebase(payload: StatePayload, flushed?: FrozenBatch): void {
+    if (wal === null) return;
+    settings = payload.settings;
+    let s = payloadToEngineState(payload);
+    for (const rec of wal.unflushed()) {
+      s = deriveNow(s, rec.at).state;
+      // Entries the replay would produce are discarded locally — the server
+      // is the only entry writer; the vine refetches on entriesVersion.
+      s = dispatch(s, engineSettings(), rec.action, rec.at).state;
+    }
+    local = s;
+    if (payload.count !== undefined) hoursToday = payload.count;
+    if (flushed !== undefined && batchProducesEntries(flushed)) {
+      entriesVersion += 1;
+    }
+    publish(Date.now());
   }
 
   async function fetchState(): Promise<StatePayload> {
@@ -260,113 +283,122 @@ export function createTimerClient(fetchImpl: FetchLike = fetch): TimerClient {
     return (await res.json()) as StatePayload;
   }
 
-  async function refetchState(): Promise<void> {
-    // Never throw: this is fired unawaited from start() and tick(), where a
-    // transient fetch failure must not become an unhandled rejection (it
-    // fails CI's test runs and would surface as console noise in prod).
-    // State simply stays stale until the next action or tick retries.
+  /** Poisoned-batch fallback: fetch fresh server truth and rebase on it. */
+  async function resyncFromServer(): Promise<void> {
     try {
       const payload = await fetchState();
-      applyState(payload, Date.now());
+      // The poisoned batch may have half-mattered (e.g. day cap): make the
+      // dependent views refetch regardless.
+      entriesVersion += 1;
+      rebase(payload);
     } catch {
-      // swallow — next refetch retries
+      // swallow — the flusher keeps running; a later flush rebases anyway
     }
   }
 
-  async function performAction(action: TimerAction): Promise<void> {
-    // Request notification permission on first user interaction
-    if (!hasRequestedNotifyPermission) {
-      hasRequestedNotifyPermission = true;
-      void requestNotifyPermission();
-    }
+  function buildFlusher(walStore: WalStore): Flusher {
+    return createFlusher({
+      wal: walStore,
+      fetchImpl,
+      todayBounds: () => todayBoundsFor(Date.now()),
+      onServerState: (payload, flushed) => rebase(payload, flushed),
+      onPoisonedBatch: () => void resyncFromServer(),
+    });
+  }
 
-    try {
-      const res = await fetchImpl("/api/timer", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(action),
+  /** Only one tab flushes at a time. Web Locks resolves leadership cleanly:
+   *  followers wait; when the leader tab closes, the next acquires the lock
+   *  and starts its flusher. Falls back to always-flush where the API is
+   *  missing (jsdom, old browsers) — the server's batchId dedupe still
+   *  bounds the damage of a double-flusher to duplicate reads.
+   *  Known limit, accepted for a personal app: two tabs APPENDING in the
+   *  same instant can lose one tab's record (localStorage has no CAS). */
+  function startFlusherWithLeadership(userKey: string): void {
+    const f = flusher!;
+    const locks = (globalThis.navigator as Navigator & { locks?: LockManager })
+      ?.locks;
+    if (locks?.request === undefined) {
+      f.start();
+      return;
+    }
+    void locks.request(`pomodiary-wal-flush:${userKey}`, () => {
+      if (stopped) return Promise.resolve();
+      f.start();
+      return new Promise<void>((resolve) => {
+        releaseFlushLock = resolve;
       });
-      if (!res.ok) throw new Error(`POST /api/timer failed: ${res.status}`);
-      const payload = (await res.json()) as StatePayload;
-      applyState(payload, Date.now());
+    });
+  }
+
+  async function loadInitialState(): Promise<void> {
+    try {
+      const payload = await fetchState();
+      if (stopped) return;
+
+      wal = createWalStore(payload.userKey);
+      settings = payload.settings;
+      hoursToday = payload.count;
+      flusher = buildFlusher(wal);
+
+      const inFlight = wal.inFlight();
+      if (inFlight === null) {
+        // Common path: nothing was mid-flush, so every stored record is
+        // definitely unseen by the server — replay locally, no extra
+        // roundtrip, and let the flusher send them on its own clock.
+        let s = payloadToEngineState(payload);
+        for (const rec of wal.unflushed()) {
+          s = deriveNow(s, rec.at).state;
+          s = dispatch(s, engineSettings(), rec.action, rec.at).state;
+        }
+        local = s;
+      } else {
+        // A tab died mid-flush and we cannot know whether the batch landed.
+        // Replaying it locally could double-apply (the engine is not replay-
+        // idempotent: a re-run [ringNow..log] cycle mints a second entry),
+        // so show plain server state and let the flusher retry the batch —
+        // the server's lastBatchId dedupe answers authoritatively and the
+        // ack's rebase replays the remaining records within ~one RTT.
+        local = payloadToEngineState(payload);
+      }
+
+      publish(Date.now());
+      startFlusherWithLeadership(payload.userKey);
+      if (wal.hasWork()) flusher.flushNow();
     } catch {
-      await refetchState();
+      if (stopped) return;
+      loadRetryId = setTimeout(() => {
+        loadRetryId = null;
+        void loadInitialState();
+      }, LOAD_RETRY_MS);
     }
   }
 
   function tick(now: number): void {
-    if (shadow === null || current === null) return;
-
-    const wasMode = shadow.mode;
-    const { state: nextShadow, remainingSeconds } = deriveNow(shadow, now);
-    shadow = nextShadow;
-
-    if (wasMode !== "chime" && nextShadow.mode === "chime") {
-      current = {
-        ...current,
-        mode: "chime",
-        remainingSeconds: 0,
-        chimeFrom: nextShadow.chimeFrom,
-        chimeTo: nextShadow.chimeTo,
-      };
-      notifyState();
-      notifyChime();
-      void refetchState();
-      return;
-    }
-
-    if (wasMode === "running") {
-      const prevRemaining = current.remainingSeconds;
-      current = { ...current, remainingSeconds };
-      // Re-render only when a displayed value can change: the UI shows
-      // minute-level granularity, so per-second renders of the whole panel
-      // tree were pure idle CPU burn (Chrome flags tabs for less).
-      if (Math.ceil(remainingSeconds / 60) !== Math.ceil(prevRemaining / 60)) {
-        notifyState();
-      }
-      return;
-    }
-
-    if (wasMode === "away" && awayEnteredAt !== null) {
-      const prevElapsed = current.awayElapsedSeconds ?? 0;
-      const elapsed = Math.floor((now - awayEnteredAt) / 1000);
-      current = { ...current, awayElapsedSeconds: elapsed };
-      if (Math.floor(elapsed / 60) !== Math.floor(prevElapsed / 60)) {
-        notifyState();
-      }
-    }
-  }
-
-  function clearDraftTimer(): void {
-    if (draftTimer !== null) {
-      clearTimeout(draftTimer);
-      draftTimer = null;
+    if (local === null || current === null) return;
+    const next = project(now);
+    const modeChanged = next.mode !== current.mode;
+    // Re-render only when a displayed value can change: the UI shows
+    // minute-level granularity, so per-second renders of the whole panel
+    // tree were pure idle CPU burn (Chrome flags tabs for less).
+    const minuteChanged =
+      Math.ceil(next.remainingSeconds / 60) !==
+      Math.ceil(current.remainingSeconds / 60);
+    const awayMinuteChanged =
+      Math.floor((next.awayElapsedSeconds ?? 0) / 60) !==
+      Math.floor((current.awayElapsedSeconds ?? 0) / 60);
+    if (modeChanged || minuteChanged || awayMinuteChanged) {
+      publish(now);
     }
   }
 
   function updateDraft(patch: DraftPatch): void {
-    if (current !== null) {
-      current = applyDraftPatchLocally(current, patch);
-      notifyState();
-    }
-    pendingDraftPatch = { ...pendingDraftPatch, ...patch };
-
-    clearDraftTimer();
-    draftTimer = setTimeout(() => {
-      draftTimer = null;
-      void flushDraft();
-    }, DRAFT_DEBOUNCE_MS);
-  }
-
-  async function flushDraft(): Promise<void> {
-    clearDraftTimer();
-    if (Object.keys(pendingDraftPatch).length === 0) return;
-    const patch = pendingDraftPatch;
-    pendingDraftPatch = {};
-    await performAction({ type: "draftUpdate", patch });
+    dispatchLocal({ type: "draftUpdate", patch });
   }
 
   async function updateSettings(patch: Partial<ApiSettings>): Promise<void> {
+    // Settings stay a direct PATCH, deliberately outside the WAL: they are
+    // rare, they configure replay itself (pauseAfterLog), and last-write-
+    // wins is the behavior a settings toggle wants.
     try {
       const res = await fetchImpl("/api/settings", {
         method: "PATCH",
@@ -374,13 +406,10 @@ export function createTimerClient(fetchImpl: FetchLike = fetch): TimerClient {
         body: JSON.stringify(patch),
       });
       if (!res.ok) throw new Error(`PATCH /api/settings failed: ${res.status}`);
-      const settings = (await res.json()) as ApiSettings;
-      if (current !== null) {
-        current = { ...current, settings };
-        notifyState();
-      }
+      settings = (await res.json()) as ApiSettings;
+      publish(Date.now());
     } catch {
-      await refetchState();
+      await resyncFromServer();
     }
   }
 
@@ -399,49 +428,62 @@ export function createTimerClient(fetchImpl: FetchLike = fetch): TimerClient {
     },
 
     start() {
-      void refetchState();
+      stopped = false;
+      void loadInitialState();
       if (intervalId === null) {
         intervalId = setInterval(() => tick(Date.now()), TICK_MS);
       }
     },
 
     stop() {
+      stopped = true;
       if (intervalId !== null) {
         clearInterval(intervalId);
         intervalId = null;
       }
-      clearDraftTimer();
+      if (loadRetryId !== null) {
+        clearTimeout(loadRetryId);
+        loadRetryId = null;
+      }
+      flusher?.stop();
+      releaseFlushLock?.();
+      releaseFlushLock = null;
     },
 
-    resume: () => performAction({ type: "resume" }),
-    ringNow: () => performAction({ type: "ringNow" }),
-    acknowledge: () => performAction({ type: "acknowledge" }),
-
-    async log(payload) {
-      await flushDraft();
-      await performAction({ type: "log", payload });
+    resume: () => {
+      dispatchLocal({ type: "resume" });
+      return Promise.resolve();
     },
-
-    async skip() {
-      await flushDraft();
-      await performAction({ type: "skip" });
+    ringNow: () => {
+      dispatchLocal({ type: "ringNow" });
+      return Promise.resolve();
     },
-
-    async awayStart(kind, label) {
-      awayKindEntered = kind;
-      awayLabelEntered = kind === "custom" ? (label ?? null) : null;
-      await flushDraft();
-      await performAction(
+    acknowledge: () => {
+      dispatchLocal({ type: "acknowledge" });
+      return Promise.resolve();
+    },
+    log: (payload) => {
+      dispatchLocal({ type: "log", payload });
+      return Promise.resolve();
+    },
+    skip: () => {
+      dispatchLocal({ type: "skip" });
+      return Promise.resolve();
+    },
+    awayStart: (kind, label) => {
+      dispatchLocal(
         kind === "custom"
           ? { type: "awayStart", kind, label }
           : { type: "awayStart", kind },
       );
+      return Promise.resolve();
+    },
+    awayReturn: () => {
+      dispatchLocal({ type: "awayReturn" });
+      return Promise.resolve();
     },
 
-    awayReturn: () => performAction({ type: "awayReturn" }),
-
     updateDraft,
-    flushDraft,
     updateSettings,
   };
 }

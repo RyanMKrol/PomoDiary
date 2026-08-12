@@ -603,7 +603,7 @@ describe("GridView", () => {
   });
 
   describe("refetching", () => {
-    it("refetches only when the timer leaves an entry-creating mode", async () => {
+    it("refetches only when entriesVersion bumps, not on mode changes", async () => {
       const fetchSpy = vi.fn(() =>
         Promise.resolve({
           ok: true,
@@ -614,21 +614,37 @@ describe("GridView", () => {
       global.fetch = fetchSpy as any;
 
       const { rerender } = render(
-        <GridView onSelectDay={() => {}} timerState={{ mode: "running" }} />,
+        <GridView
+          onSelectDay={() => {}}
+          timerState={{ mode: "running", entriesVersion: 0 }}
+        />,
       );
 
       await screen.findByTestId("day-row-0");
       expect(fetchSpy).toHaveBeenCalledTimes(1);
 
-      // Entering recap creates no entries yet — no refetch.
+      // Mode transitions are local under the optimistic client and precede
+      // the server insert — they must NOT refetch.
       rerender(
-        <GridView onSelectDay={() => {}} timerState={{ mode: "recap" }} />,
+        <GridView
+          onSelectDay={() => {}}
+          timerState={{ mode: "recap", entriesVersion: 0 }}
+        />,
+      );
+      rerender(
+        <GridView
+          onSelectDay={() => {}}
+          timerState={{ mode: "running", entriesVersion: 0 }}
+        />,
       );
       expect(fetchSpy).toHaveBeenCalledTimes(1);
 
-      // Leaving recap (the log landed) — refetch.
+      // A flush ack confirmed new entries in the database — refetch.
       rerender(
-        <GridView onSelectDay={() => {}} timerState={{ mode: "running" }} />,
+        <GridView
+          onSelectDay={() => {}}
+          timerState={{ mode: "running", entriesVersion: 1 }}
+        />,
       );
       expect(fetchSpy).toHaveBeenCalledTimes(2);
     });

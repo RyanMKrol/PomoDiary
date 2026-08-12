@@ -48,10 +48,16 @@ export interface StatePayload {
   draftIntent: string | null;
   phraseIdx: number;
   settings: ApiSettings;
+  /** Server clock at response time, for client skew observability. */
+  serverNow: number;
+  /** Opaque per-user key for client-side storage (the WAL's localStorage
+   *  key). Delivered via the payload rather than the Clerk client SDK so
+   *  the Playwright harnesses (which run a fake Clerk) still get one. */
+  userKey: string;
   count?: number;
 }
 
-function rowToEngineState(row: TimerStateRow): EngineTimerState {
+export function rowToEngineState(row: TimerStateRow): EngineTimerState {
   return {
     mode: row.mode as Mode,
     hourStart: row.hourStart.getTime(),
@@ -121,6 +127,7 @@ export function buildStatePayload(
   state: EngineTimerState,
   settings: ApiSettings,
   now: number,
+  userId: string,
   count?: number,
 ): StatePayload {
   const derived = deriveNow(state, now);
@@ -141,6 +148,8 @@ export function buildStatePayload(
     draftIntent: derived.state.draftIntent,
     phraseIdx: derived.state.phraseIdx,
     settings,
+    serverNow: now,
+    userKey: userId,
     ...(count !== undefined ? { count } : {}),
   };
 }

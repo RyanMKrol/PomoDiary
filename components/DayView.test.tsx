@@ -316,7 +316,7 @@ describe("DayView", () => {
       expect(fetchSpy).toHaveBeenCalledTimes(2);
     });
 
-    it("refetches only when the timer leaves an entry-creating mode", async () => {
+    it("refetches only when entriesVersion bumps, not on mode changes", async () => {
       const fetchSpy = vi.fn(() =>
         Promise.resolve({
           ok: true,
@@ -330,29 +330,37 @@ describe("DayView", () => {
         <DayView
           dayStart={1000}
           dayEnd={2000}
-          timerState={{ mode: "running" }}
+          timerState={{ mode: "running", entriesVersion: 0 }}
         />,
       );
 
       await screen.findByText("Nothing in the basket yet.");
       expect(fetchSpy).toHaveBeenCalledTimes(1);
 
-      // Entering recap creates no entries yet — no refetch.
+      // Mode transitions are local under the optimistic client and precede
+      // the server insert — they must NOT refetch.
       rerender(
         <DayView
           dayStart={1000}
           dayEnd={2000}
-          timerState={{ mode: "recap" }}
+          timerState={{ mode: "recap", entriesVersion: 0 }}
+        />,
+      );
+      rerender(
+        <DayView
+          dayStart={1000}
+          dayEnd={2000}
+          timerState={{ mode: "running", entriesVersion: 0 }}
         />,
       );
       expect(fetchSpy).toHaveBeenCalledTimes(1);
 
-      // Leaving recap (the log landed) — refetch.
+      // A flush ack confirmed new entries in the database — refetch.
       rerender(
         <DayView
           dayStart={1000}
           dayEnd={2000}
-          timerState={{ mode: "running" }}
+          timerState={{ mode: "running", entriesVersion: 1 }}
         />,
       );
       expect(fetchSpy).toHaveBeenCalledTimes(2);

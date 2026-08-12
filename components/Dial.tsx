@@ -2,7 +2,7 @@
 
 import { fmtClock } from "@/lib/time";
 import { PHRASES } from "@/lib/domain";
-import { useTimer, type UseTimerResult } from "@/lib/client/useTimer";
+import { type UseTimerResult } from "@/lib/client/useTimer";
 import styles from "./Dial.module.css";
 
 const SESSION_SECONDS = 3600; // Default to 1 hour
@@ -29,14 +29,14 @@ function generateTicks(): Array<{
 }
 
 export interface DialProps {
-  timerState?: Partial<UseTimerResult>;
+  /** Always supplied by the shell — the Dial must never create its own
+   *  timer client (a second client means a second WAL copy and a double
+   *  chime). */
+  timerState: Partial<UseTimerResult>;
 }
 
-export function Dial({ timerState }: DialProps = {}) {
-  const defaultState = useTimer();
-  const state = timerState
-    ? { ...defaultState, ...timerState }
-    : (defaultState as Partial<UseTimerResult>);
+export function Dial({ timerState }: DialProps) {
+  const state = timerState;
 
   const {
     mode = "running",
