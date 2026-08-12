@@ -34,10 +34,12 @@ export function DayView({ dayStart, dayEnd, timerState }: DayViewProps) {
     // (undefined -> running) for no new data.
     const prev = prevRef.current;
     prevRef.current = { dayStart, dayEnd, mode: timerState.mode };
-    // A failed fetch must never be sticky: while in the error state, ANY
-    // effect trigger retries — otherwise one flaky request blanks the vine
-    // until the day changes.
-    if (prev !== null && error === null) {
+    // Never early-return until the first load has actually SETTLED: React
+    // StrictMode (dev) runs the effect twice, cancelling the first fetch —
+    // an early return on the second run left the vine loading forever. And
+    // a failed fetch must never be sticky: in the error state, any trigger
+    // retries.
+    if (prev !== null && !loading && error === null) {
       const dayChanged = prev.dayStart !== dayStart || prev.dayEnd !== dayEnd;
       const leftEntryCreatingMode =
         prev.mode !== timerState.mode &&
