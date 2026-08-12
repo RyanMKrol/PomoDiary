@@ -20,7 +20,6 @@
   width: min(124px, 17vh);
   aspect-ratio: 1 / 1;
   flex: 0 0 auto;
-  cursor: pointer;
   animation: breathe 7s ease-in-out infinite;
   position: relative;
 }
