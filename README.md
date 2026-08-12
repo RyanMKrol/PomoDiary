@@ -15,7 +15,9 @@ classic 25/5 pomodoro timer; the point is the hourly check-in and the record it 
 - Blocks line up with the clock on the wall: whenever a block starts, it runs until the next
   :00, so a block begun at 10:27 chimes at 11:00 and is logged as 10:27 to 11:00.
 - When the block chimes you tidy the bullets up, tag the hour, and log it; the next one starts.
-- Sleep and Work away modes back-fill absences as hour blocks, also aligned to the clock.
+- Sleep, Work and Gym away modes back-fill absences as hour blocks, also aligned to the
+  clock. A custom option lets you type anything else ("Travelling", say) and remembers your
+  recent labels as quick picks.
 - "The vine" shows your day as a readable log, and a grid shows where the hours went.
 
 The full design lives in [`design/`](design/README.md); the visual prototype is

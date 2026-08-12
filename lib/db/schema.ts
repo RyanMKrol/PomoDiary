@@ -36,6 +36,7 @@ export const timerState = pgTable("timer_state", {
   chimeTo: timestamp("chime_to", { withTimezone: true }),
   awayKind: text("away_kind"),
   awaySince: timestamp("away_since", { withTimezone: true }),
+  awayLabel: text("away_label"),
   draftBullets: jsonb("draft_bullets").$type<string[]>().notNull(),
   draftTag: text("draft_tag"),
   draftFeel: text("draft_feel"),
@@ -51,4 +52,9 @@ export const userSettings = pgTable("user_settings", {
   soundOn: boolean("sound_on").notNull().default(true),
   chimeVolume: real("chime_volume").notNull().default(0.8),
   pauseAfterLog: boolean("pause_after_log").notNull().default(false),
+  // Server-managed MRU of custom away labels (cap 5) — not client-patchable.
+  recentAwayLabels: jsonb("recent_away_labels")
+    .$type<string[]>()
+    .notNull()
+    .default([]),
 });

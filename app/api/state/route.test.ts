@@ -88,6 +88,7 @@ describe("GET /api/state", () => {
       soundOn: true,
       chimeVolume: 0.8,
       pauseAfterLog: false,
+      recentAwayLabels: [],
     });
     expect(body.count).toBeUndefined();
   });

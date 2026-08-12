@@ -1,7 +1,17 @@
 .bar {
   display: flex;
+  flex-direction: column;
   border-top: 2px solid rgba(32, 30, 29, 0.4);
   flex: 0 0 auto;
+}
+
+.row {
+  display: flex;
+}
+
+.row + .row,
+.row + .customArea {
+  border-top: 2px solid rgba(32, 30, 29, 0.4);
 }
 
 .button {
@@ -23,6 +33,11 @@
     color 0.2s ease;
 }
 
+.button:hover {
+  background-color: #eae9e9;
+  color: #201e1d;
+}
+
 .buttonLast {
   border-right: none;
 }
@@ -34,21 +49,88 @@
   flex-shrink: 0;
 }
 
-.pauseResumeButton {
+.endEarlyButton {
   flex: 1;
 }
 
-.pauseResumeButton:hover {
+.endEarlyButton:hover {
   background-color: #ffe0d9;
   color: #ae1800;
 }
 
-.sleepButton:hover {
-  background-color: #eae9e9;
-  color: #201e1d;
+.moreButton {
+  flex: 1;
+  justify-content: flex-start;
+  opacity: 0.7;
 }
 
-.workButton:hover {
-  background-color: #eae9e9;
+/* Custom away entry: chips of recent labels above a borderless input. */
+.customArea {
+  display: flex;
+  flex-direction: column;
+}
+
+.recentChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 12px 16px 0;
+}
+
+.recentChip {
+  padding: 5px 10px;
+  background: transparent;
+  border: 1px solid rgba(32, 30, 29, 0.4);
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
   color: #201e1d;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease;
+}
+
+.recentChip:hover {
+  background-color: #201e1d;
+  color: #fff;
+}
+
+.customRow {
+  display: flex;
+  align-items: stretch;
+}
+
+.customInput {
+  flex: 1;
+  min-width: 0;
+  padding: 15px 16px;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid rgba(32, 30, 29, 0.4);
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: -0.012em;
+  color: #201e1d;
+  outline: none;
+}
+
+.customInput::placeholder {
+  color: rgba(32, 30, 29, 0.35);
+}
+
+.goButton {
+  border-left: 2px solid rgba(32, 30, 29, 0.4);
+  color: #ec3013;
+}
+
+.goButton:hover {
+  background-color: #ffe0d9;
+  color: #ae1800;
+}
+
+.cancelButton {
+  font-size: 16px;
+  opacity: 0.55;
 }

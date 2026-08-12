@@ -87,6 +87,60 @@ describe("LiveRegion", () => {
     expect(region.textContent).toContain("At work since");
   });
 
+  it("announces entering the gym", () => {
+    const { rerender } = render(
+      <LiveRegion timerState={{ mode: "running" }} />,
+    );
+
+    rerender(
+      <LiveRegion
+        timerState={{ mode: "away" }}
+        awayKind="gym"
+        awaySince={aug10_214pm}
+      />,
+    );
+
+    const region = screen.getByTestId("live-region");
+    expect(region.textContent).toContain("At the gym since");
+    expect(region.textContent).toContain("2:14 PM");
+  });
+
+  it("announces entering a custom away using its label", () => {
+    const { rerender } = render(
+      <LiveRegion timerState={{ mode: "running" }} />,
+    );
+
+    rerender(
+      <LiveRegion
+        timerState={{ mode: "away" }}
+        awayKind="custom"
+        awaySince={aug10_214pm}
+        awayLabel="Travelling"
+      />,
+    );
+
+    const region = screen.getByTestId("live-region");
+    expect(region.textContent).toContain("Travelling since");
+    expect(region.textContent).toContain("2:14 PM");
+  });
+
+  it("announces a label-less custom away as plain Away", () => {
+    const { rerender } = render(
+      <LiveRegion timerState={{ mode: "running" }} />,
+    );
+
+    rerender(
+      <LiveRegion
+        timerState={{ mode: "away" }}
+        awayKind="custom"
+        awaySince={aug10_214pm}
+      />,
+    );
+
+    const region = screen.getByTestId("live-region");
+    expect(region.textContent).toContain("Away since");
+  });
+
   it("announces returning with the hours logged count", () => {
     const { rerender } = render(
       <LiveRegion

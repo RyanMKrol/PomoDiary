@@ -21,6 +21,7 @@ export function Panels() {
     chimeTo,
     awayKind,
     awaySince,
+    awayLabel,
     awayElapsedSeconds,
     updateDraft,
     resume,
@@ -64,6 +65,7 @@ export function Panels() {
               awayKind={awayKind}
               awaySince={awaySince}
               now={awayNow}
+              awayLabel={awayLabel}
               onReturn={() => awayReturn()}
             />
           )}

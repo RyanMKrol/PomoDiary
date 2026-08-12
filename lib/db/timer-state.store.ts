@@ -16,6 +16,7 @@ export interface TimerStateInput {
   chimeTo?: Date | null;
   awayKind?: string | null;
   awaySince?: Date | null;
+  awayLabel?: string | null;
   draftBullets: string[];
   draftTag?: string | null;
   draftFeel?: string | null;
@@ -33,6 +34,7 @@ const DEFAULT_SETTINGS = {
   soundOn: true,
   chimeVolume: 0.8,
   pauseAfterLog: false,
+  recentAwayLabels: [] as string[],
 };
 
 export async function getTimerState<T extends Db>(
@@ -58,6 +60,7 @@ export async function upsertTimerState<T extends Db>(
     chimeTo: state.chimeTo || null,
     awayKind: state.awayKind || null,
     awaySince: state.awaySince || null,
+    awayLabel: state.awayLabel || null,
     draftBullets: state.draftBullets,
     draftTag: state.draftTag || null,
     draftFeel: state.draftFeel || null,
@@ -115,5 +118,31 @@ export async function upsertSettings<T extends Db>(
     .onConflictDoUpdate({
       target: userSettings.userId,
       set: updateData,
+    });
+}
+
+export const MAX_RECENT_AWAY_LABELS = 5;
+
+/** Pushes a custom away label onto the user's most-recent-first list:
+ *  case-insensitive dedupe, newest first, capped. Server-managed — the
+ *  settings PATCH schema deliberately does not accept this field. */
+export async function pushRecentAwayLabel<T extends Db>(
+  db: T,
+  userId: string,
+  label: string,
+): Promise<void> {
+  const current = await getSettings(db, userId);
+  const existing = current.recentAwayLabels ?? [];
+  const next = [
+    label,
+    ...existing.filter((l) => l.toLowerCase() !== label.toLowerCase()),
+  ].slice(0, MAX_RECENT_AWAY_LABELS);
+
+  await db
+    .insert(userSettings)
+    .values({ userId, recentAwayLabels: next })
+    .onConflictDoUpdate({
+      target: userSettings.userId,
+      set: { recentAwayLabels: next },
     });
 }

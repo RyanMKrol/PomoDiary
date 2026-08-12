@@ -34,6 +34,7 @@ export interface ClientState {
   awayElapsedSeconds: number | null;
   awayKind: AwayKind | null;
   awaySince: number | null;
+  awayLabel: string | null;
 }
 
 export interface DraftPatch {
@@ -58,6 +59,7 @@ interface ShadowState {
   chimeTo: number | null;
   awayKind: AwayKind | null;
   awaySince: number | null;
+  awayLabel: string | null;
   draftBullets: string[];
   draftTag: string | null;
   draftFeel: string | null;
@@ -83,6 +85,7 @@ export function reconstructShadow(payload: StatePayload): ShadowState {
     chimeTo: payload.chimeTo,
     awayKind: payload.awayKind ?? null,
     awaySince: payload.awaySince ?? null,
+    awayLabel: payload.awayLabel ?? null,
     draftBullets: payload.draftBullets,
     draftTag: payload.draftTag,
     draftFeel: payload.draftFeel,
@@ -96,6 +99,7 @@ export function toClientState(
   awayEnteredAt: number | null,
   now: number,
   awayKind: AwayKind | null = null,
+  awayLabel: string | null = null,
 ): ClientState {
   // The payload's own away fields win: they survive reloads, while the
   // awayEnteredAt/awayKind arguments only exist in this tab's memory.
@@ -103,6 +107,8 @@ export function toClientState(
     payload.mode === "away" ? (payload.awaySince ?? awayEnteredAt) : null;
   const resolvedAwayKind =
     payload.mode === "away" ? (payload.awayKind ?? awayKind) : null;
+  const resolvedAwayLabel =
+    payload.mode === "away" ? (payload.awayLabel ?? awayLabel) : null;
   return {
     mode: payload.mode,
     remainingSeconds: payload.remainingSeconds,
@@ -121,6 +127,7 @@ export function toClientState(
       awaySince !== null ? Math.floor((now - awaySince) / 1000) : null,
     awayKind: resolvedAwayKind,
     awaySince,
+    awayLabel: resolvedAwayLabel,
   };
 }
 
@@ -144,7 +151,7 @@ type TimerAction =
   | { type: "acknowledge" }
   | { type: "log"; payload: LogPayload }
   | { type: "skip" }
-  | { type: "awayStart"; kind: "sleep" | "work" }
+  | { type: "awayStart"; kind: AwayKind; label?: string }
   | { type: "awayReturn" }
   | { type: "draftUpdate"; patch: DraftPatch };
 
@@ -160,7 +167,7 @@ export interface TimerClient {
   acknowledge(): Promise<void>;
   log(payload: LogPayload): Promise<void>;
   skip(): Promise<void>;
-  awayStart(kind: "sleep" | "work"): Promise<void>;
+  awayStart(kind: AwayKind, label?: string): Promise<void>;
   awayReturn(): Promise<void>;
   updateDraft(patch: DraftPatch): void;
   flushDraft(): Promise<void>;
@@ -174,6 +181,7 @@ export function createTimerClient(fetchImpl: FetchLike = fetch): TimerClient {
   let shadow: ShadowState | null = null;
   let awayEnteredAt: number | null = null;
   let awayKindEntered: AwayKind | null = null;
+  let awayLabelEntered: string | null = null;
   let loading = true;
   let intervalId: ReturnType<typeof setInterval> | null = null;
 
@@ -213,13 +221,21 @@ export function createTimerClient(fetchImpl: FetchLike = fetch): TimerClient {
       // tab's memory of when away mode was entered.
       awayEnteredAt = payload.awaySince ?? awayEnteredAt ?? now;
       if (payload.awayKind !== null) awayKindEntered = payload.awayKind;
+      if (payload.awayLabel !== null) awayLabelEntered = payload.awayLabel;
     } else {
       awayEnteredAt = null;
       awayKindEntered = null;
+      awayLabelEntered = null;
     }
 
     shadow = reconstructShadow(payload);
-    current = toClientState(payload, awayEnteredAt, now, awayKindEntered);
+    current = toClientState(
+      payload,
+      awayEnteredAt,
+      now,
+      awayKindEntered,
+      awayLabelEntered,
+    );
     loading = false;
     notifyState();
 
@@ -411,10 +427,15 @@ export function createTimerClient(fetchImpl: FetchLike = fetch): TimerClient {
       await performAction({ type: "skip" });
     },
 
-    async awayStart(kind) {
+    async awayStart(kind, label) {
       awayKindEntered = kind;
+      awayLabelEntered = kind === "custom" ? (label ?? null) : null;
       await flushDraft();
-      await performAction({ type: "awayStart", kind });
+      await performAction(
+        kind === "custom"
+          ? { type: "awayStart", kind, label }
+          : { type: "awayStart", kind },
+      );
     },
 
     awayReturn: () => performAction({ type: "awayReturn" }),
@@ -436,7 +457,7 @@ export interface UseTimerResult extends Partial<ClientState> {
   acknowledge(): Promise<void>;
   log(payload: LogPayload): Promise<void>;
   skip(): Promise<void>;
-  awayStart(kind: "sleep" | "work"): Promise<void>;
+  awayStart(kind: AwayKind, label?: string): Promise<void>;
   awayReturn(): Promise<void>;
   updateDraft(patch: DraftPatch): void;
   updateSettings(patch: Partial<ApiSettings>): Promise<void>;

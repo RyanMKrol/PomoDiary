@@ -1,8 +1,8 @@
-import { AWAY, inferTag } from "../domain";
+import { AWAY, awayConfig, inferTag } from "../domain";
 
 export type Mode = "running" | "paused" | "chime" | "recap" | "away";
 
-export type AwayKind = keyof typeof AWAY;
+export type AwayKind = keyof typeof AWAY | "custom";
 
 export interface Settings {
   pauseAfterLog: boolean;
@@ -15,6 +15,8 @@ export interface TimerState {
   chimeTo: number | null;
   awayKind: AwayKind | null;
   awaySince: number | null;
+  /** The user-typed label when awayKind is "custom"; null otherwise. */
+  awayLabel: string | null;
   draftBullets: string[];
   draftTag: string | null;
   draftFeel: string | null;
@@ -51,7 +53,7 @@ export type Action =
   | { type: "acknowledge" }
   | { type: "log"; payload: LogPayload }
   | { type: "skip" }
-  | { type: "awayStart"; kind: AwayKind }
+  | { type: "awayStart"; kind: AwayKind; label?: string }
   | { type: "awayReturn" }
   | { type: "draftUpdate"; patch: DraftPatch };
 
@@ -97,6 +99,7 @@ export function initialState(now: number): TimerState {
     chimeTo: null,
     awayKind: null,
     awaySince: null,
+    awayLabel: null,
     draftBullets: [],
     draftTag: null,
     draftFeel: null,
@@ -145,6 +148,7 @@ function resetForNextBlock(
     chimeTo: null,
     awayKind: null,
     awaySince: null,
+    awayLabel: null,
     draftBullets: [],
     draftTag: null,
     draftFeel: null,
@@ -235,12 +239,17 @@ export function dispatch(
     case "awayStart": {
       if (state.mode !== "running" && state.mode !== "paused")
         return NOOP(state);
+      const label = action.kind === "custom" ? (action.label ?? "").trim() : "";
+      // A custom away with no label has nothing to tag its hours with —
+      // belt under the zod strap, which already rejects it.
+      if (action.kind === "custom" && label === "") return NOOP(state);
       return {
         state: {
           ...state,
           mode: "away",
           awayKind: action.kind,
           awaySince: now,
+          awayLabel: action.kind === "custom" ? label : null,
         },
         entriesToInsert: [],
       };
@@ -248,7 +257,7 @@ export function dispatch(
 
     case "awayReturn": {
       if (state.mode !== "away" || state.awayKind === null) return NOOP(state);
-      const cfg = AWAY[state.awayKind];
+      const cfg = awayConfig(state.awayKind, state.awayLabel);
       const blocks: EntryToInsert[] = [];
       let from = state.awaySince ?? now;
 

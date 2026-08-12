@@ -6,6 +6,8 @@ import {
   INTENTS,
   PHRASES,
   UNFILED_COLOR,
+  CUSTOM_AWAY_COLOR,
+  awayConfig,
   tagColor,
   inferTag,
 } from "./index";
@@ -56,6 +58,12 @@ describe("domain", () => {
     });
   });
 
+  describe("CUSTOM_AWAY_COLOR", () => {
+    it("has the correct OKLCH value", () => {
+      expect(CUSTOM_AWAY_COLOR).toBe("oklch(0.45 0.06 62)");
+    });
+  });
+
   describe("tagColor", () => {
     it("returns the tag's color for a tag label", () => {
       expect(tagColor("Deep work")).toBe("oklch(0.58 0.20 30)");
@@ -70,8 +78,17 @@ describe("domain", () => {
       expect(tagColor("At work")).toBe("oklch(0.50 0.075 235)");
     });
 
-    it("returns UNFILED_COLOR for unknown labels", () => {
-      expect(tagColor("Unknown")).toBe(UNFILED_COLOR);
+    it("returns the away mode color for At the gym", () => {
+      expect(tagColor("At the gym")).toBe("oklch(0.50 0.09 120)");
+    });
+
+    it("returns UNFILED_COLOR only for the exact Unfiled label", () => {
+      expect(tagColor("Unfiled")).toBe(UNFILED_COLOR);
+    });
+
+    it("returns CUSTOM_AWAY_COLOR for unknown labels (custom away tags)", () => {
+      expect(tagColor("Unknown")).toBe(CUSTOM_AWAY_COLOR);
+      expect(tagColor("Travelling")).toBe(CUSTOM_AWAY_COLOR);
     });
   });
 
@@ -96,6 +113,58 @@ describe("domain", () => {
         note: "Away hours log themselves. Tidy them up later if you like.",
         bullet: "At work",
       });
+    });
+
+    it("has gym config with exact values", () => {
+      expect(AWAY.gym).toEqual({
+        tag: "At the gym",
+        color: "oklch(0.50 0.09 120)",
+        end: "I'm back",
+        title: "AT THE GYM.",
+        note: "Away hours log themselves. Tidy them up later if you like.",
+        bullet: "At the gym",
+      });
+    });
+  });
+
+  describe("awayConfig", () => {
+    it("returns the AWAY entry verbatim for fixed kinds", () => {
+      expect(awayConfig("sleep")).toBe(AWAY.sleep);
+      expect(awayConfig("work")).toBe(AWAY.work);
+      expect(awayConfig("gym")).toBe(AWAY.gym);
+    });
+
+    it("ignores a label passed alongside a fixed kind", () => {
+      expect(awayConfig("gym", "Travelling")).toBe(AWAY.gym);
+    });
+
+    it("derives a config from the label for a custom kind", () => {
+      expect(awayConfig("custom", "Travelling")).toEqual({
+        tag: "Travelling",
+        color: CUSTOM_AWAY_COLOR,
+        end: "I'm back",
+        title: "TRAVELLING.",
+        note: "Away hours log themselves. Tidy them up later if you like.",
+        bullet: "Travelling",
+      });
+    });
+
+    it("trims the label and uppercases the title", () => {
+      const cfg = awayConfig("custom", "  at the dentist  ");
+      expect(cfg.tag).toBe("at the dentist");
+      expect(cfg.bullet).toBe("at the dentist");
+      expect(cfg.title).toBe("AT THE DENTIST.");
+    });
+
+    it("falls back to Away for a missing or empty custom label", () => {
+      for (const label of [undefined, null, "", "   "]) {
+        const cfg = awayConfig("custom", label);
+        expect(cfg.tag).toBe("Away");
+        expect(cfg.bullet).toBe("Away");
+        expect(cfg.title).toBe("AWAY.");
+        expect(cfg.color).toBe(CUSTOM_AWAY_COLOR);
+        expect(cfg.end).toBe("I'm back");
+      }
     });
   });
 

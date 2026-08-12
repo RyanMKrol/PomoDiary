@@ -231,6 +231,248 @@ describe("ControlBar", () => {
     });
   });
 
+  describe("gym button", () => {
+    it("renders gym button", () => {
+      render(
+        <ControlBar
+          timerState={{ mode: "running" } as Partial<UseTimerResult>}
+          ringNow={vi.fn()}
+          awayStart={vi.fn()}
+        />,
+      );
+      const button = screen.getByTestId("control-gym");
+      expect(button).toHaveTextContent("Gym");
+    });
+
+    it("calls awayStart with gym when button is clicked", async () => {
+      const awayStart = vi.fn();
+      const user = userEvent.setup();
+      render(
+        <ControlBar
+          timerState={{ mode: "running" } as Partial<UseTimerResult>}
+          ringNow={vi.fn()}
+          awayStart={awayStart}
+        />,
+      );
+      const button = screen.getByTestId("control-gym");
+      await user.click(button);
+      expect(awayStart).toHaveBeenCalledWith("gym");
+    });
+
+    it("has green swatch with oklch color", () => {
+      const { container } = render(
+        <ControlBar
+          timerState={{ mode: "running" } as Partial<UseTimerResult>}
+          ringNow={vi.fn()}
+          awayStart={vi.fn()}
+        />,
+      );
+      const swatch = container.querySelector(
+        "[data-testid='control-swatch-gym']",
+      );
+      expect(swatch).toHaveStyle({ backgroundColor: "oklch(0.50 0.09 120)" });
+    });
+  });
+
+  describe("custom away (Else…)", () => {
+    const settingsWith = (recentAwayLabels: string[]) => ({
+      soundOn: true,
+      chimeVolume: 0.5,
+      pauseAfterLog: false,
+      recentAwayLabels,
+    });
+
+    it("opens the custom area with the input when Else… is clicked", async () => {
+      const user = userEvent.setup();
+      render(
+        <ControlBar
+          timerState={{ mode: "running" } as Partial<UseTimerResult>}
+          ringNow={vi.fn()}
+          awayStart={vi.fn()}
+        />,
+      );
+
+      await user.click(screen.getByTestId("control-away-more"));
+
+      expect(screen.getByTestId("control-custom-area")).toBeInTheDocument();
+      const input = screen.getByTestId("control-custom-input");
+      expect(input).toHaveAttribute("placeholder", "Where to?");
+      // The away-kind buttons swap out for the custom area
+      expect(screen.queryByTestId("control-sleep")).not.toBeInTheDocument();
+    });
+
+    it("submits the trimmed label via awayStart on Enter", async () => {
+      const awayStart = vi.fn();
+      const user = userEvent.setup();
+      render(
+        <ControlBar
+          timerState={{ mode: "running" } as Partial<UseTimerResult>}
+          ringNow={vi.fn()}
+          awayStart={awayStart}
+        />,
+      );
+
+      await user.click(screen.getByTestId("control-away-more"));
+      await user.type(
+        screen.getByTestId("control-custom-input"),
+        "  Trimmed Label  {Enter}",
+      );
+
+      expect(awayStart).toHaveBeenCalledWith("custom", "Trimmed Label");
+    });
+
+    it("does nothing on Enter when the input is empty", async () => {
+      const awayStart = vi.fn();
+      const user = userEvent.setup();
+      render(
+        <ControlBar
+          timerState={{ mode: "running" } as Partial<UseTimerResult>}
+          ringNow={vi.fn()}
+          awayStart={awayStart}
+        />,
+      );
+
+      await user.click(screen.getByTestId("control-away-more"));
+      await user.type(screen.getByTestId("control-custom-input"), "{Enter}");
+
+      expect(awayStart).not.toHaveBeenCalled();
+      expect(screen.getByTestId("control-custom-area")).toBeInTheDocument();
+    });
+
+    it("closes back to the away buttons on Escape", async () => {
+      const awayStart = vi.fn();
+      const user = userEvent.setup();
+      render(
+        <ControlBar
+          timerState={{ mode: "running" } as Partial<UseTimerResult>}
+          ringNow={vi.fn()}
+          awayStart={awayStart}
+        />,
+      );
+
+      await user.click(screen.getByTestId("control-away-more"));
+      await user.type(
+        screen.getByTestId("control-custom-input"),
+        "Somewhere{Escape}",
+      );
+
+      expect(
+        screen.queryByTestId("control-custom-area"),
+      ).not.toBeInTheDocument();
+      expect(screen.getByTestId("control-sleep")).toBeInTheDocument();
+      expect(awayStart).not.toHaveBeenCalled();
+    });
+
+    it("submits the typed label when the Go button is clicked", async () => {
+      const awayStart = vi.fn();
+      const user = userEvent.setup();
+      render(
+        <ControlBar
+          timerState={{ mode: "running" } as Partial<UseTimerResult>}
+          ringNow={vi.fn()}
+          awayStart={awayStart}
+        />,
+      );
+
+      await user.click(screen.getByTestId("control-away-more"));
+      await user.type(screen.getByTestId("control-custom-input"), "Travelling");
+      await user.click(screen.getByTestId("control-custom-go"));
+
+      expect(awayStart).toHaveBeenCalledWith("custom", "Travelling");
+    });
+
+    it("closes the custom area when the cancel button is clicked", async () => {
+      const awayStart = vi.fn();
+      const user = userEvent.setup();
+      render(
+        <ControlBar
+          timerState={{ mode: "running" } as Partial<UseTimerResult>}
+          ringNow={vi.fn()}
+          awayStart={awayStart}
+        />,
+      );
+
+      await user.click(screen.getByTestId("control-away-more"));
+      await user.click(screen.getByTestId("control-custom-cancel"));
+
+      expect(
+        screen.queryByTestId("control-custom-area"),
+      ).not.toBeInTheDocument();
+      expect(screen.getByTestId("control-sleep")).toBeInTheDocument();
+      expect(awayStart).not.toHaveBeenCalled();
+    });
+
+    it("renders recent-label chips from settings.recentAwayLabels", async () => {
+      const user = userEvent.setup();
+      render(
+        <ControlBar
+          timerState={
+            {
+              mode: "running",
+              settings: settingsWith(["Travelling", "School run"]),
+            } as Partial<UseTimerResult>
+          }
+          ringNow={vi.fn()}
+          awayStart={vi.fn()}
+        />,
+      );
+
+      await user.click(screen.getByTestId("control-away-more"));
+
+      expect(screen.getByTestId("control-recent-0")).toHaveTextContent(
+        "Travelling",
+      );
+      expect(screen.getByTestId("control-recent-1")).toHaveTextContent(
+        "School run",
+      );
+    });
+
+    it("dispatches awayStart immediately when a recent chip is clicked", async () => {
+      const awayStart = vi.fn();
+      const user = userEvent.setup();
+      render(
+        <ControlBar
+          timerState={
+            {
+              mode: "running",
+              settings: settingsWith(["Travelling", "School run"]),
+            } as Partial<UseTimerResult>
+          }
+          ringNow={vi.fn()}
+          awayStart={awayStart}
+        />,
+      );
+
+      await user.click(screen.getByTestId("control-away-more"));
+      await user.click(screen.getByTestId("control-recent-1"));
+
+      expect(awayStart).toHaveBeenCalledWith("custom", "School run");
+      expect(
+        screen.queryByTestId("control-custom-area"),
+      ).not.toBeInTheDocument();
+    });
+
+    it("renders no chips when there are no recent labels", async () => {
+      const user = userEvent.setup();
+      render(
+        <ControlBar
+          timerState={
+            {
+              mode: "running",
+              settings: settingsWith([]),
+            } as Partial<UseTimerResult>
+          }
+          ringNow={vi.fn()}
+          awayStart={vi.fn()}
+        />,
+      );
+
+      await user.click(screen.getByTestId("control-away-more"));
+
+      expect(screen.queryByTestId("control-recent-0")).not.toBeInTheDocument();
+    });
+  });
+
   describe("button styling", () => {
     it("end early button has flex:1 to fill available space", () => {
       render(

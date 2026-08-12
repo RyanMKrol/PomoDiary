@@ -1,19 +1,13 @@
 import { z } from "zod";
 
-import { AWAY, FEELS, TAGS } from "../domain";
+import { FEELS } from "../domain";
 
 export const LIMITS = {
   MAX_BULLETS_PER_ENTRY: 30,
   MAX_BULLET_LENGTH: 500,
   MAX_ENTRIES_PER_DAY: 100,
+  MAX_TAG_LENGTH: 40,
 };
-
-const TAG_LABELS = [
-  ...TAGS.map((t) => t.label),
-  AWAY.sleep.tag,
-  AWAY.work.tag,
-  "Unfiled",
-] as unknown as [string, ...string[]];
 
 const FEEL_LABELS = [...FEELS, "—"] as unknown as [string, ...string[]];
 
@@ -21,7 +15,16 @@ export const bulletsSchema = z
   .array(z.string().max(LIMITS.MAX_BULLET_LENGTH))
   .max(LIMITS.MAX_BULLETS_PER_ENTRY);
 
-export const tagSchema = z.enum(TAG_LABELS);
+// A bounded string, not an enum: custom away kinds tag their hours with a
+// user-typed label, so the tag vocabulary is open-ended. Feel and intent
+// stay closed.
+export const tagSchema = z.string().trim().min(1).max(LIMITS.MAX_TAG_LENGTH);
+
+export const awayLabelSchema = z
+  .string()
+  .trim()
+  .min(1)
+  .max(LIMITS.MAX_TAG_LENGTH);
 
 export const feelSchema = z.enum(FEEL_LABELS);
 
@@ -53,10 +56,15 @@ export const timerActionSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("acknowledge") }),
   z.object({ type: z.literal("log"), payload: logPayloadSchema }),
   z.object({ type: z.literal("skip") }),
-  z.object({
-    type: z.literal("awayStart"),
-    kind: z.enum(["sleep", "work"]),
-  }),
+  z
+    .object({
+      type: z.literal("awayStart"),
+      kind: z.enum(["sleep", "work", "gym", "custom"]),
+      label: awayLabelSchema.optional(),
+    })
+    .refine((a) => a.kind !== "custom" || a.label !== undefined, {
+      message: "custom away requires a label",
+    }),
   z.object({ type: z.literal("awayReturn") }),
   z.object({ type: z.literal("draftUpdate"), patch: draftPatchSchema }),
 ]);

@@ -17,6 +17,7 @@ describe("SettingsPanel", () => {
     soundOn: true,
     chimeVolume: 0.5,
     pauseAfterLog: false,
+    recentAwayLabels: [],
   };
 
   const mockUpdateSettings = vi.fn();
@@ -352,6 +353,7 @@ describe("SettingsPanel", () => {
             soundOn: true,
             chimeVolume: 0.5,
             pauseAfterLog: false,
+            recentAwayLabels: [],
           }}
           updateSettings={mockUpdateSettings}
           onClose={mockOnClose}
@@ -365,6 +367,7 @@ describe("SettingsPanel", () => {
             soundOn: false,
             chimeVolume: 0.75,
             pauseAfterLog: true,
+            recentAwayLabels: [],
           }}
           updateSettings={mockUpdateSettings}
           onClose={mockOnClose}

@@ -22,6 +22,8 @@ export interface ApiSettings {
   soundOn: boolean;
   chimeVolume: number;
   pauseAfterLog: boolean;
+  /** Server-managed MRU of custom away labels; read-only for the client. */
+  recentAwayLabels: string[];
 }
 
 export interface StatePayload {
@@ -38,6 +40,8 @@ export interface StatePayload {
    *  survive a reload; without them the client can't render the away card. */
   awayKind: AwayKind | null;
   awaySince: number | null;
+  /** The user-typed label when awayKind is "custom". */
+  awayLabel: string | null;
   draftBullets: string[];
   draftTag: string | null;
   draftFeel: string | null;
@@ -55,6 +59,7 @@ function rowToEngineState(row: TimerStateRow): EngineTimerState {
     chimeTo: row.chimeTo ? row.chimeTo.getTime() : null,
     awayKind: row.awayKind as AwayKind | null,
     awaySince: row.awaySince ? row.awaySince.getTime() : null,
+    awayLabel: row.awayLabel,
     draftBullets: row.draftBullets,
     draftTag: row.draftTag,
     draftFeel: row.draftFeel,
@@ -71,6 +76,7 @@ export function engineStateToInput(state: EngineTimerState): TimerStateInput {
     chimeTo: state.chimeTo !== null ? new Date(state.chimeTo) : null,
     awayKind: state.awayKind,
     awaySince: state.awaySince !== null ? new Date(state.awaySince) : null,
+    awayLabel: state.awayLabel,
     draftBullets: state.draftBullets,
     draftTag: state.draftTag,
     draftFeel: state.draftFeel,
@@ -101,6 +107,7 @@ export async function loadSettings(
     soundOn: result.soundOn ?? true,
     chimeVolume: result.chimeVolume ?? 0.8,
     pauseAfterLog: result.pauseAfterLog ?? false,
+    recentAwayLabels: result.recentAwayLabels ?? [],
   };
 }
 
@@ -127,6 +134,7 @@ export function buildStatePayload(
     chimeTo: derived.state.chimeTo,
     awayKind: derived.state.awayKind,
     awaySince: derived.state.awaySince,
+    awayLabel: derived.state.awayLabel,
     draftBullets: derived.state.draftBullets,
     draftTag: derived.state.draftTag,
     draftFeel: derived.state.draftFeel,

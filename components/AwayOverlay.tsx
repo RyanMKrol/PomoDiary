@@ -1,6 +1,6 @@
 "use client";
 
-import { AWAY } from "@/lib/domain";
+import { awayConfig } from "@/lib/domain";
 import { fmtClock, fmtAwayElapsed } from "@/lib/time";
 import type { AwayKind } from "@/lib/timer/engine";
 import styles from "./AwayOverlay.module.css";
@@ -9,6 +9,7 @@ export interface AwayOverlayProps {
   awayKind: AwayKind;
   awaySince: number;
   now: number;
+  awayLabel?: string | null;
   onReturn: () => void;
 }
 
@@ -16,9 +17,10 @@ export function AwayOverlay({
   awayKind,
   awaySince,
   now,
+  awayLabel = null,
   onReturn,
 }: AwayOverlayProps) {
-  const mode = AWAY[awayKind];
+  const mode = awayConfig(awayKind, awayLabel);
 
   return (
     // Clicking anywhere on the card ends the away block — the labeled button

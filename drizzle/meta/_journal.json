@@ -15,6 +15,13 @@
       "when": 1786529253503,
       "tag": "0001_rainy_pride",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1786529935324,
+      "tag": "0002_lowly_wraith",
+      "breakpoints": true
     }
   ]
 }

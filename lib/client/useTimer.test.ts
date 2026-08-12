@@ -30,6 +30,7 @@ const SETTINGS: ApiSettings = {
   soundOn: true,
   chimeVolume: 0.8,
   pauseAfterLog: false,
+  recentAwayLabels: [],
 };
 
 function jsonResponse(body: unknown): Response {
@@ -349,6 +350,7 @@ describe("toClientState hourStart/blockEnd", () => {
     chimeTo: null,
     awayKind: null,
     awaySince: null,
+    awayLabel: null,
     draftBullets: [],
     draftTag: null,
     draftFeel: null,
@@ -396,6 +398,28 @@ describe("away state survives a reload", () => {
     // And the user can actually leave away mode.
     await client.awayReturn();
     expect(client.getState()?.mode).toBe("running");
+    client.stop();
+  });
+
+  it("restores a custom away's label from the server payload in a fresh client", async () => {
+    // First session starts a custom away...
+    const away = dispatch(
+      initialState(T0 - 10 * 60 * 1000),
+      toEngineSettings(SETTINGS),
+      { type: "awayStart", kind: "custom", label: "Travelling" },
+      T0 - 5 * 60 * 1000,
+    ).state;
+    const server = createFakeServer(away, SETTINGS);
+
+    // ...and a brand-new client after a page reload has no in-tab memory.
+    const client = createTimerClient(server.fetchImpl);
+    client.start();
+    await flush();
+
+    const state = client.getState();
+    expect(state?.mode).toBe("away");
+    expect(state?.awayKind).toBe("custom");
+    expect(state?.awayLabel).toBe("Travelling");
     client.stop();
   });
 });

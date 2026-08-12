@@ -324,7 +324,7 @@ describe("GridView", () => {
   });
 
   describe("legend", () => {
-    it("renders exactly 10 legend items", async () => {
+    it("renders exactly 12 legend items", async () => {
       global.fetch = vi.fn(() => mockFetchResponse([])) as any;
       render(
         <GridView onSelectDay={() => {}} timerState={{ mode: "running" }} />,
@@ -333,7 +333,8 @@ describe("GridView", () => {
       // Wait for content to load
       await screen.findByTestId("day-row-0");
 
-      // Check all 10 legend items are present
+      // Check all 12 legend items are present: 8 tags, 3 fixed away
+      // kinds, and the custom-away swatch.
       const deepWorkLabel = screen.getByText("Deep work");
       const adminLabel = screen.getByText("Admin");
       const meetingsLabel = screen.getByText("Meetings");
@@ -344,6 +345,8 @@ describe("GridView", () => {
       const lostItLabel = screen.getByText("Lost it");
       const asleepLabel = screen.getByText("Asleep");
       const atWorkLabel = screen.getByText("At work");
+      const atTheGymLabel = screen.getByText("At the gym");
+      const awayCustomLabel = screen.getByText("Away (custom)");
 
       expect(deepWorkLabel).toBeInTheDocument();
       expect(adminLabel).toBeInTheDocument();
@@ -355,6 +358,8 @@ describe("GridView", () => {
       expect(lostItLabel).toBeInTheDocument();
       expect(asleepLabel).toBeInTheDocument();
       expect(atWorkLabel).toBeInTheDocument();
+      expect(atTheGymLabel).toBeInTheDocument();
+      expect(awayCustomLabel).toBeInTheDocument();
     });
 
     it("does not render Unfiled in legend", async () => {

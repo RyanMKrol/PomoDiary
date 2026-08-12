@@ -138,4 +138,39 @@ describe("POST /api/timer", () => {
     const body = await res.json();
     expect(body.mode).toBe("recap");
   });
+
+  it("starts a custom away and records the label in the recent list", async () => {
+    const res = await POST(
+      postAction({ type: "awayStart", kind: "custom", label: "Travelling" }),
+    );
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.mode).toBe("away");
+    expect(body.awayKind).toBe("custom");
+    expect(body.awayLabel).toBe("Travelling");
+    expect(body.settings.recentAwayLabels[0]).toBe("Travelling");
+  });
+
+  it("puts the newest custom label first after a second custom away", async () => {
+    await POST(
+      postAction({ type: "awayStart", kind: "custom", label: "Travelling" }),
+    );
+    await POST(postAction({ type: "awayReturn" }));
+
+    const res = await POST(
+      postAction({ type: "awayStart", kind: "custom", label: "Dentist" }),
+    );
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.awayLabel).toBe("Dentist");
+    expect(body.settings.recentAwayLabels).toEqual(["Dentist", "Travelling"]);
+  });
+
+  it("returns 400 for a custom awayStart without a label", async () => {
+    const res = await POST(postAction({ type: "awayStart", kind: "custom" }));
+
+    expect(res.status).toBe(400);
+  });
 });

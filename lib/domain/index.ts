@@ -154,17 +154,22 @@ export const TAGS = [
 
 export const UNFILED_COLOR = "oklch(0.72 0.012 40)";
 
+/** Grid/vine colour for entries whose tag is a user-typed away label (or any
+ *  other tag outside the fixed vocabulary): a muted amber in the away band. */
+export const CUSTOM_AWAY_COLOR = "oklch(0.45 0.06 62)";
+
 export function tagColor(label: string): string {
   const tag = TAGS.find((t) => t.label === label);
   if (tag) return tag.color;
 
-  const awayTag =
-    label === "Asleep" || label === "At work"
-      ? AWAY[label === "Asleep" ? "sleep" : "work"]
-      : null;
-  if (awayTag) return awayTag.color;
+  const away = Object.values(AWAY).find((a) => a.tag === label);
+  if (away) return away.color;
 
-  return UNFILED_COLOR;
+  if (label === "Unfiled") return UNFILED_COLOR;
+
+  // Entries store only the tag string, so a custom away label (or a hand-
+  // edited tag) is any label we do not recognise.
+  return CUSTOM_AWAY_COLOR;
 }
 
 export const AWAY = {
@@ -184,7 +189,44 @@ export const AWAY = {
     note: "Away hours log themselves. Tidy them up later if you like.",
     bullet: "At work",
   },
+  gym: {
+    tag: "At the gym",
+    color: "oklch(0.50 0.09 120)",
+    end: "I'm back",
+    title: "AT THE GYM.",
+    note: "Away hours log themselves. Tidy them up later if you like.",
+    bullet: "At the gym",
+  },
 };
+
+export interface AwayConfig {
+  tag: string;
+  color: string;
+  end: string;
+  title: string;
+  note: string;
+  bullet: string;
+}
+
+/** Resolves the away card/entry config for a kind, deriving one from the
+ *  user-typed label when the kind is "custom". */
+export function awayConfig(
+  kind: keyof typeof AWAY | "custom",
+  label?: string | null,
+): AwayConfig {
+  if (kind === "custom") {
+    const l = (label ?? "").trim() || "Away";
+    return {
+      tag: l,
+      color: CUSTOM_AWAY_COLOR,
+      end: "I'm back",
+      title: `${l.toUpperCase()}.`,
+      note: "Away hours log themselves. Tidy them up later if you like.",
+      bullet: l,
+    };
+  }
+  return AWAY[kind];
+}
 
 export const FEELS = ["Charged", "Steady", "Scattered", "Drained"];
 
