@@ -46,7 +46,6 @@ describe("ControlBar", () => {
         <ControlBar
           timerState={{ mode: "running" } as Partial<UseTimerResult>}
           ringNow={vi.fn()}
-          restart={vi.fn()}
           awayStart={vi.fn()}
         />,
       );
@@ -59,7 +58,6 @@ describe("ControlBar", () => {
         <ControlBar
           timerState={{ mode: "paused" } as Partial<UseTimerResult>}
           ringNow={vi.fn()}
-          restart={vi.fn()}
           awayStart={vi.fn()}
         />,
       );
@@ -72,7 +70,6 @@ describe("ControlBar", () => {
         <ControlBar
           timerState={{ mode: "chime" } as Partial<UseTimerResult>}
           ringNow={vi.fn()}
-          restart={vi.fn()}
           awayStart={vi.fn()}
         />,
       );
@@ -85,7 +82,6 @@ describe("ControlBar", () => {
         <ControlBar
           timerState={{ mode: "recap" } as Partial<UseTimerResult>}
           ringNow={vi.fn()}
-          restart={vi.fn()}
           awayStart={vi.fn()}
         />,
       );
@@ -98,7 +94,6 @@ describe("ControlBar", () => {
         <ControlBar
           timerState={{ mode: "away" } as Partial<UseTimerResult>}
           ringNow={vi.fn()}
-          restart={vi.fn()}
           awayStart={vi.fn()}
         />,
       );
@@ -113,7 +108,6 @@ describe("ControlBar", () => {
         <ControlBar
           timerState={{ mode: "running" } as Partial<UseTimerResult>}
           ringNow={vi.fn()}
-          restart={vi.fn()}
           awayStart={vi.fn()}
         />,
       );
@@ -128,7 +122,6 @@ describe("ControlBar", () => {
         <ControlBar
           timerState={{ mode: "running" } as Partial<UseTimerResult>}
           ringNow={ringNow}
-          restart={vi.fn()}
           awayStart={vi.fn()}
         />,
       );
@@ -142,7 +135,6 @@ describe("ControlBar", () => {
         <ControlBar
           timerState={{ mode: "running" } as Partial<UseTimerResult>}
           ringNow={vi.fn()}
-          restart={vi.fn()}
           awayStart={vi.fn()}
         />,
       );
@@ -153,58 +145,12 @@ describe("ControlBar", () => {
     });
   });
 
-  describe("restart button", () => {
-    it("renders restart button", () => {
-      render(
-        <ControlBar
-          timerState={{ mode: "running" } as Partial<UseTimerResult>}
-          ringNow={vi.fn()}
-          restart={vi.fn()}
-          awayStart={vi.fn()}
-        />,
-      );
-      const button = screen.getByTestId("control-restart");
-      expect(button).toHaveTextContent("Restart");
-    });
-
-    it("calls restart when button is clicked", async () => {
-      const restart = vi.fn();
-      const user = userEvent.setup();
-      render(
-        <ControlBar
-          timerState={{ mode: "running" } as Partial<UseTimerResult>}
-          ringNow={vi.fn()}
-          restart={restart}
-          awayStart={vi.fn()}
-        />,
-      );
-      const button = screen.getByTestId("control-restart");
-      await user.click(button);
-      expect(restart).toHaveBeenCalled();
-    });
-
-    it("does not have a swatch", () => {
-      render(
-        <ControlBar
-          timerState={{ mode: "running" } as Partial<UseTimerResult>}
-          ringNow={vi.fn()}
-          restart={vi.fn()}
-          awayStart={vi.fn()}
-        />,
-      );
-      const button = screen.getByTestId("control-restart");
-      const swatch = button.querySelector("[data-testid]");
-      expect(swatch).not.toBeInTheDocument();
-    });
-  });
-
   describe("sleep button", () => {
     it("renders sleep button", () => {
       render(
         <ControlBar
           timerState={{ mode: "running" } as Partial<UseTimerResult>}
           ringNow={vi.fn()}
-          restart={vi.fn()}
           awayStart={vi.fn()}
         />,
       );
@@ -219,7 +165,6 @@ describe("ControlBar", () => {
         <ControlBar
           timerState={{ mode: "running" } as Partial<UseTimerResult>}
           ringNow={vi.fn()}
-          restart={vi.fn()}
           awayStart={awayStart}
         />,
       );
@@ -233,7 +178,6 @@ describe("ControlBar", () => {
         <ControlBar
           timerState={{ mode: "running" } as Partial<UseTimerResult>}
           ringNow={vi.fn()}
-          restart={vi.fn()}
           awayStart={vi.fn()}
         />,
       );
@@ -250,7 +194,6 @@ describe("ControlBar", () => {
         <ControlBar
           timerState={{ mode: "running" } as Partial<UseTimerResult>}
           ringNow={vi.fn()}
-          restart={vi.fn()}
           awayStart={vi.fn()}
         />,
       );
@@ -265,7 +208,6 @@ describe("ControlBar", () => {
         <ControlBar
           timerState={{ mode: "running" } as Partial<UseTimerResult>}
           ringNow={vi.fn()}
-          restart={vi.fn()}
           awayStart={awayStart}
         />,
       );
@@ -279,7 +221,6 @@ describe("ControlBar", () => {
         <ControlBar
           timerState={{ mode: "running" } as Partial<UseTimerResult>}
           ringNow={vi.fn()}
-          restart={vi.fn()}
           awayStart={vi.fn()}
         />,
       );
@@ -296,7 +237,6 @@ describe("ControlBar", () => {
         <ControlBar
           timerState={{ mode: "running" } as Partial<UseTimerResult>}
           ringNow={vi.fn()}
-          restart={vi.fn()}
           awayStart={vi.fn()}
         />,
       );
@@ -311,7 +251,6 @@ describe("ControlBar", () => {
         <ControlBar
           timerState={{ mode: "running" } as Partial<UseTimerResult>}
           ringNow={vi.fn()}
-          restart={vi.fn()}
           awayStart={vi.fn()}
         />,
       );
@@ -326,7 +265,6 @@ describe("ControlBar", () => {
         <ControlBar
           timerState={{ mode: "running" } as Partial<UseTimerResult>}
           ringNow={vi.fn()}
-          restart={vi.fn()}
           awayStart={vi.fn()}
         />,
       );
@@ -341,7 +279,6 @@ describe("ControlBar", () => {
         <ControlBar
           timerState={{ mode: "running" } as Partial<UseTimerResult>}
           ringNow={vi.fn()}
-          restart={vi.fn()}
           awayStart={vi.fn()}
         />,
       );

@@ -272,10 +272,6 @@ function applyAction(state, action, now) {
     case "resume":
       if (state.mode === "paused") state.mode = "running";
       break;
-    case "restart":
-      state.mode = "running";
-      state.remainingSeconds = state.settings.sessionMinutes * 60;
-      break;
     case "ringNow":
       state.mode = "chime";
       state.chimeFrom = now - state.settings.sessionMinutes * 60_000;

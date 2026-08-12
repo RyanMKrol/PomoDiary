@@ -52,7 +52,6 @@ const draftPatchSchema = z.object({
 export const timerActionSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("pause") }),
   z.object({ type: z.literal("resume") }),
-  z.object({ type: z.literal("restart") }),
   z.object({ type: z.literal("ringNow") }),
   z.object({ type: z.literal("acknowledge") }),
   z.object({ type: z.literal("log"), payload: logPayloadSchema }),

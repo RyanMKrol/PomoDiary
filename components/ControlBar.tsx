@@ -6,14 +6,12 @@ import styles from "./ControlBar.module.css";
 export interface ControlBarProps {
   timerState: Partial<UseTimerResult>;
   ringNow: () => Promise<void>;
-  restart: () => Promise<void>;
   awayStart: (kind: "sleep" | "work") => Promise<void>;
 }
 
 export function ControlBar({
   timerState,
   ringNow,
-  restart,
   awayStart,
 }: ControlBarProps) {
   const { mode = "running" } = timerState;
@@ -39,14 +37,6 @@ export function ControlBar({
           data-testid="control-swatch-end-early"
         />
         End early
-      </button>
-
-      <button
-        className={`${styles.button} ${styles.restartButton}`}
-        onClick={() => restart()}
-        data-testid="control-restart"
-      >
-        Restart
       </button>
 
       <button

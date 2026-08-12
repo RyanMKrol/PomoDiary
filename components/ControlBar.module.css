@@ -43,15 +43,6 @@
   color: #ae1800;
 }
 
-.restartButton:hover {
-  background-color: #eae9e9;
-  color: #201e1d;
-}
-
-.restartButton {
-  opacity: 0.55;
-}
-
 .sleepButton:hover {
   background-color: #eae9e9;
   color: #201e1d;

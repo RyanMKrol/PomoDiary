@@ -50,7 +50,6 @@ export interface EntryToInsert {
 export type Action =
   | { type: "pause" }
   | { type: "resume" }
-  | { type: "restart" }
   | { type: "ringNow" }
   | { type: "acknowledge" }
   | { type: "log"; payload: LogPayload }
@@ -206,20 +205,6 @@ export function dispatch(
           ...state,
           mode: "running",
           hourStart,
-          pausedRemaining: null,
-        },
-        entriesToInsert: [],
-      };
-    }
-
-    case "restart": {
-      if (state.mode !== "running" && state.mode !== "paused")
-        return NOOP(state);
-      return {
-        state: {
-          ...state,
-          mode: "running",
-          hourStart: now,
           pausedRemaining: null,
         },
         entriesToInsert: [],
