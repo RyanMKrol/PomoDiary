@@ -1,3 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <rect width="64" height="64" rx="12" fill="#dc2626" stroke="#333" stroke-width="2"/>
+  <!-- Chime state: ink ground with the accent square inside, so the swap
+       from the plain red base reads clearly at 16px. -->
+  <rect width="64" height="64" fill="#201e1d"/>
+  <rect x="20" y="20" width="24" height="24" fill="#ec3013"/>
 </svg>
