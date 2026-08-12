@@ -12,6 +12,21 @@
   align-items: baseline;
   gap: 8px;
   flex-wrap: wrap;
+  /* The row is the accordion toggle — a real button, styled flat. */
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+}
+
+.collapseHint {
+  margin-left: auto;
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1;
+  color: rgba(32, 30, 29, 0.45);
 }
 
 .label {
