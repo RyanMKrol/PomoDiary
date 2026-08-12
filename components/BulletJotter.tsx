@@ -82,6 +82,12 @@ export function BulletJotter({ timerState, updateDraft }: BulletJotterProps) {
   const jotHeading = isRecap ? "What did you actually do?" : "As you go";
   const jotHint = isRecap ? "Tidy it up" : "Enter for the next bullet";
 
+  const composerIndex = draftBullets.length - 1;
+  const renderOrder = [
+    composerIndex,
+    ...Array.from({ length: composerIndex }, (_, i) => i),
+  ];
+
   const getPlaceholder = (index: number): string => {
     // The composer (always the last, always empty) carries the invitation;
     // filled rows above it need no prompt.
@@ -104,7 +110,10 @@ export function BulletJotter({ timerState, updateDraft }: BulletJotterProps) {
         role="group"
         aria-label="Bullets for this hour"
       >
-        {draftBullets.map((bullet, index) => (
+        {/* The composer renders FIRST so the place to type never moves,
+            while remaining the LAST slot of the draft array — committed
+            bullets appear in order beneath it. */}
+        {renderOrder.map((index) => (
           <div key={index} className={styles.bulletRow}>
             <span
               className={styles.marker}
@@ -116,7 +125,7 @@ export function BulletJotter({ timerState, updateDraft }: BulletJotterProps) {
                 inputRefs.current[index] = el;
               }}
               type="text"
-              value={bullet}
+              value={draftBullets[index]}
               onChange={(e) => handleBulletChange(index, e.target.value)}
               onKeyDown={(e) => handleBulletKeyDown(index, e)}
               placeholder={getPlaceholder(index)}
