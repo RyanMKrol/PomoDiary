@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 
-import { playChime } from "../audio/chime";
+import { playChime, unlockAudio } from "../audio/chime";
 import {
   setChimeTitle,
   setChimeFavicon,
@@ -24,6 +24,28 @@ import { createFlusher, type Flusher } from "./flusher";
 
 const TICK_MS = 1000;
 const LOAD_RETRY_MS = 3000;
+
+/** Chrome throttles a hidden tab's main-thread timers to once a minute
+ *  after five minutes, so an interval-driven tick notices the chime up to
+ *  a minute late — but dedicated-worker timers are exempt. A tiny inline
+ *  worker ticks whenever the tab is hidden; the plain interval covers the
+ *  foreground (and environments without workers). Returns null where
+ *  workers are unavailable (jsdom, old browsers). */
+function startWorkerTicker(onTick: () => void): (() => void) | null {
+  try {
+    const url = URL.createObjectURL(
+      new Blob([`setInterval(function () { postMessage(0); }, ${TICK_MS});`], {
+        type: "text/javascript",
+      }),
+    );
+    const worker = new Worker(url);
+    URL.revokeObjectURL(url);
+    worker.onmessage = () => onTick();
+    return () => worker.terminate();
+  } catch {
+    return null;
+  }
+}
 
 export interface ClientState {
   mode: StatePayload["mode"];
@@ -136,11 +158,14 @@ export function createTimerClient(fetchImpl: FetchLike = fetch): TimerClient {
   let current: ClientState | null = null;
   let loading = true;
   let intervalId: ReturnType<typeof setInterval> | null = null;
+  let stopWorkerTicker: (() => void) | null = null;
+  let removeVisibilityListener: (() => void) | null = null;
   let loadRetryId: ReturnType<typeof setTimeout> | null = null;
   let stopped = false;
   let loadGeneration = 0;
   let hasRequestedNotifyPermission = false;
   let releaseFlushLock: (() => void) | null = null;
+  let disarmAudioUnlock: (() => void) | null = null;
 
   const stateListeners = new Set<(state: ClientState) => void>();
   const chimeListeners = new Set<() => void>();
@@ -444,6 +469,48 @@ export function createTimerClient(fetchImpl: FetchLike = fetch): TimerClient {
       if (intervalId === null) {
         intervalId = setInterval(() => tick(Date.now()), TICK_MS);
       }
+      // The worker ticker runs only while the tab is hidden — that is the
+      // only time the main-thread interval gets throttled, and keeping the
+      // worker out of the foreground keeps test clocks (which fake only
+      // main-thread timers) authoritative.
+      if (
+        removeVisibilityListener === null &&
+        typeof document !== "undefined"
+      ) {
+        const syncWorkerTicker = () => {
+          if (document.visibilityState === "hidden") {
+            if (stopWorkerTicker === null) {
+              stopWorkerTicker = startWorkerTicker(() => tick(Date.now()));
+            }
+          } else if (stopWorkerTicker !== null) {
+            stopWorkerTicker();
+            stopWorkerTicker = null;
+          }
+        };
+        document.addEventListener("visibilitychange", syncWorkerTicker);
+        removeVisibilityListener = () => {
+          document.removeEventListener("visibilitychange", syncWorkerTicker);
+          removeVisibilityListener = null;
+        };
+        syncWorkerTicker();
+      }
+      // Resume the shared AudioContext on the first real gesture, while the
+      // autoplay policy still lets us — an unlocked context is what allows
+      // the chime to sound later from an unfocused tab.
+      if (disarmAudioUnlock === null && typeof window !== "undefined") {
+        const unlock = () => {
+          unlockAudio();
+          disarm();
+        };
+        const disarm = () => {
+          window.removeEventListener("pointerdown", unlock);
+          window.removeEventListener("keydown", unlock);
+          disarmAudioUnlock = null;
+        };
+        window.addEventListener("pointerdown", unlock);
+        window.addEventListener("keydown", unlock);
+        disarmAudioUnlock = disarm;
+      }
     },
 
     stop() {
@@ -452,6 +519,12 @@ export function createTimerClient(fetchImpl: FetchLike = fetch): TimerClient {
         clearInterval(intervalId);
         intervalId = null;
       }
+      if (stopWorkerTicker !== null) {
+        stopWorkerTicker();
+        stopWorkerTicker = null;
+      }
+      removeVisibilityListener?.();
+      disarmAudioUnlock?.();
       if (loadRetryId !== null) {
         clearTimeout(loadRetryId);
         loadRetryId = null;

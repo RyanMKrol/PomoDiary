@@ -5,7 +5,6 @@ const FAVICON_ACCENT_HREF = "/favicon-accent.svg";
 
 let originalTitle: string | null = null;
 let originalFaviconHref: string | null = null;
-let notificationPermission: NotificationPermission | null = null;
 
 export function setChimeTitle(on: boolean): void {
   if (typeof window === "undefined") return;
@@ -46,8 +45,8 @@ export async function requestNotifyPermission(): Promise<void> {
   if (typeof Notification === "undefined") return;
   if (typeof window === "undefined") return;
 
-  if (notificationPermission === null) {
-    notificationPermission = await Notification.requestPermission();
+  if (Notification.permission === "default") {
+    await Notification.requestPermission();
   }
 }
 
@@ -55,8 +54,10 @@ export function notifyChime(fromTs: number, toTs: number): void {
   if (typeof Notification === "undefined") return;
   if (typeof window === "undefined") return;
 
+  // Read the browser's live permission, not a session cache: a grant from a
+  // previous visit must count even before any prompt runs this session.
   if (
-    notificationPermission !== "granted" ||
+    Notification.permission !== "granted" ||
     document.visibilityState !== "hidden"
   ) {
     return;
