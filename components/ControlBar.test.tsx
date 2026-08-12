@@ -45,7 +45,6 @@ describe("ControlBar", () => {
       const { container } = render(
         <ControlBar
           timerState={{ mode: "running" } as Partial<UseTimerResult>}
-          ringNow={vi.fn()}
           awayStart={vi.fn()}
         />,
       );
@@ -57,7 +56,6 @@ describe("ControlBar", () => {
       const { container } = render(
         <ControlBar
           timerState={{ mode: "paused" } as Partial<UseTimerResult>}
-          ringNow={vi.fn()}
           awayStart={vi.fn()}
         />,
       );
@@ -69,7 +67,6 @@ describe("ControlBar", () => {
       const { container } = render(
         <ControlBar
           timerState={{ mode: "chime" } as Partial<UseTimerResult>}
-          ringNow={vi.fn()}
           awayStart={vi.fn()}
         />,
       );
@@ -81,7 +78,6 @@ describe("ControlBar", () => {
       const { container } = render(
         <ControlBar
           timerState={{ mode: "recap" } as Partial<UseTimerResult>}
-          ringNow={vi.fn()}
           awayStart={vi.fn()}
         />,
       );
@@ -93,7 +89,6 @@ describe("ControlBar", () => {
       const { container } = render(
         <ControlBar
           timerState={{ mode: "away" } as Partial<UseTimerResult>}
-          ringNow={vi.fn()}
           awayStart={vi.fn()}
         />,
       );
@@ -102,46 +97,17 @@ describe("ControlBar", () => {
     });
   });
 
-  describe("end early button", () => {
-    it("shows the 'End early' label", () => {
-      render(
-        <ControlBar
-          timerState={{ mode: "running" } as Partial<UseTimerResult>}
-          ringNow={vi.fn()}
-          awayStart={vi.fn()}
-        />,
-      );
-      const button = screen.getByTestId("control-end-early");
-      expect(button).toHaveTextContent("End early");
-    });
-
-    it("calls ringNow when clicked", async () => {
-      const ringNow = vi.fn();
-      const user = userEvent.setup();
-      render(
-        <ControlBar
-          timerState={{ mode: "running" } as Partial<UseTimerResult>}
-          ringNow={ringNow}
-          awayStart={vi.fn()}
-        />,
-      );
-      const button = screen.getByTestId("control-end-early");
-      await user.click(button);
-      expect(ringNow).toHaveBeenCalled();
-    });
-
-    it("has red swatch with correct color", () => {
+  describe("removed affordances", () => {
+    it("renders no End early button (the hour only ends at :00)", () => {
       const { container } = render(
         <ControlBar
           timerState={{ mode: "running" } as Partial<UseTimerResult>}
-          ringNow={vi.fn()}
           awayStart={vi.fn()}
         />,
       );
-      const swatch = container.querySelector(
-        "[data-testid='control-swatch-end-early']",
-      );
-      expect(swatch).toHaveStyle({ backgroundColor: "#ec3013" });
+      expect(
+        container.querySelector("[data-testid='control-end-early']"),
+      ).not.toBeInTheDocument();
     });
   });
 
@@ -150,7 +116,6 @@ describe("ControlBar", () => {
       render(
         <ControlBar
           timerState={{ mode: "running" } as Partial<UseTimerResult>}
-          ringNow={vi.fn()}
           awayStart={vi.fn()}
         />,
       );
@@ -164,7 +129,6 @@ describe("ControlBar", () => {
       render(
         <ControlBar
           timerState={{ mode: "running" } as Partial<UseTimerResult>}
-          ringNow={vi.fn()}
           awayStart={awayStart}
         />,
       );
@@ -177,7 +141,6 @@ describe("ControlBar", () => {
       const { container } = render(
         <ControlBar
           timerState={{ mode: "running" } as Partial<UseTimerResult>}
-          ringNow={vi.fn()}
           awayStart={vi.fn()}
         />,
       );
@@ -193,7 +156,6 @@ describe("ControlBar", () => {
       render(
         <ControlBar
           timerState={{ mode: "running" } as Partial<UseTimerResult>}
-          ringNow={vi.fn()}
           awayStart={vi.fn()}
         />,
       );
@@ -207,7 +169,6 @@ describe("ControlBar", () => {
       render(
         <ControlBar
           timerState={{ mode: "running" } as Partial<UseTimerResult>}
-          ringNow={vi.fn()}
           awayStart={awayStart}
         />,
       );
@@ -220,7 +181,6 @@ describe("ControlBar", () => {
       const { container } = render(
         <ControlBar
           timerState={{ mode: "running" } as Partial<UseTimerResult>}
-          ringNow={vi.fn()}
           awayStart={vi.fn()}
         />,
       );
@@ -236,7 +196,6 @@ describe("ControlBar", () => {
       render(
         <ControlBar
           timerState={{ mode: "running" } as Partial<UseTimerResult>}
-          ringNow={vi.fn()}
           awayStart={vi.fn()}
         />,
       );
@@ -250,7 +209,6 @@ describe("ControlBar", () => {
       render(
         <ControlBar
           timerState={{ mode: "running" } as Partial<UseTimerResult>}
-          ringNow={vi.fn()}
           awayStart={awayStart}
         />,
       );
@@ -263,7 +221,6 @@ describe("ControlBar", () => {
       const { container } = render(
         <ControlBar
           timerState={{ mode: "running" } as Partial<UseTimerResult>}
-          ringNow={vi.fn()}
           awayStart={vi.fn()}
         />,
       );
@@ -287,7 +244,6 @@ describe("ControlBar", () => {
       render(
         <ControlBar
           timerState={{ mode: "running" } as Partial<UseTimerResult>}
-          ringNow={vi.fn()}
           awayStart={vi.fn()}
         />,
       );
@@ -296,7 +252,7 @@ describe("ControlBar", () => {
 
       expect(screen.getByTestId("control-custom-area")).toBeInTheDocument();
       const input = screen.getByTestId("control-custom-input");
-      expect(input).toHaveAttribute("placeholder", "Where to?");
+      expect(input).toHaveAttribute("placeholder", "Gone for a while, doing…");
       // The away-kind buttons swap out for the custom area
       expect(screen.queryByTestId("control-sleep")).not.toBeInTheDocument();
     });
@@ -307,7 +263,6 @@ describe("ControlBar", () => {
       render(
         <ControlBar
           timerState={{ mode: "running" } as Partial<UseTimerResult>}
-          ringNow={vi.fn()}
           awayStart={awayStart}
         />,
       );
@@ -327,7 +282,6 @@ describe("ControlBar", () => {
       render(
         <ControlBar
           timerState={{ mode: "running" } as Partial<UseTimerResult>}
-          ringNow={vi.fn()}
           awayStart={awayStart}
         />,
       );
@@ -345,7 +299,6 @@ describe("ControlBar", () => {
       render(
         <ControlBar
           timerState={{ mode: "running" } as Partial<UseTimerResult>}
-          ringNow={vi.fn()}
           awayStart={awayStart}
         />,
       );
@@ -369,7 +322,6 @@ describe("ControlBar", () => {
       render(
         <ControlBar
           timerState={{ mode: "running" } as Partial<UseTimerResult>}
-          ringNow={vi.fn()}
           awayStart={awayStart}
         />,
       );
@@ -387,7 +339,6 @@ describe("ControlBar", () => {
       render(
         <ControlBar
           timerState={{ mode: "running" } as Partial<UseTimerResult>}
-          ringNow={vi.fn()}
           awayStart={awayStart}
         />,
       );
@@ -412,7 +363,6 @@ describe("ControlBar", () => {
               settings: settingsWith(["Travelling", "School run"]),
             } as Partial<UseTimerResult>
           }
-          ringNow={vi.fn()}
           awayStart={vi.fn()}
         />,
       );
@@ -438,7 +388,6 @@ describe("ControlBar", () => {
               settings: settingsWith(["Travelling", "School run"]),
             } as Partial<UseTimerResult>
           }
-          ringNow={vi.fn()}
           awayStart={awayStart}
         />,
       );
@@ -462,7 +411,6 @@ describe("ControlBar", () => {
               settings: settingsWith([]),
             } as Partial<UseTimerResult>
           }
-          ringNow={vi.fn()}
           awayStart={vi.fn()}
         />,
       );
@@ -473,40 +421,11 @@ describe("ControlBar", () => {
     });
   });
 
-  describe("button styling", () => {
-    it("end early button has flex:1 to fill available space", () => {
-      render(
-        <ControlBar
-          timerState={{ mode: "running" } as Partial<UseTimerResult>}
-          ringNow={vi.fn()}
-          awayStart={vi.fn()}
-        />,
-      );
-      const button = screen.getByTestId("control-end-early");
-      expect(button.className).toBeTruthy();
-    });
-  });
-
   describe("swatch appearance", () => {
-    it("end early swatch is 9x9 square", () => {
+    it("sleep swatch is a 9x9 square with the correct color", () => {
       const { container } = render(
         <ControlBar
           timerState={{ mode: "running" } as Partial<UseTimerResult>}
-          ringNow={vi.fn()}
-          awayStart={vi.fn()}
-        />,
-      );
-      const swatch = container.querySelector(
-        "[data-testid='control-swatch-end-early']",
-      );
-      expect(swatch?.className).toMatch(/swatch/);
-    });
-
-    it("sleep swatch has correct color", () => {
-      const { container } = render(
-        <ControlBar
-          timerState={{ mode: "running" } as Partial<UseTimerResult>}
-          ringNow={vi.fn()}
           awayStart={vi.fn()}
         />,
       );
@@ -520,7 +439,6 @@ describe("ControlBar", () => {
       const { container } = render(
         <ControlBar
           timerState={{ mode: "running" } as Partial<UseTimerResult>}
-          ringNow={vi.fn()}
           awayStart={vi.fn()}
         />,
       );

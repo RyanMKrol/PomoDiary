@@ -138,6 +138,7 @@ export function createTimerClient(fetchImpl: FetchLike = fetch): TimerClient {
   let intervalId: ReturnType<typeof setInterval> | null = null;
   let loadRetryId: ReturnType<typeof setTimeout> | null = null;
   let stopped = false;
+  let loadGeneration = 0;
   let hasRequestedNotifyPermission = false;
   let releaseFlushLock: (() => void) | null = null;
 
@@ -322,7 +323,11 @@ export function createTimerClient(fetchImpl: FetchLike = fetch): TimerClient {
       return;
     }
     void locks.request(`pomodiary-wal-flush:${userKey}`, () => {
-      if (stopped) return Promise.resolve();
+      // A superseded flusher (stop() ran, or a newer load created a fresh
+      // one) must release the lock immediately, not start and hold it —
+      // otherwise the CURRENT flusher queues behind it forever and nothing
+      // ever syncs.
+      if (stopped || flusher !== f) return Promise.resolve();
       f.start();
       return new Promise<void>((resolve) => {
         releaseFlushLock = resolve;
@@ -330,10 +335,15 @@ export function createTimerClient(fetchImpl: FetchLike = fetch): TimerClient {
     });
   }
 
-  async function loadInitialState(): Promise<void> {
+  async function loadInitialState(generation: number): Promise<void> {
     try {
       const payload = await fetchState();
-      if (stopped) return;
+      // React StrictMode (dev) double-runs the mount effect: start, stop,
+      // start. Only the LATEST start's load may proceed — the abandoned
+      // first load otherwise builds a second WAL store and flusher, and
+      // whichever one wins the flush lock is not the one receiving the
+      // user's actions, so nothing ever reaches the server.
+      if (stopped || generation !== loadGeneration) return;
 
       wal = createWalStore(payload.userKey);
       settings = payload.settings;
@@ -365,10 +375,10 @@ export function createTimerClient(fetchImpl: FetchLike = fetch): TimerClient {
       startFlusherWithLeadership(payload.userKey);
       if (wal.hasWork()) flusher.flushNow();
     } catch {
-      if (stopped) return;
+      if (stopped || generation !== loadGeneration) return;
       loadRetryId = setTimeout(() => {
         loadRetryId = null;
-        void loadInitialState();
+        void loadInitialState(generation);
       }, LOAD_RETRY_MS);
     }
   }
@@ -429,7 +439,8 @@ export function createTimerClient(fetchImpl: FetchLike = fetch): TimerClient {
 
     start() {
       stopped = false;
-      void loadInitialState();
+      loadGeneration += 1;
+      void loadInitialState(loadGeneration);
       if (intervalId === null) {
         intervalId = setInterval(() => tick(Date.now()), TICK_MS);
       }

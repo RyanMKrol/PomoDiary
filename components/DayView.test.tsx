@@ -7,6 +7,7 @@ import { render, screen, cleanup, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { DayView } from "./DayView";
 import type { Entry } from "@/lib/db/entries.store";
+import { invalidateEntriesCache } from "@/lib/client/entriesCache";
 
 function mockFetchResponse(data: unknown) {
   return Promise.resolve({
@@ -17,6 +18,9 @@ function mockFetchResponse(data: unknown) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  // The entries cache is module-level state that persists between tests —
+  // without a reset it would serve one test's fixtures to the next.
+  invalidateEntriesCache();
 });
 
 afterEach(() => {
@@ -364,6 +368,129 @@ describe("DayView", () => {
         />,
       );
       expect(fetchSpy).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  describe("caching", () => {
+    const cachedEntry: Entry = {
+      id: "cached-1",
+      userId: "user-1",
+      from: new Date("2024-01-15T10:00:00Z"),
+      to: new Date("2024-01-15T11:00:00Z"),
+      tag: "Deep work",
+      feel: "Charged",
+      intent: "yes",
+      bullets: ["Cached work"],
+      createdAt: new Date("2024-01-15T11:00:00Z"),
+    };
+
+    beforeEach(() => {
+      invalidateEntriesCache();
+    });
+
+    it("serves a remount at the same entriesVersion from cache with zero fetches", async () => {
+      const fetchSpy = vi.fn(() => mockFetchResponse([cachedEntry]));
+      global.fetch = fetchSpy as any;
+
+      const { unmount } = render(
+        <DayView
+          dayStart={0}
+          dayEnd={1000}
+          timerState={{ mode: "running", entriesVersion: 0 }}
+        />,
+      );
+      await screen.findByTestId("entry-cached-1");
+      expect(fetchSpy).toHaveBeenCalledTimes(1);
+      unmount();
+
+      // Toggling day<->grid remounts DayView — same day, same version must
+      // come straight from the cache without touching the network.
+      render(
+        <DayView
+          dayStart={0}
+          dayEnd={1000}
+          timerState={{ mode: "running", entriesVersion: 0 }}
+        />,
+      );
+      expect(await screen.findByTestId("entry-cached-1")).toBeInTheDocument();
+      expect(fetchSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it("refetches on remount after an entriesVersion bump", async () => {
+      const fetchSpy = vi.fn(() => mockFetchResponse([cachedEntry]));
+      global.fetch = fetchSpy as any;
+
+      const { unmount } = render(
+        <DayView
+          dayStart={0}
+          dayEnd={1000}
+          timerState={{ mode: "running", entriesVersion: 0 }}
+        />,
+      );
+      await screen.findByTestId("entry-cached-1");
+      expect(fetchSpy).toHaveBeenCalledTimes(1);
+      unmount();
+
+      // The slot was stored at version 0 — a caller at version 1 must miss.
+      render(
+        <DayView
+          dayStart={0}
+          dayEnd={1000}
+          timerState={{ mode: "running", entriesVersion: 1 }}
+        />,
+      );
+      await screen.findByTestId("entry-cached-1");
+      expect(fetchSpy).toHaveBeenCalledTimes(2);
+    });
+
+    it("refetches on remount after an entry edit is saved", async () => {
+      const user = userEvent.setup();
+      const updatedEntry: Entry = { ...cachedEntry, tag: "Admin" };
+      const listCalls = () =>
+        fetchSpy.mock.calls.filter(([url]) =>
+          String(url).startsWith("/api/entries?"),
+        ).length;
+
+      const fetchSpy = vi.fn((url: string) => {
+        if (String(url).startsWith("/api/entries/cached-1")) {
+          return mockFetchResponse(updatedEntry);
+        }
+        return mockFetchResponse([cachedEntry]);
+      });
+      global.fetch = fetchSpy as any;
+
+      const { unmount } = render(
+        <DayView
+          dayStart={0}
+          dayEnd={1000}
+          timerState={{ mode: "running", entriesVersion: 0 }}
+        />,
+      );
+
+      // Drive the real editor-save path: edit the entry's tag and save.
+      const editButton = await screen.findByTestId("edit-button-cached-1");
+      await user.click(editButton);
+      await user.click(screen.getByTestId("editor-chip-cached-1-Admin"));
+      await user.click(screen.getByTestId("editor-save-cached-1"));
+      await waitFor(() => {
+        expect(screen.getByTestId("chip-tag-cached-1")).toHaveTextContent(
+          "Admin",
+        );
+      });
+      expect(listCalls()).toBe(1);
+      unmount();
+
+      // The save invalidated the cache — a remount at the same version must
+      // go back to the network rather than serve the pre-edit copy.
+      render(
+        <DayView
+          dayStart={0}
+          dayEnd={1000}
+          timerState={{ mode: "running", entriesVersion: 0 }}
+        />,
+      );
+      await screen.findByTestId("entry-cached-1");
+      expect(listCalls()).toBe(2);
     });
   });
 

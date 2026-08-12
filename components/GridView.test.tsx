@@ -6,6 +6,7 @@ import { render, screen, cleanup } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { GridView } from "./GridView";
 import type { Entry } from "@/lib/db/entries.store";
+import { invalidateEntriesCache } from "@/lib/client/entriesCache";
 
 function mockFetchResponse(data: unknown) {
   return Promise.resolve({
@@ -35,6 +36,10 @@ function entryDaysAgo(n: number) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  // The entries cache is module-level state that persists between tests —
+  // without a reset it would serve one test's fixtures to the next (every
+  // grid fetch shares the "all" key).
+  invalidateEntriesCache();
 });
 
 afterEach(() => {
@@ -646,6 +651,91 @@ describe("GridView", () => {
           timerState={{ mode: "running", entriesVersion: 1 }}
         />,
       );
+      expect(fetchSpy).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  describe("caching", () => {
+    beforeEach(() => {
+      invalidateEntriesCache();
+    });
+
+    it("serves a remount at the same entriesVersion from cache with zero fetches", async () => {
+      const fetchSpy = vi.fn(() => mockFetchResponse([entryDaysAgo(9)]));
+      global.fetch = fetchSpy as any;
+
+      const { unmount } = render(
+        <GridView
+          onSelectDay={() => {}}
+          timerState={{ mode: "running", entriesVersion: 0 }}
+        />,
+      );
+      await screen.findByTestId("day-row-9");
+      expect(fetchSpy).toHaveBeenCalledTimes(1);
+      unmount();
+
+      // Toggling day<->grid remounts GridView — same version must come
+      // straight from the cache without touching the network.
+      render(
+        <GridView
+          onSelectDay={() => {}}
+          timerState={{ mode: "running", entriesVersion: 0 }}
+        />,
+      );
+      expect(await screen.findByTestId("day-row-9")).toBeInTheDocument();
+      expect(fetchSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it("refetches on remount after an entriesVersion bump", async () => {
+      const fetchSpy = vi.fn(() => mockFetchResponse([entryDaysAgo(9)]));
+      global.fetch = fetchSpy as any;
+
+      const { unmount } = render(
+        <GridView
+          onSelectDay={() => {}}
+          timerState={{ mode: "running", entriesVersion: 0 }}
+        />,
+      );
+      await screen.findByTestId("day-row-9");
+      expect(fetchSpy).toHaveBeenCalledTimes(1);
+      unmount();
+
+      // The slot was stored at version 0 — a caller at version 1 must miss.
+      render(
+        <GridView
+          onSelectDay={() => {}}
+          timerState={{ mode: "running", entriesVersion: 1 }}
+        />,
+      );
+      await screen.findByTestId("day-row-9");
+      expect(fetchSpy).toHaveBeenCalledTimes(2);
+    });
+
+    it("refetches on remount after invalidateEntriesCache (an entry edit)", async () => {
+      const fetchSpy = vi.fn(() => mockFetchResponse([entryDaysAgo(9)]));
+      global.fetch = fetchSpy as any;
+
+      const { unmount } = render(
+        <GridView
+          onSelectDay={() => {}}
+          timerState={{ mode: "running", entriesVersion: 0 }}
+        />,
+      );
+      await screen.findByTestId("day-row-9");
+      expect(fetchSpy).toHaveBeenCalledTimes(1);
+      unmount();
+
+      // GridView has no editor of its own — DayView's save callback calls
+      // invalidateEntriesCache(), so simulate that directly.
+      invalidateEntriesCache();
+
+      render(
+        <GridView
+          onSelectDay={() => {}}
+          timerState={{ mode: "running", entriesVersion: 0 }}
+        />,
+      );
+      await screen.findByTestId("day-row-9");
       expect(fetchSpy).toHaveBeenCalledTimes(2);
     });
   });

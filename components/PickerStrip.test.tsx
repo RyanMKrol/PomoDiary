@@ -144,3 +144,52 @@ describe("PickerStrip", () => {
     });
   });
 });
+
+describe("PickerStrip accordion", () => {
+  afterEach(() => {
+    cleanup();
+  });
+
+  it("collapses to just the header when the toggle is clicked, and reopens", async () => {
+    const user = userEvent.setup();
+    const timerState: Partial<UseTimerResult> = {
+      mode: "running",
+      draftBullets: [""],
+    };
+
+    render(<PickerStrip timerState={timerState} updateDraft={vi.fn()} />);
+
+    expect(screen.getByTestId("chip-Deep work")).toBeInTheDocument();
+
+    await user.click(screen.getByTestId("picker-strip-toggle"));
+    expect(screen.queryByTestId("chip-Deep work")).not.toBeInTheDocument();
+    expect(screen.getByTestId("picker-strip-toggle")).toHaveAttribute(
+      "aria-expanded",
+      "false",
+    );
+
+    await user.click(screen.getByTestId("picker-strip-toggle"));
+    expect(screen.getByTestId("chip-Deep work")).toBeInTheDocument();
+  });
+
+  it("stays open during recap even when collapsed — the chips call the hour", async () => {
+    const user = userEvent.setup();
+    const { rerender } = render(
+      <PickerStrip
+        timerState={{ mode: "running", draftBullets: [""] }}
+        updateDraft={vi.fn()}
+      />,
+    );
+
+    await user.click(screen.getByTestId("picker-strip-toggle"));
+    expect(screen.queryByTestId("chip-Deep work")).not.toBeInTheDocument();
+
+    rerender(
+      <PickerStrip
+        timerState={{ mode: "recap", draftBullets: [""] }}
+        updateDraft={vi.fn()}
+      />,
+    );
+    expect(screen.getByTestId("chip-Deep work")).toBeInTheDocument();
+  });
+});

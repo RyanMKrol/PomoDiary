@@ -3,6 +3,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Entry } from "@/lib/db/entries.store";
 import {
+  entriesCacheKey,
+  getCachedEntries,
+  setCachedEntries,
+} from "@/lib/client/entriesCache";
+import {
   dayKey,
   fmtGridDayLabel,
   gridCellTitle,
@@ -42,6 +47,22 @@ export function GridView({ onSelectDay, timerState }: GridViewProps) {
       if (prevVersion === entriesVersion) return;
     }
 
+    // A fetch would fire here — consult the session cache first (see
+    // DayView). A hit at the same entriesVersion means nothing new can be
+    // in the database, so a day<->grid toggle costs zero network calls.
+    const cacheKey = entriesCacheKey();
+    const cached = getCachedEntries(cacheKey, entriesVersion);
+    if (cached !== null) {
+      // Synchronous setState here is deliberate: this branch replaces the
+      // async fetch path's setState with the cached copy of the same data —
+      // it runs at most once per mount/version change, never cascades.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setEntries(cached);
+      setLoading(false);
+      setError(null);
+      return;
+    }
+
     // No range params = the user's full history: the grid shows every day
     // since first use, not a fixed window. Refetches keep the previous rows
     // on screen until fresh data lands (no blank flash).
@@ -54,7 +75,10 @@ export function GridView({ onSelectDay, timerState }: GridViewProps) {
           throw new Error("Failed to fetch entries");
         }
         const data = await response.json();
-        if (!cancelled) setEntries(data);
+        if (!cancelled) {
+          setCachedEntries(cacheKey, entriesVersion, data);
+          setEntries(data);
+        }
       } catch (err) {
         if (!cancelled)
           setError(err instanceof Error ? err.message : "Unknown error");

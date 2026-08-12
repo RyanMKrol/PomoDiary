@@ -28,7 +28,6 @@ export function Panels({ timerState }: PanelsProps) {
     awayElapsedSeconds,
     updateDraft,
     resume,
-    ringNow,
     awayStart,
     awayReturn,
     log,
@@ -47,11 +46,7 @@ export function Panels({ timerState }: PanelsProps) {
         <Dial timerState={timerState} />
         <BulletJotter timerState={timerState} updateDraft={updateDraft} />
         <PickerStrip timerState={timerState} updateDraft={updateDraft} />
-        <ControlBar
-          timerState={timerState}
-          ringNow={ringNow}
-          awayStart={awayStart}
-        />
+        <ControlBar timerState={timerState} awayStart={awayStart} />
         <RecapBar timerState={timerState} log={log} skip={skip} />
         {mode === "chime" && chimeFrom != null && chimeTo != null && (
           <ChimeOverlay

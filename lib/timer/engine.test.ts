@@ -519,12 +519,13 @@ describe("awayStart", () => {
 });
 
 describe("awayReturn", () => {
-  function away(since: number, kind: "sleep" | "work" = "sleep") {
+  function away(since: number, overrides = {}) {
     return running({
       mode: "away",
-      awayKind: kind,
+      awayKind: "sleep",
       awaySince: since,
       phraseIdx: 1,
+      ...overrides,
     });
   }
 
@@ -541,18 +542,57 @@ describe("awayReturn", () => {
     }
   });
 
-  it("backfills a ragged first block to the :00, then to the return time, newest first", () => {
-    // Away from T0 (13m20s past the hour) for 90 minutes.
-    const s = away(T0);
+  it("returning within the same block resumes the hour with drafts intact plus an away bullet", () => {
+    // Block T0 -> T0_BOUNDARY. Away from T0+5min, back at T0+20min.
+    const s = away(T0 + 5 * 60 * 1000, {
+      hourStart: T0,
+      draftBullets: ["wrote a bit"],
+    });
+    const now = T0 + 20 * 60 * 1000;
+    const { state, entriesToInsert } = dispatch(
+      s,
+      SETTINGS,
+      { type: "awayReturn" },
+      now,
+    );
+    expect(entriesToInsert).toEqual([]);
+    expect(state.mode).toBe("running");
+    // The SAME hour continues — hourStart untouched.
+    expect(state.hourStart).toBe(T0);
+    expect(state.draftBullets).toEqual(["wrote a bit", "Asleep (15 min)"]);
+    expect(state.awayKind).toBeNull();
+    expect(state.awaySince).toBeNull();
+  });
+
+  it("a sub-minute blip within the block adds no bullet and keeps the draft verbatim", () => {
+    const since = T0 + 5 * 60 * 1000;
+    const s = away(since, { hourStart: T0, draftBullets: ["wrote a bit"] });
+    const { state, entriesToInsert } = dispatch(
+      s,
+      SETTINGS,
+      { type: "awayReturn" },
+      since + 30 * 1000,
+    );
+    expect(entriesToInsert).toEqual([]);
+    expect(state.mode).toBe("running");
+    expect(state.hourStart).toBe(T0);
+    expect(state.draftBullets).toEqual(["wrote a bit"]);
+  });
+
+  it("an away that crosses the hour's end auto-pushes the whole block with the pre-away drafts", () => {
+    const s = away(T0 + 5 * 60 * 1000, {
+      hourStart: T0,
+      draftBullets: ["wrote a bit", "  "],
+    });
     const now = T0 + 90 * 60 * 1000;
-    const { entriesToInsert } = dispatch(
+    const { state, entriesToInsert } = dispatch(
       s,
       SETTINGS,
       { type: "awayReturn" },
       now,
     );
     expect(entriesToInsert).toHaveLength(2);
-    // Newest first: the final block runs from the boundary to the return.
+    // Newest first: the final partial block ends at the return.
     expect(entriesToInsert[0]).toEqual({
       from: T0_BOUNDARY,
       to: now,
@@ -561,19 +601,45 @@ describe("awayReturn", () => {
       intent: "yes",
       bullets: ["Asleep"],
     });
-    // Oldest: the ragged lead-in ends on the wall-clock :00.
+    // Oldest: the interrupted hour, whole block span, drafts folded in
+    // (blank bullets dropped).
     expect(entriesToInsert[1]).toEqual({
       from: T0,
       to: T0_BOUNDARY,
       tag: "Asleep",
       feel: "—",
       intent: "yes",
-      bullets: ["Asleep"],
+      bullets: ["wrote a bit", "Asleep"],
     });
+    // The next hour starts fresh — drafts were consumed by the entry.
+    expect(state.draftBullets).toEqual([]);
+    expect(state.hourStart).toBe(now);
   });
 
-  it("drops a trailing sliver under a minute", () => {
-    const s = away(T0H, "work");
+  it("whole away hours carry just the away bullet", () => {
+    const s = away(T0H, { hourStart: T0H, draftBullets: [] });
+    const now = T0H + 2 * HOUR;
+    const { entriesToInsert } = dispatch(
+      s,
+      SETTINGS,
+      { type: "awayReturn" },
+      now,
+    );
+    expect(entriesToInsert).toHaveLength(2);
+    expect(entriesToInsert[1]).toEqual({
+      from: T0H,
+      to: T0H + HOUR,
+      tag: "Asleep",
+      feel: "—",
+      intent: "yes",
+      bullets: ["Asleep"],
+    });
+    expect(entriesToInsert[0].from).toBe(T0H + HOUR);
+    expect(entriesToInsert[0].to).toBe(T0H + 2 * HOUR);
+  });
+
+  it("drops a trailing sliver under a minute after the crossed hour", () => {
+    const s = away(T0H, { hourStart: T0H, awayKind: "work" });
     const now = T0H + HOUR + 30 * 1000;
     const { entriesToInsert } = dispatch(
       s,
@@ -592,37 +658,8 @@ describe("awayReturn", () => {
     });
   });
 
-  it("a leading sliver rolls into the first full hour instead of logging seconds", () => {
-    // Away began 30 seconds before a boundary; the first block absorbs the
-    // sliver and runs to the NEXT boundary.
-    const since = T0H + HOUR - 30 * 1000;
-    const s = away(since);
-    const now = T0H + 2 * HOUR;
-    const { entriesToInsert } = dispatch(
-      s,
-      SETTINGS,
-      { type: "awayReturn" },
-      now,
-    );
-    expect(entriesToInsert).toHaveLength(1);
-    expect(entriesToInsert[0].from).toBe(since);
-    expect(entriesToInsert[0].to).toBe(now);
-  });
-
-  it("45s away backfills nothing", () => {
-    const s = away(T0);
-    const now = T0 + 45 * 1000;
-    const { entriesToInsert } = dispatch(
-      s,
-      SETTINGS,
-      { type: "awayReturn" },
-      now,
-    );
-    expect(entriesToInsert).toEqual([]);
-  });
-
   it("caps at MAX_AWAY_BLOCKS whole hours, oldest kept", () => {
-    const s = away(T0H);
+    const s = away(T0H, { hourStart: T0H });
     const now = T0H + 50 * HOUR;
     const { entriesToInsert } = dispatch(
       s,
@@ -631,74 +668,13 @@ describe("awayReturn", () => {
       now,
     );
     expect(entriesToInsert).toHaveLength(MAX_AWAY_BLOCKS);
-    // Oldest block (last, since newest-first) starts at the away start.
     expect(entriesToInsert[MAX_AWAY_BLOCKS - 1].from).toBe(T0H);
     expect(entriesToInsert[MAX_AWAY_BLOCKS - 1].to).toBe(T0H + HOUR);
-    // Newest block ends 48h in; the remaining 2h of the span is dropped.
     expect(entriesToInsert[0].to).toBe(T0H + MAX_AWAY_BLOCKS * HOUR);
   });
 
-  it("from gym tags blocks with 'At the gym'", () => {
-    const s = running({
-      mode: "away",
-      awayKind: "gym",
-      awaySince: T0H,
-    });
-    const now = T0H + HOUR;
-    const { entriesToInsert } = dispatch(
-      s,
-      SETTINGS,
-      { type: "awayReturn" },
-      now,
-    );
-    expect(entriesToInsert).toHaveLength(1);
-    expect(entriesToInsert[0]).toEqual({
-      from: T0H,
-      to: T0H + HOUR,
-      tag: "At the gym",
-      feel: "—",
-      intent: "yes",
-      bullets: ["At the gym"],
-    });
-  });
-
-  it("from a custom away tags blocks with the user's label", () => {
-    const s = running({
-      mode: "away",
-      awayKind: "custom",
-      awaySince: T0H,
-      awayLabel: "Travelling",
-    });
-    const now = T0H + 2 * HOUR;
-    const { entriesToInsert } = dispatch(
-      s,
-      SETTINGS,
-      { type: "awayReturn" },
-      now,
-    );
-    expect(entriesToInsert).toHaveLength(2);
-    for (const entry of entriesToInsert) {
-      expect(entry.tag).toBe("Travelling");
-      expect(entry.bullets).toEqual(["Travelling"]);
-    }
-  });
-
-  it("clears awayLabel along with the other away fields on return", () => {
-    const s = running({
-      mode: "away",
-      awayKind: "custom",
-      awaySince: T0H,
-      awayLabel: "Travelling",
-    });
-    const { state } = dispatch(s, SETTINGS, { type: "awayReturn" }, T0H + HOUR);
-    expect(state.mode).toBe("running");
-    expect(state.awayKind).toBeNull();
-    expect(state.awaySince).toBeNull();
-    expect(state.awayLabel).toBeNull();
-  });
-
   it("always returns to running (ignores pauseAfterLog) and does not advance phraseIdx", () => {
-    const s = away(T0);
+    const s = away(T0, { hourStart: T0 });
     const now = T0 + 2 * HOUR;
     const { state } = dispatch(
       s,

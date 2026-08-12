@@ -10,7 +10,6 @@ import styles from "./ControlBar.module.css";
 
 export interface ControlBarProps {
   timerState: Partial<UseTimerResult>;
-  ringNow: () => Promise<void>;
   awayStart: (kind: AwayKind, label?: string) => Promise<void>;
 }
 
@@ -20,11 +19,7 @@ const AWAY_BUTTONS = Object.entries(AWAY).map(([kind, cfg]) => ({
   color: cfg.color,
 }));
 
-export function ControlBar({
-  timerState,
-  ringNow,
-  awayStart,
-}: ControlBarProps) {
+export function ControlBar({ timerState, awayStart }: ControlBarProps) {
   const { mode = "running", settings } = timerState;
   const [customOpen, setCustomOpen] = useState(false);
   const [customLabel, setCustomLabel] = useState("");
@@ -54,25 +49,11 @@ export function ControlBar({
 
   return (
     <div className={styles.bar} data-testid="control-bar">
-      {/* Mid-hour pause was removed deliberately: hours are real wall-clock
-          blocks, and pausing relabelled time (the block slid forward on
-          resume). Ending the hour early and accounting for it is the honest
-          equivalent. */}
-      <div className={styles.row}>
-        <button
-          className={`${styles.button} ${styles.endEarlyButton} ${styles.buttonLast}`}
-          onClick={() => ringNow()}
-          data-testid="control-end-early"
-        >
-          <span
-            className={styles.swatch}
-            style={{ backgroundColor: "#ec3013" }}
-            data-testid="control-swatch-end-early"
-          />
-          End early
-        </button>
-      </div>
-
+      {/* Mid-hour pause and early ending were both removed deliberately:
+          hours are real wall-clock blocks, so the hour only ends at :00.
+          Pausing relabelled time (the block slid forward on resume), and
+          "End early" cut blocks short — the away modes are the honest way
+          to leave an hour before it rings. */}
       {customOpen ? (
         <div className={styles.customArea} data-testid="control-custom-area">
           {recentLabels.length > 0 && (
@@ -94,7 +75,7 @@ export function ControlBar({
               ref={inputRef}
               className={styles.customInput}
               value={customLabel}
-              placeholder="Where to?"
+              placeholder="Gone for a while, doing…"
               maxLength={LIMITS.MAX_TAG_LENGTH}
               onChange={(e) => setCustomLabel(e.target.value)}
               onKeyDown={(e) => {

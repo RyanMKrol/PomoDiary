@@ -67,6 +67,12 @@ async function driveVisualStates() {
       viewport: { width: 1440, height: 1100 },
     });
     const page = await context.newPage();
+    // Some flows raise the chime by fast-forwarding the browser clock past the
+    // next wall-clock hour boundary (the End early button is gone; the client
+    // derives the chime locally from hourStart/blockEnd). Install the fake
+    // clock at the same instant the fixture was created with, so page time and
+    // fixture time start in agreement.
+    await page.clock.install({ time: now });
     // The WAL persists in localStorage; never let one run's log leak into
     // the next (or a stale batch replay against fresh fixture state).
     await page.addInitScript(() => {
@@ -85,11 +91,23 @@ async function driveVisualStates() {
       // Ignore failed loads of Clerk's own client SDK from the fake frontend API host — an
       // artifact of ClerkProvider needing a syntactically valid key even though
       // E2E_BYPASS_AUTH means it's never actually used to authenticate anything.
+      // The clock fast-forwards also fire Clerk's load-timeout, whose error text
+      // names no host — filter that shape by message too.
       if (msg.location().url.includes(FAKE_CLERK_FRONTEND_HOST)) return;
+      if (msg.text().includes("Failed to load Clerk JS")) return;
       consoleErrors.push(msg.text());
     });
     const pageErrors = [];
-    page.on("pageerror", (err) => pageErrors.push(String(err)));
+    page.on("pageerror", (err) => {
+      const text = String(err);
+      if (
+        text.includes(FAKE_CLERK_FRONTEND_HOST) ||
+        text.includes("Failed to load Clerk JS")
+      ) {
+        return;
+      }
+      pageErrors.push(text);
+    });
 
     await routeApi(page, fixtureState);
 

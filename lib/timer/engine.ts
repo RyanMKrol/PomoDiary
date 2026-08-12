@@ -258,13 +258,51 @@ export function dispatch(
     case "awayReturn": {
       if (state.mode !== "away" || state.awayKind === null) return NOOP(state);
       const cfg = awayConfig(state.awayKind, state.awayLabel);
-      const blocks: EntryToInsert[] = [];
-      let from = state.awaySince ?? now;
+      const since = state.awaySince ?? now;
+      const interruptedBlockEnd = blockEndFor(state.hourStart);
+      const keptDraft = state.draftBullets.filter((b) => b.trim() !== "");
 
-      // Backfill aligned to wall-clock hours: a ragged first block runs
-      // from awaySince to the next :00, whole hours follow, and the last
-      // block ends at the return time. A trailing sliver under a minute is
-      // dropped, matching the running-block floor.
+      // The away interrupted an hour with a story in progress — the draft
+      // bullets must never be lost to it.
+      if (now < interruptedBlockEnd) {
+        // Back within the same block: no entry yet. Resume the SAME hour
+        // with its drafts intact, folding the absence in as a bullet (a
+        // sub-minute blip adds nothing). The hour is logged as one story
+        // when it chimes at :00.
+        const awayMinutes = Math.round((now - since) / 60000);
+        const draftBullets =
+          now - since >= MIN_BLOCK_MS
+            ? [...keptDraft, `${cfg.bullet} (${awayMinutes} min)`]
+            : state.draftBullets;
+        return {
+          state: {
+            ...state,
+            mode: "running",
+            awayKind: null,
+            awaySince: null,
+            awayLabel: null,
+            draftBullets,
+          },
+          entriesToInsert: [],
+        };
+      }
+
+      // The away crossed the interrupted block's end, so that hour is over:
+      // auto-push it spanning the WHOLE block, carrying the pre-away drafts
+      // plus the away bullet. Whole aligned hours follow with just the away
+      // bullet; the final block ends at the return time (a trailing sliver
+      // under a minute is dropped, matching the running-block floor).
+      const blocks: EntryToInsert[] = [
+        {
+          from: state.hourStart,
+          to: interruptedBlockEnd,
+          tag: cfg.tag,
+          feel: "—",
+          intent: "yes",
+          bullets: [...keptDraft, cfg.bullet],
+        },
+      ];
+      let from = interruptedBlockEnd;
       while (now - from >= MIN_BLOCK_MS && blocks.length < MAX_AWAY_BLOCKS) {
         const to = Math.min(blockEndFor(from), now);
         blocks.push({

@@ -13,6 +13,9 @@
   flex-direction: column;
   border-right: 2px solid rgba(32, 30, 29, 0.4);
   background-color: var(--bg);
+  /* Backstop for very short viewports: once every section is at its
+     minimum, the panel scrolls instead of clipping the control bar. */
+  overflow-y: auto;
 }
 
 .rightPanel {

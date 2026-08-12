@@ -9,7 +9,10 @@
 
 .scroller {
   flex: 1;
-  min-height: 0;
+  /* The bullets are the point of the app: on short viewports the fixed
+     sections squeezed this flex child to zero height. Guarantee room for
+     the heading plus at least one input; the section scrolls beyond it. */
+  min-height: 130px;
   overflow: auto;
   padding: 0 32px 14px;
   border-top: 2px solid rgba(32, 30, 29, 0.4);
