@@ -33,6 +33,7 @@ function createFlowFixture(t0) {
     // below, so the "server" and the browser agree on what time it is.
     now: t0,
     state: initialState(t0),
+    lastBatchId: null,
     settings: {
       soundOn: false,
       chimeVolume: 0.5,
@@ -88,6 +89,8 @@ function statePayload(fx, todayStart, todayEnd) {
     draftIntent: fx.state.draftIntent,
     phraseIdx: fx.state.phraseIdx,
     settings: fx.settings,
+    serverNow: fx.now,
+    userKey: "e2e",
   };
   if (todayStart !== null && todayEnd !== null) {
     payload.count = fx.entries.filter((e) => {
@@ -123,13 +126,33 @@ async function routeStatefulApi(page, fx) {
       return route.fulfill({ json: statePayload(fx, todayStart, todayEnd) });
     }
 
-    if (pathname === "/api/timer" && method === "POST") {
-      derive(fx); // roll running -> chime first, exactly like the real handler
-      const action = readJson();
-      const result = dispatch(fx.state, engineSettings(fx), action, fx.now);
-      fx.state = result.state;
-      pushEntries(fx, result.entriesToInsert);
-      return route.fulfill({ json: statePayload(fx, null, null) });
+    if (pathname === "/api/timer/sync" && method === "POST") {
+      const body = readJson();
+      if (fx.lastBatchId !== null && fx.lastBatchId === body.batchId) {
+        return route.fulfill({
+          json: { applied: false, state: statePayload(fx, null, null) },
+        });
+      }
+      // Replay each record AT ITS OWN client timestamp (rec.at, not fx.now),
+      // deriving first — exactly like the real sync handler. Dispatching at
+      // fx.now instead would pass today and rot silently.
+      for (const rec of body.actions ?? []) {
+        fx.state = deriveNow(fx.state, rec.at).state;
+        const result = dispatch(
+          fx.state,
+          engineSettings(fx),
+          rec.action,
+          rec.at,
+        );
+        fx.state = result.state;
+        pushEntries(fx, result.entriesToInsert);
+      }
+      fx.lastBatchId = body.batchId;
+      const ts = body.todayStart ?? null;
+      const te = body.todayEnd ?? null;
+      return route.fulfill({
+        json: { applied: true, state: statePayload(fx, ts, te) },
+      });
     }
 
     if (pathname === "/api/entries" && method === "GET") {
@@ -197,6 +220,25 @@ async function tick(page, fx, ms) {
   await page.clock.fastForward(ms);
 }
 
+/** Let the client's background flusher fire (3s cadence) so fixture-side
+ *  assertions observe the flushed state. UI assertions never need this —
+ *  the UI is optimistic — only `fx.*` reads do. */
+async function flushTick(page, fx) {
+  await tick(page, fx, 3_500);
+}
+
+/** fastForward fires the flusher's virtual timer, but the intercepted POST
+ *  completes in REAL time after fastForward resolves — poll the fixture
+ *  until the flush has actually landed. */
+async function waitForFixture(step, label, predicate) {
+  const deadline = Date.now() + 10_000;
+  while (Date.now() < deadline) {
+    if (predicate()) return;
+    await new Promise((r) => setTimeout(r, 50));
+  }
+  fail(step, `timed out waiting for fixture: ${label}`);
+}
+
 const MIN = 60_000;
 
 async function main() {
@@ -229,6 +271,18 @@ async function main() {
       }
     });
 
+    // The WAL persists in localStorage; clear on every document load so the
+    // flows stay deterministic (reloads intentionally drop unflushed local
+    // records here — WAL recovery is covered by the client unit tests).
+    await page.addInitScript(() => {
+      // Init scripts run in every frame, including opaque-origin ones where
+      // localStorage access throws a SecurityError — guard it.
+      try {
+        localStorage.clear();
+      } catch {
+        /* inaccessible in this frame — nothing to clear */
+      }
+    });
     await page.clock.install({ time: T0 });
     await routeStatefulApi(page, fx);
     await gotoWithRetry(page, BASE_URL, { waitUntil: "domcontentloaded" });
@@ -251,6 +305,10 @@ async function main() {
         `chime overlay should show "${expectedRange}" (the block's :00), got: ${overlayText.replace(/\n/g, " | ")}`,
       );
     }
+    // The natural chime is derived, not dispatched: the fixture's stored
+    // state still says "running" until something rolls it forward, exactly
+    // like the real DB row. Derive at the fixture clock to observe it.
+    derive(fx);
     assertEqual("1-rollover", "fixture mode", fx.state.mode, "chime");
     pass("1-rollover: chime raised; range end pinned to the block's :00");
 
@@ -316,6 +374,13 @@ async function main() {
     await page.getByTestId("recap-skip").click();
     await page.getByTestId("recap-bar").waitFor({ state: "hidden" });
 
+    const phraseIdxBefore = fx.state.phraseIdx;
+    await flushTick(page, fx);
+    await waitForFixture(
+      "3-skip",
+      "skip to flush",
+      () => fx.state.phraseIdx !== phraseIdxBefore,
+    );
     assertEqual("3-skip", "entries after skip", fx.entries.length, 1);
     const phraseAfter = PHRASES[fx.state.phraseIdx][0];
     if (phraseAfter === phraseBefore) {
@@ -333,6 +398,13 @@ async function main() {
     await tick(page, fx, 3 * 60 * MIN + 20 * MIN); // 3h20m
     await page.getByTestId("away-return-button").click();
     await page.getByTestId("away-overlay").waitFor({ state: "hidden" });
+    const awayReturnAt = fx.now;
+    await flushTick(page, fx);
+    await waitForFixture(
+      "4-away",
+      "away blocks to flush",
+      () => fx.entries.length > entriesBeforeAway,
+    );
 
     // Aligned backfill: a ragged lead-in to the next :00, whole hours after,
     // and a final block ending at the return time. Compute the expectation
@@ -340,8 +412,8 @@ async function main() {
     const expectedBlocks = (() => {
       let from = awayStartAt;
       let count = 0;
-      while (fx.now - from >= MIN) {
-        from = Math.min(blockEndFor(from), fx.now);
+      while (awayReturnAt - from >= MIN) {
+        from = Math.min(blockEndFor(from), awayReturnAt);
         count += 1;
       }
       return count;
@@ -373,14 +445,24 @@ async function main() {
     // ---- 5. "Wait for me" hold survives reload -------------------------------
     // Mid-hour pause was removed from the UI (hours are honest wall-clock
     // blocks); the paused state is now only reachable as the between-hours
-    // hold from the pauseAfterLog setting.
-    fx.settings.pauseAfterLog = true;
+    // hold from the pauseAfterLog setting. Drive the setting through the UI
+    // so the client's local copy updates too (settings stay a direct PATCH,
+    // outside the WAL).
+    await page.getByTestId("vine-settings-button").click();
+    await page.getByTestId("pause-wait-for-me-button").click();
+    await page.keyboard.press("Escape");
     await page.getByTestId("control-end-early").click();
     await page.getByTestId("chime-overlay").waitFor();
     await page.getByTestId("chime-overlay").click();
     await page.getByTestId("recap-bar").waitFor();
     await page.getByTestId("recap-log-it").click();
     await page.getByTestId("pause-overlay").waitFor();
+    await flushTick(page, fx);
+    await waitForFixture(
+      "5-pause",
+      "hold to flush",
+      () => fx.state.mode === "paused",
+    );
     assertEqual("5-pause", "mode while holding", fx.state.mode, "paused");
 
     await page.reload({ waitUntil: "domcontentloaded" });
@@ -390,13 +472,24 @@ async function main() {
     // fresh block running to the next :00.
     await page.getByTestId("pause-overlay").click();
     await page.getByTestId("pause-overlay").waitFor({ state: "hidden" });
-    assertEqual("5-pause", "mode after resume", fx.state.mode, "running");
-    assertEqual(
+    const resumeAt = fx.now;
+    await flushTick(page, fx);
+    await waitForFixture(
       "5-pause",
-      "block starts at resume",
-      fx.state.hourStart,
-      fx.now,
+      "resume to flush",
+      () => fx.state.mode === "running",
     );
+    assertEqual("5-pause", "mode after resume", fx.state.mode, "running");
+    // The record's timestamp is the page's clock at click time, which keeps
+    // ticking in real time between fastForwards — allow that drift, the
+    // point is that the block starts at the resume, not at the flush.
+    const resumeDrift = Math.abs(fx.state.hourStart - resumeAt);
+    if (resumeDrift > 30_000) {
+      fail(
+        "5-pause",
+        `block should start at the resume click (drift ${resumeDrift}ms)`,
+      );
+    }
     pass("5-pause: wait-for-me hold survives reload and resumes on click");
 
     if (pageErrors.length > 0) {

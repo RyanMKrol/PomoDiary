@@ -67,6 +67,17 @@ async function driveVisualStates() {
       viewport: { width: 1440, height: 1100 },
     });
     const page = await context.newPage();
+    // The WAL persists in localStorage; never let one run's log leak into
+    // the next (or a stale batch replay against fresh fixture state).
+    await page.addInitScript(() => {
+      // Init scripts run in every frame, including opaque-origin ones where
+      // localStorage access throws a SecurityError — guard it.
+      try {
+        localStorage.clear();
+      } catch {
+        /* inaccessible in this frame — nothing to clear */
+      }
+    });
 
     const consoleErrors = [];
     page.on("console", (msg) => {

@@ -69,6 +69,21 @@ export const timerActionSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("draftUpdate"), patch: draftPatchSchema }),
 ]);
 
+export const MAX_SYNC_ACTIONS = 200;
+
+export const walRecordSchema = z.object({
+  id: z.uuid(),
+  at: z.number().int().positive(),
+  action: timerActionSchema,
+});
+
+export const syncRequestSchema = z.object({
+  batchId: z.uuid(),
+  actions: z.array(walRecordSchema).min(1).max(MAX_SYNC_ACTIONS),
+  todayStart: z.number().int().optional(),
+  todayEnd: z.number().int().optional(),
+});
+
 export const settingsPatchSchema = z
   .object({
     soundOn: z.boolean(),

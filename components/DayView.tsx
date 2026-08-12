@@ -12,6 +12,7 @@ export interface DayViewProps {
   dayEnd: number;
   timerState: {
     mode?: string;
+    entriesVersion?: number;
   };
 }
 
@@ -21,19 +22,23 @@ export function DayView({ dayStart, dayEnd, timerState }: DayViewProps) {
   const [error, setError] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
 
+  const entriesVersion = timerState.entriesVersion ?? 0;
+
   const prevRef = useRef<{
     dayStart: number;
     dayEnd: number;
-    mode?: string;
+    entriesVersion: number;
   } | null>(null);
 
   useEffect(() => {
-    // Refetch on the first load, when the shown day changes, or when the timer
-    // LEAVES an entry-creating mode (log from recap/chime, backfill from away).
-    // Refetching on every mode change doubled the network calls at page load
-    // (undefined -> running) for no new data.
+    // Refetch on the first load, when the shown day changes, or when
+    // entriesVersion bumps — the timer client increments it when a flush
+    // ack confirms new entries reached the database. (The old trigger,
+    // "left an entry-creating mode", broke under the optimistic client:
+    // mode transitions are now local and happen BEFORE the server insert,
+    // so refetching on them raced the flush and missed the new entry.)
     const prev = prevRef.current;
-    prevRef.current = { dayStart, dayEnd, mode: timerState.mode };
+    prevRef.current = { dayStart, dayEnd, entriesVersion };
     // Never early-return until the first load has actually SETTLED: React
     // StrictMode (dev) runs the effect twice, cancelling the first fetch —
     // an early return on the second run left the vine loading forever. And
@@ -41,12 +46,8 @@ export function DayView({ dayStart, dayEnd, timerState }: DayViewProps) {
     // retries.
     if (prev !== null && !loading && error === null) {
       const dayChanged = prev.dayStart !== dayStart || prev.dayEnd !== dayEnd;
-      const leftEntryCreatingMode =
-        prev.mode !== timerState.mode &&
-        (prev.mode === "recap" ||
-          prev.mode === "away" ||
-          prev.mode === "chime");
-      if (!dayChanged && !leftEntryCreatingMode) return;
+      const entriesChanged = prev.entriesVersion !== entriesVersion;
+      if (!dayChanged && !entriesChanged) return;
     }
 
     // Refetches keep the previous entries on screen until fresh data lands —
@@ -77,10 +78,11 @@ export function DayView({ dayStart, dayEnd, timerState }: DayViewProps) {
       cancelled = true;
     };
     // `error` is deliberately NOT a dependency: it gates the early return so
-    // day/mode changes retry a failed fetch, but including it would make the
-    // effect refire on its own setError and hammer a persistently-down API.
+    // day/version changes retry a failed fetch, but including it would make
+    // the effect refire on its own setError and hammer a persistently-down
+    // API.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dayStart, dayEnd, timerState.mode]);
+  }, [dayStart, dayEnd, entriesVersion]);
 
   if (loading) {
     return <div className={styles.container} />;

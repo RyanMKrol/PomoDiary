@@ -1,0 +1,1 @@
+ALTER TABLE "timer_state" ADD COLUMN "last_batch_id" text;

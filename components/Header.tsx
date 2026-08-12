@@ -1,18 +1,21 @@
 "use client";
 
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useSyncExternalStore } from "react";
 import { padCount, fmtTodayLabel } from "@/lib/time";
+import type { UseTimerResult } from "@/lib/client/useTimer";
 import styles from "./Header.module.css";
-
-interface StateResponse {
-  count?: number;
-}
 
 const emptySubscribe = () => () => {};
 
-export function Header() {
-  const [hoursToday, setHoursToday] = useState(0);
-  const [isLoading, setIsLoading] = useState(true);
+export interface HeaderProps {
+  timerState: Partial<UseTimerResult>;
+}
+
+export function Header({ timerState }: HeaderProps) {
+  // The count rides the shared timer client: incremented locally the moment
+  // an hour is logged, corrected by every flush ack. The old per-mount fetch
+  // both cost a request and went stale after the first log.
+  const { hoursToday, loading = true } = timerState;
   // Client-only value: the server can't render the user's local date (it runs
   // in UTC), so SSR gets an empty label and the client fills it immediately.
   const todayLabel = useSyncExternalStore(
@@ -21,35 +24,7 @@ export function Header() {
     () => "",
   );
 
-  useEffect(() => {
-    async function fetchHoursToday() {
-      try {
-        const now = Date.now();
-        const todayStart = new Date(now);
-        todayStart.setHours(0, 0, 0, 0);
-        const todayEnd = new Date(now);
-        todayEnd.setHours(23, 59, 59, 999);
-
-        const params = new URLSearchParams({
-          todayStart: todayStart.getTime().toString(),
-          todayEnd: todayEnd.getTime().toString(),
-        });
-
-        const response = await fetch(`/api/state?${params}`);
-        const data: StateResponse = await response.json();
-        setHoursToday(data.count ?? 0);
-      } catch (error) {
-        console.error("Failed to fetch hours today:", error);
-        setHoursToday(0);
-      } finally {
-        setIsLoading(false);
-      }
-    }
-
-    fetchHoursToday();
-  }, []);
-
-  const displayCount = isLoading ? "00" : padCount(hoursToday);
+  const displayCount = loading ? "00" : padCount(hoursToday ?? 0);
 
   return (
     <header className={styles.header}>

@@ -48,12 +48,10 @@ export async function getTimerState<T extends Db>(
   return result[0] || null;
 }
 
-export async function upsertTimerState<T extends Db>(
-  db: T,
-  userId: string,
-  state: TimerStateInput,
-): Promise<void> {
-  const updateData = {
+/** The column mapping shared by upsertTimerState and the sync path's atomic
+ *  write, so the two can never drift. */
+export function timerStateUpdateData(state: TimerStateInput) {
+  return {
     mode: state.mode,
     hourStart: state.hourStart,
     chimeFrom: state.chimeFrom || null,
@@ -68,6 +66,14 @@ export async function upsertTimerState<T extends Db>(
     phraseIdx: state.phraseIdx,
     updatedAt: new Date(),
   };
+}
+
+export async function upsertTimerState<T extends Db>(
+  db: T,
+  userId: string,
+  state: TimerStateInput,
+): Promise<void> {
+  const updateData = timerStateUpdateData(state);
 
   await db
     .insert(timerState)

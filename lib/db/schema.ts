@@ -42,6 +42,9 @@ export const timerState = pgTable("timer_state", {
   draftFeel: text("draft_feel"),
   draftIntent: text("draft_intent"),
   phraseIdx: integer("phrase_idx").notNull(),
+  // The id of the last applied sync batch: a retried batch with the same id
+  // is detected and skipped, making flush retries exact-once.
+  lastBatchId: text("last_batch_id"),
   updatedAt: timestamp("updated_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
