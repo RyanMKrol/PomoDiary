@@ -67,12 +67,7 @@ export function Panels() {
               onReturn={() => awayReturn()}
             />
           )}
-        {mode === "paused" && (
-          <PauseOverlay
-            remainingSeconds={remainingSeconds ?? 0}
-            onResume={() => resume()}
-          />
-        )}
+        {mode === "paused" && <PauseOverlay onResume={() => resume()} />}
       </div>
       <div className={styles.rightPanel} data-testid="right-panel">
         <Vine timerState={timerState} />

@@ -29,7 +29,7 @@ describe("purgeUser", () => {
 
     await db.insert(userSettings).values({
       userId,
-      sessionMinutes: 45,
+      pauseAfterLog: true,
     });
   }
 

@@ -12,7 +12,6 @@ export type UserSettings = typeof userSettings.$inferSelect;
 export interface TimerStateInput {
   mode: string;
   hourStart: Date;
-  pausedRemaining?: number | null;
   chimeFrom?: Date | null;
   chimeTo?: Date | null;
   awayKind?: string | null;
@@ -25,14 +24,12 @@ export interface TimerStateInput {
 }
 
 export interface UserSettingsInput {
-  sessionMinutes?: number;
   soundOn?: boolean;
   chimeVolume?: number;
   pauseAfterLog?: boolean;
 }
 
 const DEFAULT_SETTINGS = {
-  sessionMinutes: 60,
   soundOn: true,
   chimeVolume: 0.8,
   pauseAfterLog: false,
@@ -57,7 +54,6 @@ export async function upsertTimerState<T extends Db>(
   const updateData = {
     mode: state.mode,
     hourStart: state.hourStart,
-    pausedRemaining: state.pausedRemaining || null,
     chimeFrom: state.chimeFrom || null,
     chimeTo: state.chimeTo || null,
     awayKind: state.awayKind || null,
@@ -104,8 +100,6 @@ export async function upsertSettings<T extends Db>(
   patch: UserSettingsInput,
 ): Promise<void> {
   const updateData: Partial<UserSettings> = {};
-  if (patch.sessionMinutes !== undefined)
-    updateData.sessionMinutes = patch.sessionMinutes;
   if (patch.soundOn !== undefined) updateData.soundOn = patch.soundOn;
   if (patch.chimeVolume !== undefined)
     updateData.chimeVolume = patch.chimeVolume;

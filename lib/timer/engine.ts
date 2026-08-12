@@ -5,14 +5,12 @@ export type Mode = "running" | "paused" | "chime" | "recap" | "away";
 export type AwayKind = keyof typeof AWAY;
 
 export interface Settings {
-  sessionMinutes: number;
   pauseAfterLog: boolean;
 }
 
 export interface TimerState {
   mode: Mode;
   hourStart: number;
-  pausedRemaining: number | null;
   chimeFrom: number | null;
   chimeTo: number | null;
   awayKind: AwayKind | null;
@@ -48,7 +46,6 @@ export interface EntryToInsert {
 }
 
 export type Action =
-  | { type: "pause" }
   | { type: "resume" }
   | { type: "ringNow" }
   | { type: "acknowledge" }
@@ -63,28 +60,39 @@ export interface DispatchResult {
   entriesToInsert: EntryToInsert[];
 }
 
+export const HOUR_MS = 3_600_000;
+export const MIN_BLOCK_MS = 60_000;
+export const MAX_AWAY_BLOCKS = 48;
+
 const NOOP = (state: TimerState): DispatchResult => ({
   state,
   entriesToInsert: [],
 });
 
-function sessionMs(settings: Settings): number {
-  return settings.sessionMinutes * 60 * 1000;
+/** The epoch-hour boundary strictly after t. Epoch hours coincide with local
+ *  :00 in every whole-hour-offset timezone; half-hour zones (India, Nepal)
+ *  would chime at local :30 — accepted, since computing local boundaries
+ *  would need environment access and the engine must stay pure. */
+export function nextHourBoundary(t: number): number {
+  return (Math.floor(t / HOUR_MS) + 1) * HOUR_MS;
 }
 
-function runningRemainingSeconds(
-  hourStart: number,
-  ms: number,
-  now: number,
-): number {
-  return Math.max(0, Math.floor((ms - (now - hourStart)) / 1000));
+/** Where a block started at `start` ends: the next :00, rolling one hour
+ *  forward when the block would be under a minute long (a block picked up
+ *  at 11:59:30 runs to 13:00, not for 30 seconds). */
+export function blockEndFor(start: number): number {
+  const boundary = nextHourBoundary(start);
+  return boundary - start < MIN_BLOCK_MS ? boundary + HOUR_MS : boundary;
+}
+
+function runningRemainingSeconds(hourStart: number, now: number): number {
+  return Math.max(0, Math.floor((blockEndFor(hourStart) - now) / 1000));
 }
 
 export function initialState(now: number): TimerState {
   return {
     mode: "running",
     hourStart: now,
-    pausedRemaining: null,
     chimeFrom: null,
     chimeTo: null,
     awayKind: null,
@@ -99,18 +107,15 @@ export function initialState(now: number): TimerState {
 
 export function deriveNow(
   state: TimerState,
-  settings: Settings,
   now: number,
 ): { state: TimerState; remainingSeconds: number } {
-  const ms = sessionMs(settings);
-
-  if (state.mode === "running" && now >= state.hourStart + ms) {
+  if (state.mode === "running" && now >= blockEndFor(state.hourStart)) {
     return {
       state: {
         ...state,
         mode: "chime",
         chimeFrom: state.hourStart,
-        chimeTo: state.hourStart + ms,
+        chimeTo: blockEndFor(state.hourStart),
       },
       remainingSeconds: 0,
     };
@@ -119,20 +124,15 @@ export function deriveNow(
   if (state.mode === "running") {
     return {
       state,
-      remainingSeconds: runningRemainingSeconds(state.hourStart, ms, now),
+      remainingSeconds: runningRemainingSeconds(state.hourStart, now),
     };
-  }
-
-  if (state.mode === "paused") {
-    return { state, remainingSeconds: state.pausedRemaining ?? 0 };
   }
 
   return { state, remainingSeconds: 0 };
 }
 
-function resetForNextHour(
+function resetForNextBlock(
   state: TimerState,
-  settings: Settings,
   now: number,
   mode: "running" | "paused",
   phraseIdx: number,
@@ -141,8 +141,6 @@ function resetForNextHour(
     ...state,
     mode,
     hourStart: now,
-    pausedRemaining:
-      mode === "paused" ? Math.round(sessionMs(settings) / 1000) : null,
     chimeFrom: null,
     chimeTo: null,
     awayKind: null,
@@ -182,31 +180,12 @@ export function dispatch(
   now: number,
 ): DispatchResult {
   switch (action.type) {
-    case "pause": {
-      if (state.mode !== "running") return NOOP(state);
-      const remaining = runningRemainingSeconds(
-        state.hourStart,
-        sessionMs(settings),
-        now,
-      );
-      return {
-        state: { ...state, mode: "paused", pausedRemaining: remaining },
-        entriesToInsert: [],
-      };
-    }
-
     case "resume": {
       if (state.mode !== "paused") return NOOP(state);
-      const ms = sessionMs(settings);
-      const remaining = state.pausedRemaining ?? 0;
-      const hourStart = now - (ms - remaining * 1000);
+      // The paused hold sits between blocks, so resuming starts a fresh
+      // block from now to the next hour boundary — nothing to rebase.
       return {
-        state: {
-          ...state,
-          mode: "running",
-          hourStart,
-          pausedRemaining: null,
-        },
+        state: { ...state, mode: "running", hourStart: now },
         entriesToInsert: [],
       };
     }
@@ -233,9 +212,8 @@ export function dispatch(
     case "log": {
       if (state.mode !== "recap" && state.mode !== "chime") return NOOP(state);
       const entry = buildEntry(state, action.payload, now);
-      const nextState = resetForNextHour(
+      const nextState = resetForNextBlock(
         state,
-        settings,
         now,
         settings.pauseAfterLog ? "paused" : "running",
         (state.phraseIdx + 1) % 5,
@@ -245,9 +223,8 @@ export function dispatch(
 
     case "skip": {
       if (state.mode !== "recap" && state.mode !== "chime") return NOOP(state);
-      const nextState = resetForNextHour(
+      const nextState = resetForNextBlock(
         state,
-        settings,
         now,
         settings.pauseAfterLog ? "paused" : "running",
         (state.phraseIdx + 1) % 5,
@@ -272,12 +249,15 @@ export function dispatch(
     case "awayReturn": {
       if (state.mode !== "away" || state.awayKind === null) return NOOP(state);
       const cfg = AWAY[state.awayKind];
-      const hourMs = 3600000;
       const blocks: EntryToInsert[] = [];
       let from = state.awaySince ?? now;
 
-      while (now - from > 60000 && blocks.length < 24) {
-        const to = Math.min(from + hourMs, now);
+      // Backfill aligned to wall-clock hours: a ragged first block runs
+      // from awaySince to the next :00, whole hours follow, and the last
+      // block ends at the return time. A trailing sliver under a minute is
+      // dropped, matching the running-block floor.
+      while (now - from >= MIN_BLOCK_MS && blocks.length < MAX_AWAY_BLOCKS) {
+        const to = Math.min(blockEndFor(from), now);
         blocks.push({
           from,
           to,
@@ -290,9 +270,8 @@ export function dispatch(
       }
       blocks.reverse();
 
-      const nextState = resetForNextHour(
+      const nextState = resetForNextBlock(
         state,
-        settings,
         now,
         "running",
         state.phraseIdx,

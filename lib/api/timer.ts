@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { getDb } from "../db";
 import { insertEntries } from "../db/entries.store";
-import { dispatch } from "../timer/engine";
+import { deriveNow, dispatch } from "../timer/engine";
 import { timerActionSchema } from "../validation";
 import { parseJsonBody } from "./route-handler";
 import {
@@ -28,7 +28,11 @@ export async function postTimerHandler(
     loadSettings(db, userId),
   ]);
 
-  const result = dispatch(state, toEngineSettings(settings), action, now);
+  // Roll a naturally-elapsed block into its chime before dispatching:
+  // the stored row can still say "running" after the boundary passed, and
+  // acknowledge/log guard on the chime mode.
+  const rolled = deriveNow(state, now).state;
+  const result = dispatch(rolled, toEngineSettings(settings), action, now);
 
   await upsertTimerState(db, userId, engineStateToInput(result.state));
 

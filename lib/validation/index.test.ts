@@ -67,7 +67,7 @@ describe("feelSchema", () => {
 
 describe("timerActionSchema", () => {
   it("accepts a known action type", () => {
-    expect(timerActionSchema.safeParse({ type: "pause" }).success).toBe(true);
+    expect(timerActionSchema.safeParse({ type: "resume" }).success).toBe(true);
     expect(
       timerActionSchema.safeParse({
         type: "log",
@@ -82,6 +82,10 @@ describe("timerActionSchema", () => {
     );
   });
 
+  it("rejects the removed pause action", () => {
+    expect(timerActionSchema.safeParse({ type: "pause" }).success).toBe(false);
+  });
+
   it("accepts an empty draftUpdate patch", () => {
     expect(
       timerActionSchema.safeParse({ type: "draftUpdate", patch: {} }).success,
@@ -90,30 +94,37 @@ describe("timerActionSchema", () => {
 });
 
 describe("settingsPatchSchema", () => {
-  it("accepts sessionMinutes at the boundaries", () => {
+  it("accepts chimeVolume at the boundaries", () => {
+    expect(settingsPatchSchema.safeParse({ chimeVolume: 0 }).success).toBe(
+      true,
+    );
+    expect(settingsPatchSchema.safeParse({ chimeVolume: 1 }).success).toBe(
+      true,
+    );
+  });
+
+  it("rejects chimeVolume just outside the boundaries", () => {
+    expect(settingsPatchSchema.safeParse({ chimeVolume: -0.1 }).success).toBe(
+      false,
+    );
+    expect(settingsPatchSchema.safeParse({ chimeVolume: 1.1 }).success).toBe(
+      false,
+    );
+  });
+
+  it("accepts boolean fields", () => {
     expect(
-      settingsPatchSchema.safeParse({
-        sessionMinutes: LIMITS.SESSION_MINUTES_MIN,
-      }).success,
-    ).toBe(true);
-    expect(
-      settingsPatchSchema.safeParse({
-        sessionMinutes: LIMITS.SESSION_MINUTES_MAX,
-      }).success,
+      settingsPatchSchema.safeParse({ soundOn: false, pauseAfterLog: true })
+        .success,
     ).toBe(true);
   });
 
-  it("rejects sessionMinutes just outside the boundaries", () => {
-    expect(
-      settingsPatchSchema.safeParse({
-        sessionMinutes: LIMITS.SESSION_MINUTES_MIN - 1,
-      }).success,
-    ).toBe(false);
-    expect(
-      settingsPatchSchema.safeParse({
-        sessionMinutes: LIMITS.SESSION_MINUTES_MAX + 1,
-      }).success,
-    ).toBe(false);
+  it("strips the removed sessionMinutes key instead of keeping it", () => {
+    const result = settingsPatchSchema.safeParse({ sessionMinutes: 45 });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data).not.toHaveProperty("sessionMinutes");
+    }
   });
 });
 

@@ -65,7 +65,7 @@ describe("PGlite test harness", () => {
     await insert();
     await db
       .update(timerState)
-      .set({ mode: "paused", pausedRemaining: 120 })
+      .set({ mode: "paused" })
       .where(eq(timerState.userId, "user_456"));
     await insert();
 

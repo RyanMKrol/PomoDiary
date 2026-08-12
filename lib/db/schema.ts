@@ -32,7 +32,6 @@ export const timerState = pgTable("timer_state", {
   userId: text("user_id").primaryKey(),
   mode: text("mode").notNull(),
   hourStart: timestamp("hour_start", { withTimezone: true }).notNull(),
-  pausedRemaining: integer("paused_remaining"),
   chimeFrom: timestamp("chime_from", { withTimezone: true }),
   chimeTo: timestamp("chime_to", { withTimezone: true }),
   awayKind: text("away_kind"),
@@ -49,7 +48,6 @@ export const timerState = pgTable("timer_state", {
 
 export const userSettings = pgTable("user_settings", {
   userId: text("user_id").primaryKey(),
-  sessionMinutes: integer("session_minutes").notNull().default(60),
   soundOn: boolean("sound_on").notNull().default(true),
   chimeVolume: real("chime_volume").notNull().default(0.8),
   pauseAfterLog: boolean("pause_after_log").notNull().default(false),

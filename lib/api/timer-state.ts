@@ -1,4 +1,5 @@
 import {
+  blockEndFor,
   deriveNow,
   initialState,
   type AwayKind,
@@ -18,7 +19,6 @@ import {
 } from "../db/timer-state.store";
 
 export interface ApiSettings {
-  sessionMinutes: number;
   soundOn: boolean;
   chimeVolume: number;
   pauseAfterLog: boolean;
@@ -27,6 +27,11 @@ export interface ApiSettings {
 export interface StatePayload {
   mode: Mode;
   remainingSeconds: number;
+  /** Raw engine fields: when the current block started and when it ends
+   *  (the next wall-clock hour boundary). The client renders from these
+   *  directly instead of inverting remainingSeconds. */
+  hourStart: number;
+  blockEnd: number;
   chimeFrom: number | null;
   chimeTo: number | null;
   /** Which away kind is active and since when — REQUIRED for an away state to
@@ -46,7 +51,6 @@ function rowToEngineState(row: TimerStateRow): EngineTimerState {
   return {
     mode: row.mode as Mode,
     hourStart: row.hourStart.getTime(),
-    pausedRemaining: row.pausedRemaining,
     chimeFrom: row.chimeFrom ? row.chimeFrom.getTime() : null,
     chimeTo: row.chimeTo ? row.chimeTo.getTime() : null,
     awayKind: row.awayKind as AwayKind | null,
@@ -63,7 +67,6 @@ export function engineStateToInput(state: EngineTimerState): TimerStateInput {
   return {
     mode: state.mode,
     hourStart: new Date(state.hourStart),
-    pausedRemaining: state.pausedRemaining,
     chimeFrom: state.chimeFrom !== null ? new Date(state.chimeFrom) : null,
     chimeTo: state.chimeTo !== null ? new Date(state.chimeTo) : null,
     awayKind: state.awayKind,
@@ -95,7 +98,6 @@ export async function loadSettings(
 ): Promise<ApiSettings> {
   const result = await getSettings(db, userId);
   return {
-    sessionMinutes: result.sessionMinutes ?? 60,
     soundOn: result.soundOn ?? true,
     chimeVolume: result.chimeVolume ?? 0.8,
     pauseAfterLog: result.pauseAfterLog ?? false,
@@ -104,7 +106,6 @@ export async function loadSettings(
 
 export function toEngineSettings(settings: ApiSettings): EngineSettings {
   return {
-    sessionMinutes: settings.sessionMinutes,
     pauseAfterLog: settings.pauseAfterLog,
   };
 }
@@ -115,11 +116,13 @@ export function buildStatePayload(
   now: number,
   count?: number,
 ): StatePayload {
-  const derived = deriveNow(state, toEngineSettings(settings), now);
+  const derived = deriveNow(state, now);
 
   return {
     mode: derived.state.mode,
     remainingSeconds: derived.remainingSeconds,
+    hourStart: derived.state.hourStart,
+    blockEnd: blockEndFor(derived.state.hourStart),
     chimeFrom: derived.state.chimeFrom,
     chimeTo: derived.state.chimeTo,
     awayKind: derived.state.awayKind,

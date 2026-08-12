@@ -1,6 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { dispatch, initialState, type TimerState } from "../timer/engine";
+import {
+  deriveNow,
+  dispatch,
+  initialState,
+  type TimerState,
+} from "../timer/engine";
 import {
   buildStatePayload,
   toEngineSettings,
@@ -17,10 +22,11 @@ import {
 } from "./useTimer";
 
 const HOUR = 3600000;
-const T0 = 1_700_000_000_000;
+// An exact epoch-hour boundary (1_699_999_200_000 = 472222 * HOUR), so a
+// block started at T0 runs a full hour to the next wall-clock :00.
+const T0 = 472222 * HOUR;
 
 const SETTINGS: ApiSettings = {
-  sessionMinutes: 60,
   soundOn: true,
   chimeVolume: 0.8,
   pauseAfterLog: false,
@@ -54,8 +60,11 @@ function createFakeServer(initial: TimerState, settings: ApiSettings) {
 
       if (url === "/api/timer" && init?.method === "POST") {
         const action = JSON.parse(init.body as string);
+        // Mirror the real handler: roll a naturally-elapsed block into its
+        // chime before dispatching (see lib/api/timer.ts).
+        const rolled = deriveNow(state, now).state;
         const result = dispatch(
-          state,
+          rolled,
           toEngineSettings(currentSettings),
           action,
           now,
@@ -104,28 +113,37 @@ describe("todayBoundsFor", () => {
 });
 
 describe("reconstructShadow", () => {
-  it("rebuilds hourStart from a running payload's remainingSeconds", () => {
+  it("copies hourStart straight from a running payload", () => {
     const payload = buildStatePayload(
       initialState(T0),
       SETTINGS,
       T0 + 10 * 60 * 1000,
     );
-    const shadow = reconstructShadow(payload, T0 + 10 * 60 * 1000);
+    const shadow = reconstructShadow(payload);
     expect(shadow.mode).toBe("running");
     expect(shadow.hourStart).toBe(T0);
   });
 
-  it("keeps pausedRemaining verbatim for a paused payload", () => {
-    const paused = dispatch(
+  it("carries a paused payload's mode and hourStart verbatim", () => {
+    // Reach paused mode via the surviving path: chime, then skip with
+    // pauseAfterLog on.
+    const chimed = dispatch(
       initialState(T0),
       toEngineSettings(SETTINGS),
-      { type: "pause" },
+      { type: "ringNow" },
       T0 + 1000,
     ).state;
+    const paused = dispatch(
+      chimed,
+      { pauseAfterLog: true },
+      { type: "skip" },
+      T0 + 2000,
+    ).state;
     const payload = buildStatePayload(paused, SETTINGS, T0 + 5000);
-    const shadow = reconstructShadow(payload, T0 + 5000);
+    expect(payload.remainingSeconds).toBe(0);
+    const shadow = reconstructShadow(payload);
     expect(shadow.mode).toBe("paused");
-    expect(shadow.pausedRemaining).toBe(payload.remainingSeconds);
+    expect(shadow.hourStart).toBe(T0 + 2000);
   });
 });
 
@@ -159,6 +177,8 @@ describe("createTimerClient", () => {
 
     expect(client.getState()?.mode).toBe("running");
     expect(client.getState()?.remainingSeconds).toBe(60 * 60);
+    expect(client.getState()?.hourStart).toBe(T0);
+    expect(client.getState()?.blockEnd).toBe(T0 + HOUR);
     expect(client.getState()?.settings).toEqual(SETTINGS);
     client.stop();
   });
@@ -178,14 +198,9 @@ describe("createTimerClient", () => {
   });
 
   it("flips to chime exactly once when the wall clock crosses the boundary, and reconciles with the server", async () => {
-    // 2 seconds left on the session.
-    const almostDone = dispatch(
-      initialState(T0 - HOUR + 2000),
-      toEngineSettings(SETTINGS),
-      { type: "draftUpdate", patch: {} },
-      T0,
-    ).state;
-    const server = createFakeServer(almostDone, SETTINGS);
+    // 2 seconds before the block's wall-clock :00 boundary.
+    vi.setSystemTime(T0 + HOUR - 2000);
+    const server = createFakeServer(initialState(T0), SETTINGS);
     const client = createTimerClient(server.fetchImpl);
 
     let chimeCount = 0;
@@ -196,6 +211,7 @@ describe("createTimerClient", () => {
     client.start();
     await flush();
     expect(client.getState()?.mode).toBe("running");
+    expect(client.getState()?.remainingSeconds).toBe(2);
 
     // Cross the boundary.
     await vi.advanceTimersByTimeAsync(3000);
@@ -210,7 +226,7 @@ describe("createTimerClient", () => {
     client.stop();
   });
 
-  it("dispatch (e.g. pause) posts to /api/timer and applies the response", async () => {
+  it("dispatch (e.g. ringNow) posts to /api/timer and applies the response", async () => {
     const server = createFakeServer(initialState(T0), SETTINGS);
     const client = createTimerClient(server.fetchImpl);
 
@@ -218,11 +234,12 @@ describe("createTimerClient", () => {
     await flush();
 
     await vi.advanceTimersByTimeAsync(20 * 60 * 1000);
-    await client.pause();
+    await client.ringNow();
 
-    expect(client.getState()?.mode).toBe("paused");
-    expect(client.getState()?.remainingSeconds).toBe(40 * 60);
-    expect(server.getServerState().mode).toBe("paused");
+    expect(client.getState()?.mode).toBe("chime");
+    expect(client.getState()?.chimeFrom).toBe(T0);
+    expect(client.getState()?.chimeTo).toBe(T0 + 20 * 60 * 1000);
+    expect(server.getServerState().mode).toBe("chime");
 
     client.stop();
   });
@@ -306,7 +323,7 @@ describe("createTimerClient", () => {
     await flush();
 
     failNext = true;
-    await client.pause();
+    await client.ringNow();
 
     // The failed POST left the server state untouched (still running); the
     // client should have refetched and reflect that, not a stale local guess.
@@ -322,10 +339,12 @@ describe("createTimerClient", () => {
   });
 });
 
-describe("toClientState hourStart", () => {
+describe("toClientState hourStart/blockEnd", () => {
   const basePayload: StatePayload = {
     mode: "running",
     remainingSeconds: 1800,
+    hourStart: T0 - 30 * 60 * 1000,
+    blockEnd: T0 + 30 * 60 * 1000,
     chimeFrom: null,
     chimeTo: null,
     awayKind: null,
@@ -339,15 +358,16 @@ describe("toClientState hourStart", () => {
     count: 0,
   };
 
-  it("reconstructs hourStart for a running hour (Dial's Since label)", () => {
+  it("passes hourStart and blockEnd through for a running hour (Dial's arc + Since label)", () => {
     const state = toClientState(basePayload, null, T0);
-    // 30 of 60 minutes remain, so the hour started 30 minutes ago.
     expect(state.hourStart).toBe(T0 - 30 * 60 * 1000);
+    expect(state.blockEnd).toBe(T0 + 30 * 60 * 1000);
   });
 
   it("is null when not running", () => {
     const paused = toClientState({ ...basePayload, mode: "paused" }, null, T0);
     expect(paused.hourStart).toBeNull();
+    expect(paused.blockEnd).toBeNull();
   });
 });
 

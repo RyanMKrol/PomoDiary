@@ -45,6 +45,8 @@ beforeEach(() => {
           Promise.resolve({
             mode: "running",
             remainingSeconds: 1800,
+            hourStart: Date.now() - 1800 * 1000,
+            blockEnd: Date.now() + 1800 * 1000,
             chimeFrom: null,
             chimeTo: null,
             draftBullets: [""],
@@ -53,7 +55,6 @@ beforeEach(() => {
             draftIntent: null,
             phraseIdx: 0,
             settings: {
-              sessionMinutes: 60,
               soundOn: true,
               chimeVolume: 0.8,
               pauseAfterLog: false,

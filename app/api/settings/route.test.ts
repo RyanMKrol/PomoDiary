@@ -60,7 +60,6 @@ describe("/api/settings", () => {
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body).toEqual({
-      sessionMinutes: 60,
       soundOn: true,
       chimeVolume: 0.8,
       pauseAfterLog: false,
@@ -68,25 +67,25 @@ describe("/api/settings", () => {
   });
 
   it("PATCH rejects an invalid body", async () => {
-    const res = await PATCH(patchBody({ sessionMinutes: -5 }));
+    const res = await PATCH(patchBody({ chimeVolume: 2 }));
 
     expect(res.status).toBe(400);
   });
 
   it("PATCH round-trips a settings update", async () => {
     const patchRes = await PATCH(
-      patchBody({ sessionMinutes: 45, pauseAfterLog: true }),
+      patchBody({ chimeVolume: 0.5, pauseAfterLog: true }),
     );
 
     expect(patchRes.status).toBe(200);
     const patchBodyJson = await patchRes.json();
-    expect(patchBodyJson.sessionMinutes).toBe(45);
+    expect(patchBodyJson.chimeVolume).toBe(0.5);
     expect(patchBodyJson.pauseAfterLog).toBe(true);
     expect(patchBodyJson.soundOn).toBe(true);
 
     const getRes = await GET(new NextRequest("http://localhost/api/settings"));
     const getBodyJson = await getRes.json();
-    expect(getBodyJson.sessionMinutes).toBe(45);
+    expect(getBodyJson.chimeVolume).toBe(0.5);
     expect(getBodyJson.pauseAfterLog).toBe(true);
   });
 });

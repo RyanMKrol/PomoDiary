@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createTestDb, type TestDb } from "../../../lib/db/test-db";
+import { blockEndFor } from "../../../lib/timer/engine";
 
 vi.mock("@clerk/nextjs/server", () => ({
   auth: vi.fn(),
@@ -66,16 +67,24 @@ describe("GET /api/state", () => {
   });
 
   it("creates initial state + default settings on first touch", async () => {
+    const before = Date.now();
     const req = new NextRequest("http://localhost/api/state");
     const res = await GET(req);
+    const after = Date.now();
 
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.mode).toBe("running");
     expect(body.draftBullets).toEqual([]);
     expect(body.phraseIdx).toBe(0);
+    // A fresh block starts at "now" and ends at the next wall-clock hour.
+    expect(body.hourStart).toBeGreaterThanOrEqual(before);
+    expect(body.hourStart).toBeLessThanOrEqual(after);
+    expect(body.blockEnd).toBe(blockEndFor(body.hourStart));
+    expect(body.remainingSeconds).toBe(
+      Math.floor((body.blockEnd - body.hourStart) / 1000),
+    );
     expect(body.settings).toEqual({
-      sessionMinutes: 60,
       soundOn: true,
       chimeVolume: 0.8,
       pauseAfterLog: false,
