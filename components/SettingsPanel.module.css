@@ -87,3 +87,25 @@
 .segmentSelected:hover {
   background-color: #201e1d;
 }
+
+.logoutButton {
+  padding: 10px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  border: 2px solid rgba(32, 30, 29, 0.3);
+  background-color: transparent;
+  color: #201e1d;
+  cursor: pointer;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease;
+  text-align: center;
+}
+
+.logoutButton:hover {
+  background-color: #ffe0d9;
+  border-color: #ae1800;
+  color: #ae1800;
+}

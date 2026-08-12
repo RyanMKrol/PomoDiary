@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useClerk } from "@clerk/nextjs";
 import type { ApiSettings } from "@/lib/api/timer-state";
 import styles from "./SettingsPanel.module.css";
 
@@ -21,6 +22,7 @@ export function SettingsPanel({
   const [chimeVolume, setChimeVolume] = useState(settings.chimeVolume);
   const [pauseAfterLog, setPauseAfterLog] = useState(settings.pauseAfterLog);
   const panelRef = useRef<HTMLDivElement>(null);
+  const { signOut } = useClerk();
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -130,6 +132,23 @@ export function SettingsPanel({
               Wait for me
             </button>
           </div>
+        </div>
+
+        <div className={styles.section}>
+          <label className={styles.sectionLabel}>Account</label>
+          <button
+            className={styles.logoutButton}
+            onClick={() =>
+              // Unflushed WAL records are safe across a sign-out: the
+              // flusher's pagehide beacon fires on the redirect, and the
+              // log is keyed per user, so whatever it misses replays the
+              // next time this account loads the app.
+              void signOut({ redirectUrl: "/sign-in" })
+            }
+            data-testid="settings-logout-button"
+          >
+            Log out
+          </button>
         </div>
       </div>
     </div>
