@@ -76,7 +76,8 @@
 }
 
 .input::placeholder {
-  color: rgba(32, 30, 29, 0.32);
+  /* Light enough that an empty composer can't be mistaken for a bullet. */
+  color: rgba(32, 30, 29, 0.22);
 }
 
 @media (max-width: 950px) {

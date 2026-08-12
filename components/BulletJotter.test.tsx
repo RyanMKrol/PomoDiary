@@ -589,3 +589,26 @@ describe("empty bullet guard", () => {
     });
   });
 });
+
+describe("composer position", () => {
+  afterEach(() => {
+    cleanup();
+  });
+
+  it("renders the composer as the FIRST row so the place to type never moves", () => {
+    render(
+      <BulletJotter
+        timerState={{
+          mode: "running",
+          draftBullets: ["Asleep (5 min)", "another note"],
+        }}
+        updateDraft={vi.fn()}
+      />,
+    );
+    const inputs = screen.getAllByRole("textbox") as HTMLInputElement[];
+    expect(inputs[0].value).toBe("");
+    expect(inputs[0].placeholder).toBe("Jot it down while it's fresh…");
+    expect(inputs[1].value).toBe("Asleep (5 min)");
+    expect(inputs[2].value).toBe("another note");
+  });
+});
