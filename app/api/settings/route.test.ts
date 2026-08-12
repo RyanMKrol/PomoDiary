@@ -63,6 +63,7 @@ describe("/api/settings", () => {
       soundOn: true,
       chimeVolume: 0.8,
       pauseAfterLog: false,
+      recentAwayLabels: [],
     });
   });
 
@@ -87,5 +88,22 @@ describe("/api/settings", () => {
     const getBodyJson = await getRes.json();
     expect(getBodyJson.chimeVolume).toBe(0.5);
     expect(getBodyJson.pauseAfterLog).toBe(true);
+  });
+
+  it("PATCH cannot set the server-managed recentAwayLabels", async () => {
+    const res = await PATCH(
+      patchBody({ recentAwayLabels: ["Injected"], soundOn: false }),
+    );
+
+    // The unknown key is stripped by zod, not rejected: the rest of the
+    // patch still applies, and the list stays server-managed.
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.soundOn).toBe(false);
+    expect(body.recentAwayLabels).toEqual([]);
+
+    const getRes = await GET(new NextRequest("http://localhost/api/settings"));
+    const getBodyJson = await getRes.json();
+    expect(getBodyJson.recentAwayLabels).toEqual([]);
   });
 });

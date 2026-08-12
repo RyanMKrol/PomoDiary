@@ -63,6 +63,7 @@ describe("initialState", () => {
     expect(s.chimeTo).toBeNull();
     expect(s.awayKind).toBeNull();
     expect(s.awaySince).toBeNull();
+    expect(s.awayLabel).toBeNull();
     expect(s.draftBullets).toEqual([]);
     expect(s.draftTag).toBeNull();
     expect(s.draftFeel).toBeNull();
@@ -460,6 +461,49 @@ describe("awayStart", () => {
     expect(state.mode).toBe("away");
   });
 
+  it("stores the gym kind with no label", () => {
+    const s = running();
+    const now = T0 + 1000;
+    const { state, entriesToInsert } = dispatch(
+      s,
+      SETTINGS,
+      { type: "awayStart", kind: "gym" },
+      now,
+    );
+    expect(state.mode).toBe("away");
+    expect(state.awayKind).toBe("gym");
+    expect(state.awaySince).toBe(now);
+    expect(state.awayLabel).toBeNull();
+    expect(entriesToInsert).toEqual([]);
+  });
+
+  it("stores the trimmed label for a custom away", () => {
+    const s = running();
+    const { state } = dispatch(
+      s,
+      SETTINGS,
+      { type: "awayStart", kind: "custom", label: "  Travelling  " },
+      T0 + 1000,
+    );
+    expect(state.mode).toBe("away");
+    expect(state.awayKind).toBe("custom");
+    expect(state.awayLabel).toBe("Travelling");
+  });
+
+  it("is a no-op for a custom away with an empty or whitespace label", () => {
+    for (const label of [undefined, "", "   "]) {
+      const s = running();
+      const { state, entriesToInsert } = dispatch(
+        s,
+        SETTINGS,
+        { type: "awayStart", kind: "custom", label },
+        T0 + 1000,
+      );
+      expect(state).toBe(s);
+      expect(entriesToInsert).toEqual([]);
+    }
+  });
+
   it("is a no-op in chime/recap/away", () => {
     for (const mode of ["chime", "recap", "away"] as const) {
       const s = running({ mode });
@@ -592,6 +636,65 @@ describe("awayReturn", () => {
     expect(entriesToInsert[MAX_AWAY_BLOCKS - 1].to).toBe(T0H + HOUR);
     // Newest block ends 48h in; the remaining 2h of the span is dropped.
     expect(entriesToInsert[0].to).toBe(T0H + MAX_AWAY_BLOCKS * HOUR);
+  });
+
+  it("from gym tags blocks with 'At the gym'", () => {
+    const s = running({
+      mode: "away",
+      awayKind: "gym",
+      awaySince: T0H,
+    });
+    const now = T0H + HOUR;
+    const { entriesToInsert } = dispatch(
+      s,
+      SETTINGS,
+      { type: "awayReturn" },
+      now,
+    );
+    expect(entriesToInsert).toHaveLength(1);
+    expect(entriesToInsert[0]).toEqual({
+      from: T0H,
+      to: T0H + HOUR,
+      tag: "At the gym",
+      feel: "—",
+      intent: "yes",
+      bullets: ["At the gym"],
+    });
+  });
+
+  it("from a custom away tags blocks with the user's label", () => {
+    const s = running({
+      mode: "away",
+      awayKind: "custom",
+      awaySince: T0H,
+      awayLabel: "Travelling",
+    });
+    const now = T0H + 2 * HOUR;
+    const { entriesToInsert } = dispatch(
+      s,
+      SETTINGS,
+      { type: "awayReturn" },
+      now,
+    );
+    expect(entriesToInsert).toHaveLength(2);
+    for (const entry of entriesToInsert) {
+      expect(entry.tag).toBe("Travelling");
+      expect(entry.bullets).toEqual(["Travelling"]);
+    }
+  });
+
+  it("clears awayLabel along with the other away fields on return", () => {
+    const s = running({
+      mode: "away",
+      awayKind: "custom",
+      awaySince: T0H,
+      awayLabel: "Travelling",
+    });
+    const { state } = dispatch(s, SETTINGS, { type: "awayReturn" }, T0H + HOUR);
+    expect(state.mode).toBe("running");
+    expect(state.awayKind).toBeNull();
+    expect(state.awaySince).toBeNull();
+    expect(state.awayLabel).toBeNull();
   });
 
   it("always returns to running (ignores pauseAfterLog) and does not advance phraseIdx", () => {

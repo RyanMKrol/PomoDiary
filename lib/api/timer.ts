@@ -12,7 +12,7 @@ import {
   loadSettings,
   toEngineSettings,
 } from "./timer-state";
-import { upsertTimerState } from "../db/timer-state.store";
+import { pushRecentAwayLabel, upsertTimerState } from "../db/timer-state.store";
 
 export async function postTimerHandler(
   req: NextRequest,
@@ -35,6 +35,23 @@ export async function postTimerHandler(
   const result = dispatch(rolled, toEngineSettings(settings), action, now);
 
   await upsertTimerState(db, userId, engineStateToInput(result.state));
+
+  // Remember the label of a custom away that actually entered away mode, so
+  // the control bar can offer it as a quick pick next time.
+  if (
+    action.type === "awayStart" &&
+    action.kind === "custom" &&
+    result.state.mode === "away" &&
+    result.state.awayLabel
+  ) {
+    await pushRecentAwayLabel(db, userId, result.state.awayLabel);
+    settings.recentAwayLabels = [
+      result.state.awayLabel,
+      ...settings.recentAwayLabels.filter(
+        (l) => l.toLowerCase() !== result.state.awayLabel!.toLowerCase(),
+      ),
+    ].slice(0, 5);
+  }
 
   if (result.entriesToInsert.length > 0) {
     await insertEntries(

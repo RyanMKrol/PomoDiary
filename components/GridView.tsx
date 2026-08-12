@@ -9,7 +9,7 @@ import {
   gridCellEmptyTitle,
   padCount,
 } from "@/lib/time";
-import { tagColor, TAGS, AWAY } from "@/lib/domain";
+import { tagColor, TAGS, AWAY, CUSTOM_AWAY_COLOR } from "@/lib/domain";
 import styles from "./GridView.module.css";
 
 export interface GridViewProps {
@@ -237,19 +237,21 @@ export function GridView({ onSelectDay, timerState }: GridViewProps) {
               <span className={styles.legendLabel}>{tag.label}</span>
             </div>
           ))}
-          <div key="asleep" className={styles.legendItem}>
+          {Object.values(AWAY).map((away) => (
+            <div key={away.tag} className={styles.legendItem}>
+              <div
+                className={styles.legendSquare}
+                style={{ backgroundColor: away.color }}
+              />
+              <span className={styles.legendLabel}>{away.tag}</span>
+            </div>
+          ))}
+          <div key="away-custom" className={styles.legendItem}>
             <div
               className={styles.legendSquare}
-              style={{ backgroundColor: AWAY.sleep.color }}
+              style={{ backgroundColor: CUSTOM_AWAY_COLOR }}
             />
-            <span className={styles.legendLabel}>Asleep</span>
-          </div>
-          <div key="at-work" className={styles.legendItem}>
-            <div
-              className={styles.legendSquare}
-              style={{ backgroundColor: AWAY.work.color }}
-            />
-            <span className={styles.legendLabel}>At work</span>
+            <span className={styles.legendLabel}>Away (custom)</span>
           </div>
         </div>
         <div className={styles.footerText}>

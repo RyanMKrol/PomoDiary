@@ -207,17 +207,16 @@ export function DayView({ dayStart, dayEnd, timerState }: DayViewProps) {
                           {entry.tag}
                         </div>
                       )}
-                      {entry.feel !== "—" &&
-                        entry.feel &&
-                        entry.tag !== "Asleep" &&
-                        entry.tag !== "At work" && (
-                          <div
-                            className={styles.feelChip}
-                            data-testid={`chip-feel-${entry.id}`}
-                          >
-                            {entry.feel}
-                          </div>
-                        )}
+                      {/* Away entries always carry feel "—", so this one
+                          check covers every away kind, custom included. */}
+                      {entry.feel !== "—" && entry.feel && (
+                        <div
+                          className={styles.feelChip}
+                          data-testid={`chip-feel-${entry.id}`}
+                        >
+                          {entry.feel}
+                        </div>
+                      )}
                       {(entry.intent === "yes" || entry.intent === "no") && (
                         <div
                           className={`${styles.intentChip} ${

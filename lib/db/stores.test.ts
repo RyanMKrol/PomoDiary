@@ -16,6 +16,8 @@ import {
   upsertTimerState,
   getSettings,
   upsertSettings,
+  pushRecentAwayLabel,
+  MAX_RECENT_AWAY_LABELS,
 } from "./timer-state.store";
 import { entries } from "./schema";
 import { createTestDb, type TestDb } from "./test-db";
@@ -611,6 +613,38 @@ describe("timer-state.store", () => {
       expect(state).not.toBeNull();
       expect(state!.mode).toBe("away");
       expect(state!.awayKind).toBe("sleep");
+      expect(state!.awayLabel).toBeNull();
+    });
+
+    it("round-trips awayLabel for a custom away", async () => {
+      const hourStart = new Date("2026-08-11T09:00:00Z");
+      const awaySince = new Date("2026-08-11T09:30:00Z");
+
+      await upsertTimerState(db, "user_1", {
+        mode: "away",
+        hourStart,
+        awayKind: "custom",
+        awaySince,
+        awayLabel: "Travelling",
+        draftBullets: [],
+        phraseIdx: 0,
+      });
+
+      const state = await getTimerState(db, "user_1");
+      expect(state).not.toBeNull();
+      expect(state!.awayKind).toBe("custom");
+      expect(state!.awayLabel).toBe("Travelling");
+
+      // Clearing the away state also clears the label.
+      await upsertTimerState(db, "user_1", {
+        mode: "running",
+        hourStart,
+        draftBullets: [],
+        phraseIdx: 0,
+      });
+
+      const cleared = await getTimerState(db, "user_1");
+      expect(cleared!.awayLabel).toBeNull();
     });
   });
 
@@ -620,6 +654,7 @@ describe("timer-state.store", () => {
       expect(settings.soundOn).toBe(true);
       expect(settings.chimeVolume).toBe(0.8);
       expect(settings.pauseAfterLog).toBe(false);
+      expect(settings.recentAwayLabels).toEqual([]);
     });
 
     it("returns persisted settings", async () => {
@@ -657,6 +692,63 @@ describe("timer-state.store", () => {
       const settings = await getSettings(db, "user_1");
       expect(settings.soundOn).toBe(false);
       expect(settings.chimeVolume).toBe(0.3);
+    });
+  });
+
+  describe("pushRecentAwayLabel", () => {
+    it("creates the settings row for a fresh user", async () => {
+      await pushRecentAwayLabel(db, "user_1", "Travelling");
+
+      const settings = await getSettings(db, "user_1");
+      expect(settings.recentAwayLabels).toEqual(["Travelling"]);
+      // Row defaults survive: the other settings stay at their defaults.
+      expect(settings.soundOn).toBe(true);
+      expect(settings.pauseAfterLog).toBe(false);
+    });
+
+    it("keeps labels newest first", async () => {
+      await pushRecentAwayLabel(db, "user_1", "Travelling");
+      await pushRecentAwayLabel(db, "user_1", "Dentist");
+      await pushRecentAwayLabel(db, "user_1", "School run");
+
+      const settings = await getSettings(db, "user_1");
+      expect(settings.recentAwayLabels).toEqual([
+        "School run",
+        "Dentist",
+        "Travelling",
+      ]);
+    });
+
+    it("dedupes case-insensitively, moving the label to the front", async () => {
+      await pushRecentAwayLabel(db, "user_1", "Travelling");
+      await pushRecentAwayLabel(db, "user_1", "Dentist");
+      await pushRecentAwayLabel(db, "user_1", "TRAVELLING");
+
+      const settings = await getSettings(db, "user_1");
+      expect(settings.recentAwayLabels).toEqual(["TRAVELLING", "Dentist"]);
+    });
+
+    it("caps the list at MAX_RECENT_AWAY_LABELS, dropping the oldest", async () => {
+      for (let i = 1; i <= MAX_RECENT_AWAY_LABELS + 2; i++) {
+        await pushRecentAwayLabel(db, "user_1", `Label ${i}`);
+      }
+
+      const settings = await getSettings(db, "user_1");
+      expect(settings.recentAwayLabels).toHaveLength(MAX_RECENT_AWAY_LABELS);
+      expect(settings.recentAwayLabels).toEqual([
+        "Label 7",
+        "Label 6",
+        "Label 5",
+        "Label 4",
+        "Label 3",
+      ]);
+    });
+
+    it("recent labels are per-user", async () => {
+      await pushRecentAwayLabel(db, "user_1", "Travelling");
+
+      const settings2 = await getSettings(db, "user_2");
+      expect(settings2.recentAwayLabels).toEqual([]);
     });
   });
 

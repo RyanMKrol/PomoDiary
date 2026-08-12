@@ -4,7 +4,7 @@ import { describe, expect, it, vi, beforeAll, afterEach } from "vitest";
 import { render, screen, cleanup } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { AwayOverlay } from "./AwayOverlay";
-import { AWAY } from "@/lib/domain";
+import { AWAY, CUSTOM_AWAY_COLOR } from "@/lib/domain";
 
 beforeAll(() => {
   Object.defineProperty(window, "matchMedia", {
@@ -257,6 +257,64 @@ describe("AwayOverlay", () => {
 
     const swatches = container.querySelectorAll("[class*='swatch']");
     expect(swatches.length).toBeGreaterThan(0);
+  });
+
+  it("renders gym title, end label and color", () => {
+    const onReturn = vi.fn();
+    const { container } = render(
+      <AwayOverlay
+        awayKind="gym"
+        awaySince={baseTime}
+        now={baseTime}
+        onReturn={onReturn}
+      />,
+    );
+
+    const headline = container.querySelector("h1");
+    expect(headline?.textContent).toBe(AWAY.gym.title);
+
+    const button = screen.getByTestId("away-return-button");
+    expect(button.textContent).toContain(AWAY.gym.end);
+
+    const overlay = screen.getByTestId("away-overlay");
+    expect(overlay).toHaveStyle({ backgroundColor: AWAY.gym.color });
+  });
+
+  it("renders custom away from the user-typed label", () => {
+    const onReturn = vi.fn();
+    const { container } = render(
+      <AwayOverlay
+        awayKind="custom"
+        awaySince={baseTime}
+        now={baseTime}
+        awayLabel="Travelling"
+        onReturn={onReturn}
+      />,
+    );
+
+    const headline = container.querySelector("h1");
+    expect(headline?.textContent).toBe("TRAVELLING.");
+
+    const button = screen.getByTestId("away-return-button");
+    expect(button.textContent).toContain("I'm back");
+
+    const overlay = screen.getByTestId("away-overlay");
+    expect(overlay).toHaveStyle({ backgroundColor: CUSTOM_AWAY_COLOR });
+  });
+
+  it("falls back to a plain Away headline when the custom label is missing", () => {
+    const onReturn = vi.fn();
+    const { container } = render(
+      <AwayOverlay
+        awayKind="custom"
+        awaySince={baseTime}
+        now={baseTime}
+        onReturn={onReturn}
+      />,
+    );
+
+    const headline = container.querySelector("h1");
+    expect(headline?.textContent).toBe("AWAY.");
   });
 
   it("displays start time in elapsed text", () => {

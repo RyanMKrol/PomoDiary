@@ -127,6 +127,7 @@ describe("Vine", () => {
         soundOn: true,
         chimeVolume: 0.5,
         pauseAfterLog: false,
+        recentAwayLabels: [],
       };
       const updateSettings = vi.fn();
 
@@ -150,6 +151,7 @@ describe("Vine", () => {
         soundOn: true,
         chimeVolume: 0.5,
         pauseAfterLog: false,
+        recentAwayLabels: [],
       };
       const updateSettings = vi.fn();
 
@@ -176,6 +178,7 @@ describe("Vine", () => {
         soundOn: true,
         chimeVolume: 0.5,
         pauseAfterLog: false,
+        recentAwayLabels: [],
       };
       const updateSettings = vi.fn();
 
@@ -211,6 +214,7 @@ describe("Vine", () => {
         soundOn: true,
         chimeVolume: 0.5,
         pauseAfterLog: false,
+        recentAwayLabels: [],
       };
       const updateSettings = vi.fn();
 

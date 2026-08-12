@@ -37,6 +37,7 @@ function createFlowFixture(t0) {
       soundOn: false,
       chimeVolume: 0.5,
       pauseAfterLog: false,
+      recentAwayLabels: [],
     },
     entries: [],
   };
@@ -80,6 +81,7 @@ function statePayload(fx, todayStart, todayEnd) {
     chimeTo: fx.state.chimeTo,
     awayKind: fx.state.awayKind,
     awaySince: fx.state.awaySince,
+    awayLabel: fx.state.awayLabel,
     draftBullets: fx.state.draftBullets.length ? fx.state.draftBullets : [""],
     draftTag: fx.state.draftTag,
     draftFeel: fx.state.draftFeel,

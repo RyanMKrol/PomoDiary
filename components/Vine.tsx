@@ -14,6 +14,7 @@ interface VineProps {
       soundOn?: boolean;
       chimeVolume?: number;
       pauseAfterLog?: boolean;
+      recentAwayLabels?: string[];
     };
     updateSettings?: (patch: Record<string, unknown>) => Promise<void>;
   };
@@ -103,6 +104,7 @@ export function Vine({ timerState }: VineProps) {
                 soundOn: boolean;
                 chimeVolume: number;
                 pauseAfterLog: boolean;
+                recentAwayLabels: string[];
               }
             }
             updateSettings={timerState.updateSettings}

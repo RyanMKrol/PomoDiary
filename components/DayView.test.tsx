@@ -78,13 +78,14 @@ describe("DayView", () => {
       createdAt: new Date("2024-01-15T11:00:00Z"),
     };
 
+    // Away entries always carry feel "—" — that alone suppresses the chip.
     const mockEntryAway: Entry = {
       id: "test-away",
       userId: "user-1",
       from: new Date("2024-01-15T22:00:00Z"),
       to: new Date("2024-01-15T23:00:00Z"),
       tag: "Asleep",
-      feel: "Steady",
+      feel: "—",
       intent: "yes",
       bullets: ["Asleep"],
       createdAt: new Date("2024-01-15T23:00:00Z"),
@@ -225,6 +226,39 @@ describe("DayView", () => {
 
       await screen.findByTestId("chip-tag-test-away");
       expect(screen.queryByTestId("chip-feel-test-away")).toBeNull();
+    });
+
+    it("hides the feel chip for gym and custom-away hours", async () => {
+      const gymEntry: Entry = {
+        ...mockEntryAway,
+        id: "test-gym",
+        tag: "At the gym",
+        bullets: ["At the gym"],
+      };
+      const customEntry: Entry = {
+        ...mockEntryAway,
+        id: "test-custom",
+        from: new Date("2024-01-15T20:00:00Z"),
+        to: new Date("2024-01-15T21:00:00Z"),
+        tag: "Travelling",
+        bullets: ["Travelling"],
+      };
+
+      global.fetch = vi.fn(() =>
+        Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve([gymEntry, customEntry]),
+        }),
+      ) as any;
+
+      render(
+        <DayView dayStart={0} dayEnd={1000} timerState={{ mode: "running" }} />,
+      );
+
+      await screen.findByTestId("chip-tag-test-gym");
+      await screen.findByTestId("chip-tag-test-custom");
+      expect(screen.queryByTestId("chip-feel-test-gym")).toBeNull();
+      expect(screen.queryByTestId("chip-feel-test-custom")).toBeNull();
     });
 
     it("renders bullets with correct formatting", async () => {

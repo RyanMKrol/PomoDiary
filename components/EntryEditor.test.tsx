@@ -292,6 +292,48 @@ describe("EntryEditor", () => {
       });
     });
 
+    it("keeps an off-list custom tag when only a bullet changes", async () => {
+      const user = userEvent.setup();
+      const onSave = vi.fn();
+      const onCancel = vi.fn();
+
+      // Tag typed by the user via the custom-away flow — not in TAGS.
+      const customEntry: Entry = {
+        ...mockEntry,
+        id: "test-custom",
+        tag: "Travelling",
+        feel: "—",
+        bullets: ["Travelling"],
+      };
+
+      global.fetch = vi.fn(() =>
+        Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve(customEntry),
+        }),
+      ) as any;
+
+      render(
+        <EntryEditor entry={customEntry} onSave={onSave} onCancel={onCancel} />,
+      );
+
+      const input = screen.getByDisplayValue("Travelling");
+      await user.clear(input);
+      await user.type(input, "Train to Glasgow");
+
+      const saveButton = screen.getByTestId("editor-save-test-custom");
+      await user.click(saveButton);
+
+      await waitFor(() => {
+        const callBody = JSON.parse(
+          (global.fetch as any).mock.calls[0][1].body,
+        );
+        expect(callBody.bullets).toEqual(["Train to Glasgow"]);
+        // The PATCH must not touch the tag — the custom label survives.
+        expect("tag" in callBody).toBe(false);
+      });
+    });
+
     it("trims bullets and drops empties on save", async () => {
       const user = userEvent.setup();
       const onSave = vi.fn();

@@ -200,6 +200,8 @@ export function seedSettings() {
     soundOn: true,
     chimeVolume: 0.8,
     pauseAfterLog: false,
+    // Pre-seeded so the custom-away quick-pick chips have something to show.
+    recentAwayLabels: ["Travelling", "School run"],
   };
 }
 
@@ -230,6 +232,7 @@ export function createFixtureState(now) {
     chimeTo: null,
     awayKind: null,
     awaySince: null,
+    awayLabel: null,
     draftBullets: [""],
     draftTag: null,
     draftFeel: null,
@@ -257,6 +260,7 @@ function buildStatePayload(state, now) {
     chimeTo: state.chimeTo,
     awayKind: state.awayKind,
     awaySince: state.awaySince,
+    awayLabel: state.awayLabel,
     draftBullets: state.draftBullets,
     draftTag: state.draftTag,
     draftFeel: state.draftFeel,
@@ -322,11 +326,14 @@ function applyAction(state, action, now) {
       state.mode = "away";
       state.awayKind = action.kind;
       state.awaySince = now;
+      state.awayLabel =
+        action.kind === "custom" ? (action.label ?? null) : null;
       break;
     case "awayReturn":
       state.mode = "running";
       state.awayKind = null;
       state.awaySince = null;
+      state.awayLabel = null;
       state.hourStart = now;
       state.remainingSeconds = secondsToBlockEnd(now, now);
       break;
@@ -555,6 +562,28 @@ export const FLOWS = [
     async run(page) {
       await page.keyboard.press("Escape").catch(() => {});
       await page.getByTestId("vine-settings-button").click();
+    },
+  },
+  {
+    name: "15-away-gym",
+    description: "The away overlay in gym mode.",
+    covers: ["AwayOverlay", "ControlBar"],
+    waitFor: '[data-testid="away-overlay"]',
+    async run(page) {
+      await page.keyboard.press("Escape");
+      await page.getByTestId("control-gym").click();
+    },
+  },
+  {
+    name: "16-away-custom-input",
+    description:
+      "The custom away entry: recent-label chips above the type-a-label input.",
+    covers: ["ControlBar"],
+    waitFor: '[data-testid="control-custom-input"]',
+    async run(page) {
+      await page.getByTestId("away-return-button").click();
+      await page.getByTestId("control-away-more").click();
+      await page.getByTestId("control-custom-input").fill("At the dentist");
     },
   },
 ];
