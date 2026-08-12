@@ -61,7 +61,7 @@ describe("/api/settings", () => {
     const body = await res.json();
     expect(body).toEqual({
       soundOn: true,
-      chimeVolume: 0.8,
+      chimeVolume: 1,
       pauseAfterLog: false,
       recentAwayLabels: [],
     });

@@ -17,8 +17,68 @@ describe("PickerStrip", () => {
 
     render(<PickerStrip timerState={timerState} updateDraft={updateDraft} />);
 
-    expect(screen.getByTestId("chip-Deep work")).toBeInTheDocument();
-    expect(screen.getByTestId("chip-Admin")).toBeInTheDocument();
+    for (const label of [
+      "Admin",
+      "Learning",
+      "Errands",
+      "Rest",
+      "Leisure",
+      "Social",
+      "Chores",
+    ]) {
+      expect(screen.getByTestId(`chip-${label}`)).toBeInTheDocument();
+    }
+  });
+
+  it("renders the sentence-builder header and row labels", () => {
+    render(
+      <PickerStrip timerState={{ draftBullets: [""] }} updateDraft={vi.fn()} />,
+    );
+
+    expect(screen.getByText("Call the hour")).toBeInTheDocument();
+    expect(screen.getByText("It was mostly…")).toBeInTheDocument();
+    expect(screen.getByText("It felt…")).toBeInTheDocument();
+    expect(screen.getByText("And it was…")).toBeInTheDocument();
+  });
+
+  it("renders three intent buttons with the display labels", () => {
+    render(
+      <PickerStrip timerState={{ draftBullets: [""] }} updateDraft={vi.fn()} />,
+    );
+
+    expect(screen.getByTestId("intent-yes")).toHaveTextContent("Planned");
+    expect(screen.getByTestId("intent-no")).toHaveTextContent("Unplanned");
+    expect(screen.getByTestId("intent-mixed")).toHaveTextContent("Mixed");
+  });
+
+  it("selects the mixed intent on click", async () => {
+    const user = userEvent.setup();
+    const updateDraft = vi.fn();
+
+    render(
+      <PickerStrip
+        timerState={{ draftBullets: [""] }}
+        updateDraft={updateDraft}
+      />,
+    );
+
+    await user.click(screen.getByTestId("intent-mixed"));
+    expect(updateDraft).toHaveBeenCalledWith({ intent: "mixed" });
+  });
+
+  it("toggles an intent off on reclick", async () => {
+    const user = userEvent.setup();
+    const updateDraft = vi.fn();
+
+    render(
+      <PickerStrip
+        timerState={{ draftBullets: [""], draftIntent: "mixed" }}
+        updateDraft={updateDraft}
+      />,
+    );
+
+    await user.click(screen.getByTestId("intent-mixed"));
+    expect(updateDraft).toHaveBeenCalledWith({ intent: null });
   });
 
   it("selects a tag on click", async () => {
@@ -55,7 +115,7 @@ describe("PickerStrip", () => {
         />,
       );
 
-      const group = screen.getByRole("group", { name: "Call it" });
+      const group = screen.getByRole("group", { name: "It was mostly…" });
       expect(group).toBeInTheDocument();
     });
 
@@ -159,17 +219,17 @@ describe("PickerStrip accordion", () => {
 
     render(<PickerStrip timerState={timerState} updateDraft={vi.fn()} />);
 
-    expect(screen.getByTestId("chip-Deep work")).toBeInTheDocument();
+    expect(screen.getByTestId("chip-Admin")).toBeInTheDocument();
 
     await user.click(screen.getByTestId("picker-strip-toggle"));
-    expect(screen.queryByTestId("chip-Deep work")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("chip-Admin")).not.toBeInTheDocument();
     expect(screen.getByTestId("picker-strip-toggle")).toHaveAttribute(
       "aria-expanded",
       "false",
     );
 
     await user.click(screen.getByTestId("picker-strip-toggle"));
-    expect(screen.getByTestId("chip-Deep work")).toBeInTheDocument();
+    expect(screen.getByTestId("chip-Admin")).toBeInTheDocument();
   });
 
   it("stays open during recap even when collapsed — the chips call the hour", async () => {
@@ -182,7 +242,7 @@ describe("PickerStrip accordion", () => {
     );
 
     await user.click(screen.getByTestId("picker-strip-toggle"));
-    expect(screen.queryByTestId("chip-Deep work")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("chip-Admin")).not.toBeInTheDocument();
 
     rerender(
       <PickerStrip
@@ -190,6 +250,6 @@ describe("PickerStrip accordion", () => {
         updateDraft={vi.fn()}
       />,
     );
-    expect(screen.getByTestId("chip-Deep work")).toBeInTheDocument();
+    expect(screen.getByTestId("chip-Admin")).toBeInTheDocument();
   });
 });

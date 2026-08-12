@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   blockEndFor,
   deriveNow,
+  floorHourBoundary,
   dispatch,
   initialState,
   nextHourBoundary,
@@ -55,10 +56,11 @@ describe("boundary helpers", () => {
 });
 
 describe("initialState", () => {
-  it("starts a first-time user running with empty drafts and phrase 0", () => {
+  it("starts a first-time user in the hour bucket containing now", () => {
     const s = initialState(T0);
     expect(s.mode).toBe("running");
-    expect(s.hourStart).toBe(T0);
+    // Buckets: the block snaps back to the enclosing :00.
+    expect(s.hourStart).toBe(floorHourBoundary(T0));
     expect(s.chimeFrom).toBeNull();
     expect(s.chimeTo).toBeNull();
     expect(s.awayKind).toBeNull();
@@ -112,9 +114,9 @@ describe("deriveNow", () => {
 });
 
 describe("resume", () => {
-  it("starts a fresh block from now to the next :00", () => {
+  it("resumes into the hour bucket containing now, accounting the held gap", () => {
     const s = running({ mode: "paused" });
-    const resumeAt = T0 + 5 * HOUR;
+    const resumeAt = T0 + 5 * HOUR; // 13m20s past the hour
     const { state, entriesToInsert } = dispatch(
       s,
       SETTINGS,
@@ -122,13 +124,23 @@ describe("resume", () => {
       resumeAt,
     );
     expect(state.mode).toBe("running");
-    expect(state.hourStart).toBe(resumeAt);
+    expect(state.hourStart).toBe(floorHourBoundary(resumeAt));
+    // The 13-minute held stretch is accounted inside the bucket.
+    expect(state.draftBullets).toEqual(["(first 13 min unaccounted)"]);
     expect(entriesToInsert).toEqual([]);
 
     const { remainingSeconds } = deriveNow(state, resumeAt);
     expect(remainingSeconds).toBe(
-      Math.floor((blockEndFor(resumeAt) - resumeAt) / 1000),
+      Math.floor((blockEndFor(state.hourStart) - resumeAt) / 1000),
     );
+  });
+
+  it("resuming just past the hour seeds no gap bullet", () => {
+    const s = running({ mode: "paused" });
+    const resumeAt = T0H + 2 * 60_000; // 2 min past a boundary
+    const { state } = dispatch(s, SETTINGS, { type: "resume" }, resumeAt);
+    expect(state.hourStart).toBe(T0H);
+    expect(state.draftBullets).toEqual([]);
   });
 
   it("is a no-op outside paused", () => {
@@ -235,10 +247,13 @@ describe("log", () => {
       bullets: ["wrote some code", "shipped it"],
     });
     expect(state.mode).toBe("running");
-    expect(state.hourStart).toBe(now);
+    // The next block is the bucket containing now, and the late-recap
+    // stretch is accounted (now is 13m25s past the hour, over the 5 min
+    // silence threshold).
+    expect(state.hourStart).toBe(floorHourBoundary(now));
     expect(state.chimeFrom).toBeNull();
     expect(state.chimeTo).toBeNull();
-    expect(state.draftBullets).toEqual([]);
+    expect(state.draftBullets).toEqual(["(first 13 min unaccounted)"]);
     expect(state.phraseIdx).toBe(4);
   });
 
@@ -250,7 +265,7 @@ describe("log", () => {
       {
         type: "log",
         payload: {
-          bullets: ["  wrote and shipped the design doc  "],
+          bullets: ["  did the laundry and cooked dinner  "],
           tag: null,
           feel: "Charged",
           intent: "yes",
@@ -258,7 +273,7 @@ describe("log", () => {
       },
       T0 + HOUR + 1000,
     );
-    expect(entriesToInsert[0].tag).toBe("Deep work");
+    expect(entriesToInsert[0].tag).toBe("Chores");
   });
 
   it("falls back to Unfiled when tag is empty and nothing can be inferred", () => {
@@ -415,9 +430,10 @@ describe("skip", () => {
     );
     expect(entriesToInsert).toEqual([]);
     expect(state.mode).toBe("running");
-    expect(state.hourStart).toBe(now);
+    expect(state.hourStart).toBe(floorHourBoundary(now));
     expect(state.chimeFrom).toBeNull();
-    expect(state.draftBullets).toEqual([]);
+    // Skipped at 13m22s past the hour: the dwell is accounted.
+    expect(state.draftBullets).toEqual(["(first 13 min unaccounted)"]);
     expect(state.phraseIdx).toBe(0);
   });
 
@@ -584,26 +600,17 @@ describe("awayReturn", () => {
       hourStart: T0,
       draftBullets: ["wrote a bit", "  "],
     });
-    const now = T0 + 90 * 60 * 1000;
+    const now = T0 + 90 * 60 * 1000; // 43m20s past the boundary hour
     const { state, entriesToInsert } = dispatch(
       s,
       SETTINGS,
       { type: "awayReturn" },
       now,
     );
-    expect(entriesToInsert).toHaveLength(2);
-    // Newest first: the final partial block ends at the return.
+    // Only the interrupted hour is pushed: the trailing partial is NOT its
+    // own sliver entry — it seeds the resumed bucket's draft instead.
+    expect(entriesToInsert).toHaveLength(1);
     expect(entriesToInsert[0]).toEqual({
-      from: T0_BOUNDARY,
-      to: now,
-      tag: "Asleep",
-      feel: "—",
-      intent: "yes",
-      bullets: ["Asleep"],
-    });
-    // Oldest: the interrupted hour, whole block span, drafts folded in
-    // (blank bullets dropped).
-    expect(entriesToInsert[1]).toEqual({
       from: T0,
       to: T0_BOUNDARY,
       tag: "Asleep",
@@ -611,9 +618,8 @@ describe("awayReturn", () => {
       intent: "yes",
       bullets: ["wrote a bit", "Asleep"],
     });
-    // The next hour starts fresh — drafts were consumed by the entry.
-    expect(state.draftBullets).toEqual([]);
-    expect(state.hourStart).toBe(now);
+    expect(state.hourStart).toBe(floorHourBoundary(now));
+    expect(state.draftBullets).toEqual(["Asleep (43 min)"]);
   });
 
   it("whole away hours carry just the away bullet", () => {
@@ -683,7 +689,7 @@ describe("awayReturn", () => {
       now,
     );
     expect(state.mode).toBe("running");
-    expect(state.hourStart).toBe(now);
+    expect(state.hourStart).toBe(floorHourBoundary(now));
     expect(state.awayKind).toBeNull();
     expect(state.awaySince).toBeNull();
     expect(state.phraseIdx).toBe(1);

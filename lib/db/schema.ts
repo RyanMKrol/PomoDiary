@@ -53,7 +53,7 @@ export const timerState = pgTable("timer_state", {
 export const userSettings = pgTable("user_settings", {
   userId: text("user_id").primaryKey(),
   soundOn: boolean("sound_on").notNull().default(true),
-  chimeVolume: real("chime_volume").notNull().default(0.8),
+  chimeVolume: real("chime_volume").notNull().default(1),
   pauseAfterLog: boolean("pause_after_log").notNull().default(false),
   // Server-managed MRU of custom away labels (cap 5) — not client-patchable.
   recentAwayLabels: jsonb("recent_away_labels")

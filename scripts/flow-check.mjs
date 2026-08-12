@@ -12,6 +12,7 @@ import {
   blockEndFor,
   deriveNow,
   dispatch,
+  floorHourBoundary,
   initialState,
 } from "../lib/timer/engine.ts";
 import { fmtChimeRange } from "../lib/time/index.ts";
@@ -328,12 +329,11 @@ async function main() {
     await page.getByTestId("chime-overlay").click();
     await page.getByTestId("recap-bar").waitFor();
 
-    await page.getByTestId("bullet-input-0").fill("Cleared the inbox to zero");
+    await page.getByTestId("bullet-input-0").fill("Did the laundry");
     await page.getByTestId("bullet-input-0").press("Enter");
-    await page
-      .getByTestId("bullet-input-1")
-      .fill("Replied to the vendor thread");
-    // No tag picked — inference from "inbox" must fire inside the engine.
+    await page.getByTestId("bullet-input-1").fill("Cooked dinner for everyone");
+    // No tag picked — inference from "laundry"/"cooked" must fire inside
+    // the engine and outweigh Social's "dinner" hit.
     await page.getByTestId("recap-log-it").click();
 
     await page
@@ -342,20 +342,21 @@ async function main() {
       .waitFor();
     const entryCount = fx.entries.length;
     assertEqual("2-log", "entries after log", entryCount, 1);
-    assertEqual("2-log", "inferred tag", fx.entries[0].tag, "Comms");
+    assertEqual("2-log", "inferred tag", fx.entries[0].tag, "Chores");
     // CSS uppercases the tag label in the vine, so compare case-insensitively.
     const dayViewText = (
       await page.getByTestId("vine-container").innerText()
     ).toUpperCase();
-    if (!dayViewText.includes("COMMS")) {
+    if (!dayViewText.includes("CHORES")) {
       fail(
         "2-log",
-        `day view should show the Comms entry, got: ${dayViewText.slice(0, 200)}`,
+        `day view should show the Chores entry, got: ${dayViewText.slice(0, 200)}`,
       );
     }
 
     // Ring reset: engine is running again, counting down to the next :00
-    // (the log landed mid-hour, so the new block is shorter than an hour).
+    // (the log landed mid-hour, so the new bucket starts at the floored :00
+    // and less than an hour remains).
     assertEqual("2-log", "mode after log", fx.state.mode, "running");
     assertEqual(
       "2-log",
@@ -371,7 +372,7 @@ async function main() {
     // Class names are hashed in the production build, so assert on the header's
     // text; the count reads "00" until its fetch settles, so wait for the "01".
     await page.locator("header").getByText("01", { exact: true }).waitFor();
-    pass("2-log: Comms inferred, entry in day view, ring reset, count 01");
+    pass("2-log: Chores inferred, entry in day view, ring reset, count 01");
 
     // ---- 3. Skip logs nothing and rotates the phrase ------------------------
     // The engine advances phraseIdx by one per logged/skipped hour; the dial
@@ -405,10 +406,10 @@ async function main() {
     pass("3-skip: no entry logged, phrase rotated");
 
     // ---- 4. Away backfill ----------------------------------------------------
+    const awayHourStart = fx.state.hourStart; // the interrupted hour's :00
     await page.getByTestId("control-sleep").click();
     await page.getByTestId("away-overlay").waitFor();
     const entriesBeforeAway = fx.entries.length;
-    const awayStartAt = fx.now;
 
     await tick(page, fx, 3 * 60 * MIN + 20 * MIN); // 3h20m
     await page.getByTestId("away-return-button").click();
@@ -421,14 +422,17 @@ async function main() {
       () => fx.entries.length > entriesBeforeAway,
     );
 
-    // Aligned backfill: a ragged lead-in to the next :00, whole hours after,
-    // and a final block ending at the return time. Compute the expectation
-    // from the same boundary walk the engine does.
+    // Aligned backfill: one entry for the interrupted hour (its floored :00
+    // to its boundary), then one entry per WHOLE :00→:00 hour up to the
+    // return's floored hour. The trailing partial hour is NOT its own entry —
+    // it seeds the resumed block's draft as an "Asleep (N min)" bullet.
+    // Compute the expectation from the same boundary walk the engine does.
     const expectedBlocks = (() => {
-      let from = awayStartAt;
-      let count = 0;
-      while (awayReturnAt - from >= MIN) {
-        from = Math.min(blockEndFor(from), awayReturnAt);
+      const lastBoundary = floorHourBoundary(awayReturnAt);
+      let count = 1; // the interrupted hour
+      let from = blockEndFor(awayHourStart);
+      while (from < lastBoundary) {
+        from = blockEndFor(from);
         count += 1;
       }
       return count;
@@ -443,18 +447,27 @@ async function main() {
     for (const block of newBlocks) {
       assertEqual("4-away", "backfilled tag", block.tag, "Asleep");
     }
-    // Blocks after the first must start on a wall-clock :00.
-    const sorted = [...newBlocks].sort(
-      (a, b) => new Date(a.from).getTime() - new Date(b.from).getTime(),
-    );
-    for (const block of sorted.slice(1)) {
+    // Entries are hour buckets now: every block starts AND ends on a
+    // wall-clock :00.
+    for (const block of newBlocks) {
       if (new Date(block.from).getTime() % (60 * MIN) !== 0) {
         fail("4-away", `block ${block.from} does not start on a :00`);
       }
+      if (new Date(block.to).getTime() % (60 * MIN) !== 0) {
+        fail("4-away", `block ending ${block.to} does not end on a :00`);
+      }
+    }
+    // The trailing partial hour lives in the resumed block's draft instead.
+    const seededDraft = fx.state.draftBullets.join(" | ");
+    if (!/Asleep \(\d+ min\)/.test(seededDraft)) {
+      fail(
+        "4-away",
+        `resumed draft should carry the trailing "Asleep (N min)" bullet, got: ${JSON.stringify(fx.state.draftBullets)}`,
+      );
     }
     assertEqual("4-away", "mode after return", fx.state.mode, "running");
     pass(
-      `4-away: 3h20m sleep backfilled as ${newBlocks.length} aligned Asleep blocks, timer running`,
+      `4-away: 3h20m sleep backfilled as ${newBlocks.length} aligned Asleep blocks (trailing partial seeds the draft), timer running`,
     );
 
     // ---- 5. "Wait for me" hold survives reload -------------------------------
@@ -497,14 +510,19 @@ async function main() {
       () => fx.state.mode === "running",
     );
     assertEqual("5-pause", "mode after resume", fx.state.mode, "running");
-    // The record's timestamp is the page's clock at click time, which keeps
-    // ticking in real time between fastForwards — allow that drift, the
-    // point is that the block starts at the resume, not at the flush.
-    const resumeDrift = Math.abs(fx.state.hourStart - resumeAt);
-    if (resumeDrift > 30_000) {
+    // The resumed block is the hour BUCKET containing the resume click: its
+    // hourStart is the click time floored to :00. The record's timestamp is
+    // the page's clock at click time (which drifts in real time between
+    // fastForwards), but flooring absorbs that drift — assert the bucket
+    // shape rather than exact equality.
+    if (
+      fx.state.hourStart % (60 * MIN) !== 0 ||
+      fx.state.hourStart > resumeAt ||
+      resumeAt - fx.state.hourStart >= 60 * MIN
+    ) {
       fail(
         "5-pause",
-        `block should start at the resume click (drift ${resumeDrift}ms)`,
+        `block should be the :00 bucket containing the resume click (hourStart ${fx.state.hourStart}, resumeAt ${resumeAt})`,
       );
     }
     pass("5-pause: wait-for-me hold survives reload and resumes on click");

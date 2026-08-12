@@ -652,7 +652,7 @@ describe("timer-state.store", () => {
     it("returns default settings when none exist", async () => {
       const settings = await getSettings(db, "user_1");
       expect(settings.soundOn).toBe(true);
-      expect(settings.chimeVolume).toBe(0.8);
+      expect(settings.chimeVolume).toBe(1);
       expect(settings.pauseAfterLog).toBe(false);
       expect(settings.recentAwayLabels).toEqual([]);
     });
@@ -664,7 +664,7 @@ describe("timer-state.store", () => {
 
       const settings = await getSettings(db, "user_1");
       expect(settings.soundOn).toBe(false);
-      expect(settings.chimeVolume).toBe(0.8);
+      expect(settings.chimeVolume).toBe(1);
     });
   });
 
@@ -772,7 +772,7 @@ describe("timer-state.store", () => {
       });
 
       const settings2 = await getSettings(db, "user_2");
-      expect(settings2.chimeVolume).toBe(0.8);
+      expect(settings2.chimeVolume).toBe(1);
     });
   });
 });

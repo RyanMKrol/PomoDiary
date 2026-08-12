@@ -14,41 +14,38 @@ import {
 
 describe("domain", () => {
   describe("TAGS", () => {
-    it("has 8 entries in the prototype's order", () => {
-      expect(TAGS).toHaveLength(8);
+    it("has the 7 life-centric tags in order", () => {
+      expect(TAGS).toHaveLength(7);
       expect(TAGS.map((t) => t.label)).toEqual([
-        "Deep work",
         "Admin",
-        "Meetings",
-        "Comms",
         "Learning",
         "Errands",
         "Rest",
-        "Lost it",
+        "Leisure",
+        "Social",
+        "Chores",
       ]);
     });
 
     it("has exact OKLCH colours", () => {
-      expect(TAGS[0].color).toBe("oklch(0.58 0.20 30)");
-      expect(TAGS[1].color).toBe("oklch(0.58 0.13 250)");
-      expect(TAGS[2].color).toBe("oklch(0.58 0.15 305)");
-      expect(TAGS[3].color).toBe("oklch(0.60 0.14 62)");
-      expect(TAGS[4].color).toBe("oklch(0.58 0.14 155)");
-      expect(TAGS[5].color).toBe("oklch(0.58 0.10 200)");
-      expect(TAGS[6].color).toBe("oklch(0.62 0.06 130)");
-      expect(TAGS[7].color).toBe("oklch(0.42 0.012 40)");
+      expect(TAGS[0].color).toBe("oklch(0.58 0.13 250)");
+      expect(TAGS[1].color).toBe("oklch(0.58 0.14 155)");
+      expect(TAGS[2].color).toBe("oklch(0.58 0.10 200)");
+      expect(TAGS[3].color).toBe("oklch(0.62 0.06 130)");
+      expect(TAGS[4].color).toBe("oklch(0.58 0.15 305)");
+      expect(TAGS[5].color).toBe("oklch(0.60 0.14 62)");
+      expect(TAGS[6].color).toBe("oklch(0.48 0.09 45)");
     });
 
-    it("includes exact keywords including truncated stems and single letters", () => {
-      // Check for single letter 'x' in Lost it
-      expect(TAGS[7].words).toContain("x");
-      // Check for truncated stem 'procrastin'
-      expect(TAGS[7].words).toContain("procrastin");
-      // Check for multi-word phrases
-      expect(TAGS[3].words).toContain("followed up");
-      expect(TAGS[5].words).toContain("school run");
-      expect(TAGS[7].words).toContain("not sure");
-      expect(TAGS[7].words).toContain("no idea");
+    it("includes exact keywords including multi-word phrases", () => {
+      // Multi-word phrases in Errands
+      expect(TAGS[2].words).toContain("post office");
+      expect(TAGS[2].words).toContain("school run");
+      // Hyphenated keyword in Rest
+      expect(TAGS[3].words).toContain("lie-in");
+      // Short household keywords in Chores
+      expect(TAGS[6].words).toContain("diy");
+      expect(TAGS[6].words).toContain("laundry");
     });
   });
 
@@ -66,8 +63,9 @@ describe("domain", () => {
 
   describe("tagColor", () => {
     it("returns the tag's color for a tag label", () => {
-      expect(tagColor("Deep work")).toBe("oklch(0.58 0.20 30)");
-      expect(tagColor("Comms")).toBe("oklch(0.60 0.14 62)");
+      expect(tagColor("Leisure")).toBe("oklch(0.58 0.15 305)");
+      expect(tagColor("Social")).toBe("oklch(0.60 0.14 62)");
+      expect(tagColor("Chores")).toBe("oklch(0.48 0.09 45)");
     });
 
     it("returns the away mode color for Asleep", () => {
@@ -89,6 +87,15 @@ describe("domain", () => {
     it("returns CUSTOM_AWAY_COLOR for unknown labels (custom away tags)", () => {
       expect(tagColor("Unknown")).toBe(CUSTOM_AWAY_COLOR);
       expect(tagColor("Travelling")).toBe(CUSTOM_AWAY_COLOR);
+    });
+
+    it("treats retired work-era tags as unknown labels (amber fallback)", () => {
+      // Entries logged under the old vocabulary keep their text and render
+      // via the unknown-tag fallback, like custom away labels.
+      expect(tagColor("Deep work")).toBe(CUSTOM_AWAY_COLOR);
+      expect(tagColor("Meetings")).toBe(CUSTOM_AWAY_COLOR);
+      expect(tagColor("Comms")).toBe(CUSTOM_AWAY_COLOR);
+      expect(tagColor("Lost it")).toBe(CUSTOM_AWAY_COLOR);
     });
   });
 
@@ -175,12 +182,20 @@ describe("domain", () => {
   });
 
   describe("INTENTS", () => {
-    it("maps yes to On purpose", () => {
-      expect(INTENTS.yes).toBe("On purpose");
+    it("maps yes to Planned", () => {
+      expect(INTENTS.yes).toBe("Planned");
     });
 
-    it("maps no to Got away", () => {
-      expect(INTENTS.no).toBe("Got away");
+    it("maps no to Unplanned", () => {
+      expect(INTENTS.no).toBe("Unplanned");
+    });
+
+    it("maps mixed to Mixed", () => {
+      expect(INTENTS.mixed).toBe("Mixed");
+    });
+
+    it("has exactly the three intent keys", () => {
+      expect(Object.keys(INTENTS)).toEqual(["yes", "no", "mixed"]);
     });
   });
 
@@ -226,7 +241,10 @@ describe("domain", () => {
     });
 
     it("returns the matching tag for simple keywords", () => {
-      expect(inferTag(["inbox, mostly"])).toBe("Comms");
+      expect(inferTag(["did the laundry and cooked dinner"])).toBe("Chores");
+      expect(inferTag(["played some games and watched a film"])).toBe(
+        "Leisure",
+      );
     });
 
     it("applies +2 weighting for keywords longer than 5 characters", () => {
@@ -251,41 +269,35 @@ describe("domain", () => {
     });
 
     it("uses substring matching (not word boundaries)", () => {
-      // "fixed" contains "x" (Lost it) and also matches "fixed" (Deep work)
-      // Deep work's "fixed" scores 1, Lost it's "x" scores 1
-      // Both score 1, but Deep work comes first, so it wins
-      expect(inferTag(["fixed"])).toBe("Deep work");
+      // "rereading" contains "read" (score 1) and "reading" (score 2) —
+      // neither is a standalone word in the text, both match as substrings.
+      expect(inferTag(["rereading"])).toBe("Learning");
     });
 
-    it("handles multi-word phrases like 'followed up'", () => {
-      expect(inferTag(["followed up"])).toBe("Comms");
+    it("handles multi-word phrases like 'post office'", () => {
+      expect(inferTag(["post office"])).toBe("Errands");
+      expect(inferTag(["school run"])).toBe("Errands");
     });
 
     it("breaks ties by choosing the earlier category", () => {
-      // "write" (5 chars, score 1) matches Deep work (index 0)
-      // "study" (5 chars, score 1) matches Learning (index 4)
-      // Both score 1, but Deep work comes first
-      // Actually, "write" matches Deep work's "wrote"/"writing" but "write" doesn't match as substring
-      // Let's use "admin" (5 chars, score 1) matches Admin (index 1)
-      // And "gym" doesn't match other categories equally
-      // For a real tie, we need the same score from two different categories
-      // This is hard to construct. Let's just verify the earlier one wins when they tie.
-      // "meeting" (7 chars, score 2) matches Meetings
-      expect(inferTag(["meeting"])).toBe("Meetings");
+      // "walk" (4 chars, score 1) matches Errands (index 2)
+      // "book" (4 chars, score 1) matches Leisure (index 4)
+      // Both score 1 — the earlier category (Errands) wins the tie.
+      expect(inferTag(["walk book"])).toBe("Errands");
     });
 
     it("handles case insensitivity", () => {
-      expect(inferTag(["INBOX"])).toBe("Comms");
-      expect(inferTag(["iNbOx"])).toBe("Comms");
+      expect(inferTag(["LAUNDRY"])).toBe("Chores");
+      expect(inferTag(["lAuNdRy"])).toBe("Chores");
     });
 
     it("joins bullets with spaces and handles raw text", () => {
-      expect(inferTag(["Slack", "backlog", "40 minutes"])).toBe("Comms");
+      expect(inferTag(["Friends", "pub", "40 minutes"])).toBe("Social");
     });
 
-    it("spot-check: returns Comms for 'inbox, mostly'", () => {
+    it("spot-check: returns Chores for 'did the laundry and cooked dinner'", () => {
       // From the acceptance criteria
-      expect(inferTag(["inbox, mostly"])).toBe("Comms");
+      expect(inferTag(["did the laundry and cooked dinner"])).toBe("Chores");
     });
 
     it("spot-check: returns null for 'ab'", () => {
@@ -293,16 +305,14 @@ describe("domain", () => {
       expect(inferTag(["ab"])).toBeNull();
     });
 
-    it("matches single-character keywords in text >= 3 chars", () => {
-      // "xxx" is 3 chars, contains "x" (1 char, Lost it keyword), scores 1
-      expect(inferTag(["xxx"])).toBe("Lost it");
-      // "fox" is 3 chars, contains "x" (1 char, Lost it keyword), scores 1
-      expect(inferTag(["fox"])).toBe("Lost it");
+    it("matches short two-character keywords in text >= 3 chars", () => {
+      // "the tv" clears the 3-char floor and contains "tv" (Leisure), score 1
+      expect(inferTag(["the tv"])).toBe("Leisure");
     });
 
     it("scores higher-value keywords appropriately", () => {
-      // "scrolling" (9 chars, score 2) from Lost it
-      expect(inferTag(["scrolling"])).toBe("Lost it");
+      // "scrolling" (9 chars, score 2) now lives in Leisure
+      expect(inferTag(["scrolling"])).toBe("Leisure");
     });
   });
 });

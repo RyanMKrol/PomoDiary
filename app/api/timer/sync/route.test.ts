@@ -108,8 +108,11 @@ describe("replayActions", () => {
     expect(entries).toHaveLength(1);
     expect(entries[0].from).toBe(T0H);
     expect(entries[0].to).toBe(T0H + 20 * 60 * 1000);
-    // The next block starts at the log's client time, not at flush time.
-    expect(next.hourStart).toBe(T0H + 30 * 60 * 1000);
+    // The next block snaps to the :00 bucket enclosing the log's client
+    // time (not flush time), and the 30-minute stretch before the log is
+    // accounted inside the bucket as a seeded draft bullet.
+    expect(next.hourStart).toBe(T0H);
+    expect(next.draftBullets).toEqual(["(first 30 min unaccounted)"]);
   });
 
   it("derives the lazy chime before dispatch, so acknowledge+log after an elapsed block land", () => {

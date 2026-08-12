@@ -6,6 +6,7 @@ import {
   tagSchema,
   awayLabelSchema,
   feelSchema,
+  intentSchema,
   timerActionSchema,
   settingsPatchSchema,
   entryPatchSchema,
@@ -41,7 +42,8 @@ describe("bulletsSchema", () => {
 
 describe("tagSchema", () => {
   it("accepts a known tag label", () => {
-    expect(tagSchema.safeParse("Deep work").success).toBe(true);
+    expect(tagSchema.safeParse("Chores").success).toBe(true);
+    expect(tagSchema.safeParse("Leisure").success).toBe(true);
   });
 
   it("accepts the away tags and Unfiled", () => {
@@ -103,6 +105,20 @@ describe("feelSchema", () => {
   });
 });
 
+describe("intentSchema", () => {
+  it("accepts yes, no, mixed, and null", () => {
+    expect(intentSchema.safeParse("yes").success).toBe(true);
+    expect(intentSchema.safeParse("no").success).toBe(true);
+    expect(intentSchema.safeParse("mixed").success).toBe(true);
+    expect(intentSchema.safeParse(null).success).toBe(true);
+  });
+
+  it("rejects an unknown intent", () => {
+    expect(intentSchema.safeParse("maybe").success).toBe(false);
+    expect(intentSchema.safeParse("").success).toBe(false);
+  });
+});
+
 describe("timerActionSchema", () => {
   it("accepts a known action type", () => {
     expect(timerActionSchema.safeParse({ type: "resume" }).success).toBe(true);
@@ -112,6 +128,29 @@ describe("timerActionSchema", () => {
         payload: { bullets: [], tag: null, feel: null, intent: null },
       }).success,
     ).toBe(true);
+  });
+
+  it("accepts a log payload with intent mixed", () => {
+    expect(
+      timerActionSchema.safeParse({
+        type: "log",
+        payload: {
+          bullets: ["half planned, half not"],
+          tag: "Chores",
+          feel: "Steady",
+          intent: "mixed",
+        },
+      }).success,
+    ).toBe(true);
+  });
+
+  it("rejects a log payload with an unknown intent", () => {
+    expect(
+      timerActionSchema.safeParse({
+        type: "log",
+        payload: { bullets: [], tag: null, feel: null, intent: "maybe" },
+      }).success,
+    ).toBe(false);
   });
 
   it("rejects an unknown action type", () => {
@@ -218,6 +257,16 @@ describe("settingsPatchSchema", () => {
 describe("entryPatchSchema", () => {
   it("accepts a patch with at least one key", () => {
     expect(entryPatchSchema.safeParse({ tag: "Admin" }).success).toBe(true);
+  });
+
+  it("accepts an intent-only patch for every intent value", () => {
+    for (const intent of ["yes", "no", "mixed", null]) {
+      expect(entryPatchSchema.safeParse({ intent }).success).toBe(true);
+    }
+  });
+
+  it("rejects a patch with an unknown intent", () => {
+    expect(entryPatchSchema.safeParse({ intent: "maybe" }).success).toBe(false);
   });
 
   it("rejects an empty patch", () => {

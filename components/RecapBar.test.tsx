@@ -124,7 +124,7 @@ describe("RecapBar", () => {
             {
               mode: "recap",
               draftBullets: ["bullet 1", "bullet 2"],
-              draftTag: "Deep work",
+              draftTag: "Learning",
               draftFeel: "Charged",
               draftIntent: "yes",
             } as Partial<UseTimerResult>
@@ -137,7 +137,7 @@ describe("RecapBar", () => {
       await user.click(button);
       expect(log).toHaveBeenCalledWith({
         bullets: ["bullet 1", "bullet 2"],
-        tag: "Deep work",
+        tag: "Learning",
         feel: "Charged",
         intent: "yes",
       });
@@ -340,7 +340,7 @@ describe("RecapBar", () => {
             {
               mode: "recap",
               draftBullets: [],
-              draftTag: "Meetings",
+              draftTag: "Social",
               draftFeel: null,
               draftIntent: null,
             } as Partial<UseTimerResult>
@@ -353,7 +353,7 @@ describe("RecapBar", () => {
       await user.click(button);
       expect(log).toHaveBeenCalledWith({
         bullets: [],
-        tag: "Meetings",
+        tag: "Social",
         feel: null,
         intent: null,
       });
