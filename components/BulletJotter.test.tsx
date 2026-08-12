@@ -260,7 +260,7 @@ describe("BulletJotter", () => {
       const updateDraft = vi.fn();
       const timerState: Partial<UseTimerResult> = {
         mode: "running",
-        draftBullets: [""],
+        draftBullets: ["something jotted"],
         draftTag: null,
       };
 
@@ -530,5 +530,39 @@ describe("empty draft", () => {
     );
 
     expect(screen.getByTestId("bullet-input-0")).toBeInTheDocument();
+  });
+});
+
+describe("empty bullet guard", () => {
+  beforeEach(() => cleanup());
+  afterEach(() => cleanup());
+
+  it("Enter on an empty bullet does not add another", async () => {
+    const updateDraft = vi.fn();
+    const user = userEvent.setup();
+    const { getByTestId } = render(
+      <BulletJotter
+        timerState={{ mode: "running", draftBullets: [""] }}
+        updateDraft={updateDraft}
+      />,
+    );
+
+    await user.type(getByTestId("bullet-input-0"), "{Enter}");
+    expect(updateDraft).not.toHaveBeenCalled();
+  });
+
+  it("Enter on a filled bullet still adds the next one", async () => {
+    const updateDraft = vi.fn();
+    const user = userEvent.setup();
+    const { getByTestId } = render(
+      <BulletJotter
+        timerState={{ mode: "running", draftBullets: ["did a thing"] }}
+        updateDraft={updateDraft}
+      />,
+    );
+
+    getByTestId("bullet-input-0").focus();
+    await user.keyboard("{Enter}");
+    expect(updateDraft).toHaveBeenCalledWith({ bullets: ["did a thing", ""] });
   });
 });

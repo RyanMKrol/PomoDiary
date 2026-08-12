@@ -23,9 +23,9 @@ export function Panels() {
     awaySince,
     awayElapsedSeconds,
     updateDraft,
-    pause,
     resume,
     restart,
+    ringNow,
     awayStart,
     awayReturn,
     log,
@@ -46,8 +46,7 @@ export function Panels() {
         <PickerStrip timerState={timerState} updateDraft={updateDraft} />
         <ControlBar
           timerState={timerState}
-          pause={pause}
-          resume={resume}
+          ringNow={ringNow}
           restart={restart}
           awayStart={awayStart}
         />

@@ -586,9 +586,7 @@ describe("Dial", () => {
   });
 
   describe("click interaction", () => {
-    it("calls ringNow when dial is clicked", async () => {
-      const ringNow = vi.fn();
-      const user = userEvent.setup();
+    it("is not clickable — ending the hour early lives in the control bar", () => {
       const { container } = render(
         <Dial
           timerState={{
@@ -604,14 +602,10 @@ describe("Dial", () => {
             draftBullets: [],
             draftTag: null,
             phraseIdx: 0,
-            ringNow,
           }}
         />,
       );
-      const dialWrapper = container.querySelector('[title="Ring it now"]');
-      expect(dialWrapper).toBeInTheDocument();
-      await user.click(dialWrapper!);
-      expect(ringNow).toHaveBeenCalled();
+      expect(container.querySelector('[title="Ring it now"]')).toBeNull();
     });
   });
 
@@ -635,9 +629,7 @@ describe("Dial", () => {
       } as Partial<Record<string, unknown>>;
       render(<Dial timerState={timerStateWithHourStart as any} />); // eslint-disable-line @typescript-eslint/no-explicit-any
       // Just verify the "Since" text is present
-      expect(
-        screen.getByText(/Since .* · click the dial to ring it now/),
-      ).toBeInTheDocument();
+      expect(screen.getByText(/Since /)).toBeInTheDocument();
     });
 
     it("displays chimeFrom time when in recap", () => {
@@ -662,9 +654,7 @@ describe("Dial", () => {
           }}
         />,
       );
-      expect(
-        screen.getByText(/Since .* · click the dial to ring it now/),
-      ).toBeInTheDocument();
+      expect(screen.getByText(/Since /)).toBeInTheDocument();
     });
 
     it("displays chimeFrom time when at chime", () => {
@@ -689,29 +679,25 @@ describe("Dial", () => {
           }}
         />,
       );
-      expect(
-        screen.getByText(/Since .* · click the dial to ring it now/),
-      ).toBeInTheDocument();
+      expect(screen.getByText(/Since /)).toBeInTheDocument();
     });
   });
 
   describe("dial wrapper attributes", () => {
-    it("has title='Ring it now'", () => {
+    it("carries no click affordance (no title attribute)", () => {
       const { container } = render(<Dial timerState={{ loading: true }} />);
-      const dialWrapper = container.querySelector('[title="Ring it now"]');
-      expect(dialWrapper).toBeInTheDocument();
+      expect(container.querySelector('[title="Ring it now"]')).toBeNull();
     });
 
-    it("has cursor:pointer style via CSS class", () => {
+    it("keeps the dialWrapper CSS class", () => {
       const { container } = render(<Dial timerState={{ loading: true }} />);
-      const dialWrapper = container.querySelector('[title="Ring it now"]');
-      // The cursor should be applied via CSS module class
+      const dialWrapper = container.querySelector('[class*="dialWrapper"]');
       expect(dialWrapper?.className).toMatch(/dialWrapper/);
     });
 
     it("has breathe animation via CSS class", () => {
       const { container } = render(<Dial timerState={{ loading: true }} />);
-      const dialWrapper = container.querySelector('[title="Ring it now"]');
+      const dialWrapper = container.querySelector('[class*="dialWrapper"]');
       expect(dialWrapper?.className).toMatch(/dialWrapper/);
       // CSS class includes the animation
     });

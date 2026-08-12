@@ -439,11 +439,18 @@ export const FLOWS = [
   },
   {
     name: "03-paused",
-    description: "The full-panel pause overlay shown while the clock waits.",
-    covers: ["PauseOverlay", "ControlBar"],
+    description:
+      "The full-panel pause overlay: the between-hours 'wait for me' hold after a log.",
+    covers: ["PauseOverlay", "SettingsPanel"],
     waitFor: '[data-testid="pause-overlay"]',
     async run(page) {
-      await page.getByTestId("control-pause-resume").click();
+      // Enable the wait-for-me hold, then end the hour early and log it.
+      await page.getByTestId("vine-settings-button").click();
+      await page.getByTestId("pause-wait-for-me-button").click();
+      await page.keyboard.press("Escape");
+      await page.getByTestId("control-end-early").click();
+      await page.getByTestId("chime-overlay").click();
+      await page.getByTestId("recap-log-it").click();
     },
   },
   {
@@ -452,11 +459,12 @@ export const FLOWS = [
     covers: ["ChimeOverlay"],
     waitFor: '[data-testid="chime-overlay"]',
     async run(page) {
-      await page.getByTestId("pause-overlay").click(); // click anywhere resumes
-      // force: true — the dial's progress arc animates continuously (CSS transition tied to
-      // the ticking countdown), so Playwright's actionability "element is stable" check never
-      // settles on its own.
-      await page.getByTitle("Ring it now").click({ force: true });
+      await page.getByTestId("pause-overlay").click(); // click anywhere starts the hour
+      // Turn the wait-for-me hold back off for the rest of the flows.
+      await page.getByTestId("vine-settings-button").click();
+      await page.getByTestId("pause-start-at-once-button").click();
+      await page.keyboard.press("Escape");
+      await page.getByTestId("control-end-early").click();
     },
   },
   {

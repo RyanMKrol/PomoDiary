@@ -45,8 +45,7 @@ describe("ControlBar", () => {
       const { container } = render(
         <ControlBar
           timerState={{ mode: "running" } as Partial<UseTimerResult>}
-          pause={vi.fn()}
-          resume={vi.fn()}
+          ringNow={vi.fn()}
           restart={vi.fn()}
           awayStart={vi.fn()}
         />,
@@ -59,8 +58,7 @@ describe("ControlBar", () => {
       const { container } = render(
         <ControlBar
           timerState={{ mode: "paused" } as Partial<UseTimerResult>}
-          pause={vi.fn()}
-          resume={vi.fn()}
+          ringNow={vi.fn()}
           restart={vi.fn()}
           awayStart={vi.fn()}
         />,
@@ -73,8 +71,7 @@ describe("ControlBar", () => {
       const { container } = render(
         <ControlBar
           timerState={{ mode: "chime" } as Partial<UseTimerResult>}
-          pause={vi.fn()}
-          resume={vi.fn()}
+          ringNow={vi.fn()}
           restart={vi.fn()}
           awayStart={vi.fn()}
         />,
@@ -87,8 +84,7 @@ describe("ControlBar", () => {
       const { container } = render(
         <ControlBar
           timerState={{ mode: "recap" } as Partial<UseTimerResult>}
-          pause={vi.fn()}
-          resume={vi.fn()}
+          ringNow={vi.fn()}
           restart={vi.fn()}
           awayStart={vi.fn()}
         />,
@@ -101,8 +97,7 @@ describe("ControlBar", () => {
       const { container } = render(
         <ControlBar
           timerState={{ mode: "away" } as Partial<UseTimerResult>}
-          pause={vi.fn()}
-          resume={vi.fn()}
+          ringNow={vi.fn()}
           restart={vi.fn()}
           awayStart={vi.fn()}
         />,
@@ -112,81 +107,47 @@ describe("ControlBar", () => {
     });
   });
 
-  describe("pause/resume button", () => {
-    it("shows 'Pause' label when running", () => {
+  describe("end early button", () => {
+    it("shows the 'End early' label", () => {
       render(
         <ControlBar
           timerState={{ mode: "running" } as Partial<UseTimerResult>}
-          pause={vi.fn()}
-          resume={vi.fn()}
+          ringNow={vi.fn()}
           restart={vi.fn()}
           awayStart={vi.fn()}
         />,
       );
-      const button = screen.getByTestId("control-pause-resume");
-      expect(button).toHaveTextContent("Pause");
+      const button = screen.getByTestId("control-end-early");
+      expect(button).toHaveTextContent("End early");
     });
 
-    it("shows 'Resume' label when paused", () => {
-      render(
-        <ControlBar
-          timerState={{ mode: "paused" } as Partial<UseTimerResult>}
-          pause={vi.fn()}
-          resume={vi.fn()}
-          restart={vi.fn()}
-          awayStart={vi.fn()}
-        />,
-      );
-      const button = screen.getByTestId("control-pause-resume");
-      expect(button).toHaveTextContent("Resume");
-    });
-
-    it("calls pause when running and button is clicked", async () => {
-      const pause = vi.fn();
+    it("calls ringNow when clicked", async () => {
+      const ringNow = vi.fn();
       const user = userEvent.setup();
       render(
         <ControlBar
           timerState={{ mode: "running" } as Partial<UseTimerResult>}
-          pause={pause}
-          resume={vi.fn()}
+          ringNow={ringNow}
           restart={vi.fn()}
           awayStart={vi.fn()}
         />,
       );
-      const button = screen.getByTestId("control-pause-resume");
+      const button = screen.getByTestId("control-end-early");
       await user.click(button);
-      expect(pause).toHaveBeenCalled();
-    });
-
-    it("calls resume when paused and button is clicked", async () => {
-      const resume = vi.fn();
-      const user = userEvent.setup();
-      render(
-        <ControlBar
-          timerState={{ mode: "paused" } as Partial<UseTimerResult>}
-          pause={vi.fn()}
-          resume={resume}
-          restart={vi.fn()}
-          awayStart={vi.fn()}
-        />,
-      );
-      const button = screen.getByTestId("control-pause-resume");
-      await user.click(button);
-      expect(resume).toHaveBeenCalled();
+      expect(ringNow).toHaveBeenCalled();
     });
 
     it("has red swatch with correct color", () => {
       const { container } = render(
         <ControlBar
           timerState={{ mode: "running" } as Partial<UseTimerResult>}
-          pause={vi.fn()}
-          resume={vi.fn()}
+          ringNow={vi.fn()}
           restart={vi.fn()}
           awayStart={vi.fn()}
         />,
       );
       const swatch = container.querySelector(
-        "[data-testid='control-swatch-pause-resume']",
+        "[data-testid='control-swatch-end-early']",
       );
       expect(swatch).toHaveStyle({ backgroundColor: "#ec3013" });
     });
@@ -197,8 +158,7 @@ describe("ControlBar", () => {
       render(
         <ControlBar
           timerState={{ mode: "running" } as Partial<UseTimerResult>}
-          pause={vi.fn()}
-          resume={vi.fn()}
+          ringNow={vi.fn()}
           restart={vi.fn()}
           awayStart={vi.fn()}
         />,
@@ -213,8 +173,7 @@ describe("ControlBar", () => {
       render(
         <ControlBar
           timerState={{ mode: "running" } as Partial<UseTimerResult>}
-          pause={vi.fn()}
-          resume={vi.fn()}
+          ringNow={vi.fn()}
           restart={restart}
           awayStart={vi.fn()}
         />,
@@ -228,8 +187,7 @@ describe("ControlBar", () => {
       render(
         <ControlBar
           timerState={{ mode: "running" } as Partial<UseTimerResult>}
-          pause={vi.fn()}
-          resume={vi.fn()}
+          ringNow={vi.fn()}
           restart={vi.fn()}
           awayStart={vi.fn()}
         />,
@@ -245,8 +203,7 @@ describe("ControlBar", () => {
       render(
         <ControlBar
           timerState={{ mode: "running" } as Partial<UseTimerResult>}
-          pause={vi.fn()}
-          resume={vi.fn()}
+          ringNow={vi.fn()}
           restart={vi.fn()}
           awayStart={vi.fn()}
         />,
@@ -261,8 +218,7 @@ describe("ControlBar", () => {
       render(
         <ControlBar
           timerState={{ mode: "running" } as Partial<UseTimerResult>}
-          pause={vi.fn()}
-          resume={vi.fn()}
+          ringNow={vi.fn()}
           restart={vi.fn()}
           awayStart={awayStart}
         />,
@@ -276,8 +232,7 @@ describe("ControlBar", () => {
       const { container } = render(
         <ControlBar
           timerState={{ mode: "running" } as Partial<UseTimerResult>}
-          pause={vi.fn()}
-          resume={vi.fn()}
+          ringNow={vi.fn()}
           restart={vi.fn()}
           awayStart={vi.fn()}
         />,
@@ -294,8 +249,7 @@ describe("ControlBar", () => {
       render(
         <ControlBar
           timerState={{ mode: "running" } as Partial<UseTimerResult>}
-          pause={vi.fn()}
-          resume={vi.fn()}
+          ringNow={vi.fn()}
           restart={vi.fn()}
           awayStart={vi.fn()}
         />,
@@ -310,8 +264,7 @@ describe("ControlBar", () => {
       render(
         <ControlBar
           timerState={{ mode: "running" } as Partial<UseTimerResult>}
-          pause={vi.fn()}
-          resume={vi.fn()}
+          ringNow={vi.fn()}
           restart={vi.fn()}
           awayStart={awayStart}
         />,
@@ -325,8 +278,7 @@ describe("ControlBar", () => {
       const { container } = render(
         <ControlBar
           timerState={{ mode: "running" } as Partial<UseTimerResult>}
-          pause={vi.fn()}
-          resume={vi.fn()}
+          ringNow={vi.fn()}
           restart={vi.fn()}
           awayStart={vi.fn()}
         />,
@@ -339,34 +291,32 @@ describe("ControlBar", () => {
   });
 
   describe("button styling", () => {
-    it("pause/resume button has flex:1 to fill available space", () => {
+    it("end early button has flex:1 to fill available space", () => {
       render(
         <ControlBar
           timerState={{ mode: "running" } as Partial<UseTimerResult>}
-          pause={vi.fn()}
-          resume={vi.fn()}
+          ringNow={vi.fn()}
           restart={vi.fn()}
           awayStart={vi.fn()}
         />,
       );
-      const button = screen.getByTestId("control-pause-resume");
+      const button = screen.getByTestId("control-end-early");
       expect(button.className).toBeTruthy();
     });
   });
 
   describe("swatch appearance", () => {
-    it("pause/resume swatch is 9x9 square", () => {
+    it("end early swatch is 9x9 square", () => {
       const { container } = render(
         <ControlBar
           timerState={{ mode: "running" } as Partial<UseTimerResult>}
-          pause={vi.fn()}
-          resume={vi.fn()}
+          ringNow={vi.fn()}
           restart={vi.fn()}
           awayStart={vi.fn()}
         />,
       );
       const swatch = container.querySelector(
-        "[data-testid='control-swatch-pause-resume']",
+        "[data-testid='control-swatch-end-early']",
       );
       expect(swatch?.className).toMatch(/swatch/);
     });
@@ -375,8 +325,7 @@ describe("ControlBar", () => {
       const { container } = render(
         <ControlBar
           timerState={{ mode: "running" } as Partial<UseTimerResult>}
-          pause={vi.fn()}
-          resume={vi.fn()}
+          ringNow={vi.fn()}
           restart={vi.fn()}
           awayStart={vi.fn()}
         />,
@@ -391,8 +340,7 @@ describe("ControlBar", () => {
       const { container } = render(
         <ControlBar
           timerState={{ mode: "running" } as Partial<UseTimerResult>}
-          pause={vi.fn()}
-          resume={vi.fn()}
+          ringNow={vi.fn()}
           restart={vi.fn()}
           awayStart={vi.fn()}
         />,

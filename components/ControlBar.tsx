@@ -5,16 +5,14 @@ import styles from "./ControlBar.module.css";
 
 export interface ControlBarProps {
   timerState: Partial<UseTimerResult>;
-  pause: () => Promise<void>;
-  resume: () => Promise<void>;
+  ringNow: () => Promise<void>;
   restart: () => Promise<void>;
   awayStart: (kind: "sleep" | "work") => Promise<void>;
 }
 
 export function ControlBar({
   timerState,
-  pause,
-  resume,
+  ringNow,
   restart,
   awayStart,
 }: ControlBarProps) {
@@ -24,22 +22,23 @@ export function ControlBar({
     return null;
   }
 
-  const isPaused = mode === "paused";
-  const pauseResumeLabel = isPaused ? "Resume" : "Pause";
-
   return (
     <div className={styles.bar} data-testid="control-bar">
+      {/* Mid-hour pause was removed deliberately: hours are real wall-clock
+          blocks, and pausing relabelled time (the block slid forward on
+          resume). Ending the hour early and accounting for it is the honest
+          equivalent. */}
       <button
         className={`${styles.button} ${styles.pauseResumeButton}`}
-        onClick={() => (isPaused ? resume() : pause())}
-        data-testid="control-pause-resume"
+        onClick={() => ringNow()}
+        data-testid="control-end-early"
       >
         <span
           className={styles.swatch}
           style={{ backgroundColor: "#ec3013" }}
-          data-testid="control-swatch-pause-resume"
+          data-testid="control-swatch-end-early"
         />
-        {pauseResumeLabel}
+        End early
       </button>
 
       <button
