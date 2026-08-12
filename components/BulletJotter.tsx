@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { type UseTimerResult } from "@/lib/client/useTimer";
 import styles from "./BulletJotter.module.css";
 
@@ -35,26 +35,20 @@ export function BulletJotter({ timerState, updateDraft }: BulletJotterProps) {
 
   const composerRef = useRef<HTMLInputElement | null>(null);
   const rowRefs = useRef<Array<HTMLInputElement | null>>([]);
-  const [focusComposer, setFocusComposer] = useState(isRecap);
-  const [pendingRowFocus, setPendingRowFocus] = useState<number | null>(null);
 
   useEffect(() => {
     rowRefs.current = rowRefs.current.slice(0, composerIndex);
   }, [composerIndex]);
 
+  // Focus the composer when the recap opens — synchronizing the DOM with
+  // React state, no setState involved.
+  const wasRecapRef = useRef(false);
   useEffect(() => {
-    if (focusComposer) {
+    if (isRecap && !wasRecapRef.current) {
       composerRef.current?.focus();
-      setFocusComposer(false);
     }
-  }, [focusComposer]);
-
-  useEffect(() => {
-    if (pendingRowFocus !== null) {
-      rowRefs.current[pendingRowFocus]?.focus();
-      setPendingRowFocus(null);
-    }
-  }, [pendingRowFocus]);
+    wasRecapRef.current = isRecap;
+  }, [isRecap]);
 
   const setBullet = (index: number, value: string) => {
     const newBullets = [...draftBullets];
@@ -90,10 +84,12 @@ export function BulletJotter({ timerState, updateDraft }: BulletJotterProps) {
       const newBullets = [...draftBullets];
       newBullets.splice(index, 1);
       rowRefs.current.splice(index, 1);
+      // The target elements exist right now (only the removed row leaves
+      // the DOM), so focus directly — no state round-trip needed.
       if (index > 0) {
-        setPendingRowFocus(index - 1);
+        rowRefs.current[index - 1]?.focus();
       } else {
-        setFocusComposer(true);
+        composerRef.current?.focus();
       }
       updateDraft({ bullets: newBullets });
     }

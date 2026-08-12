@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 
 import { TAGS, FEELS, INTENTS, tagColor, inferTag } from "@/lib/domain";
 import { type UseTimerResult } from "@/lib/client/useTimer";
@@ -9,6 +9,14 @@ import styles from "./PickerStrip.module.css";
 /** Below this viewport height the pickers start collapsed so the bullet
  *  jotter — the part that matters mid-hour — keeps its room. */
 const SHORT_VIEWPORT_QUERY = "(max-height: 720px)";
+
+function subscribeShortViewport(onChange: () => void): () => void {
+  // jsdom (tests) has no matchMedia; treat it as a tall viewport.
+  if (typeof window.matchMedia !== "function") return () => {};
+  const media = window.matchMedia(SHORT_VIEWPORT_QUERY);
+  media.addEventListener("change", onChange);
+  return () => media.removeEventListener("change", onChange);
+}
 
 export interface PickerStripProps {
   timerState: Partial<UseTimerResult>;
@@ -28,20 +36,26 @@ export function PickerStrip({ timerState, updateDraft }: PickerStripProps) {
     draftIntent = null,
   } = timerState;
 
-  // Accordion: the "Call the hour" header toggles the pickers; short viewports
-  // start (and re-)collapse them automatically, and a manual toggle holds
-  // until the viewport crosses the threshold again.
-  const [collapsed, setCollapsed] = useState(false);
-  useEffect(() => {
-    // jsdom (tests) has no matchMedia; treat it as a tall viewport.
-    if (typeof window.matchMedia !== "function") return;
-    const media = window.matchMedia(SHORT_VIEWPORT_QUERY);
-    setCollapsed(media.matches);
-    const onChange = (e: MediaQueryListEvent) => setCollapsed(e.matches);
-    media.addEventListener("change", onChange);
-    return () => media.removeEventListener("change", onChange);
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-  }, []);
+  // Accordion: the header toggles the pickers; short viewports collapse
+  // them automatically. The viewport is an external system, so it comes in
+  // via useSyncExternalStore; a manual toggle is stored as an override
+  // PAIRED with the auto value it overrode, so it holds until the viewport
+  // crosses the threshold again and then dissolves — no effects needed.
+  const isShortViewport = useSyncExternalStore(
+    subscribeShortViewport,
+    () =>
+      typeof window.matchMedia === "function" &&
+      window.matchMedia(SHORT_VIEWPORT_QUERY).matches,
+    () => false,
+  );
+  const [override, setOverride] = useState<{
+    auto: boolean;
+    value: boolean;
+  } | null>(null);
+  const collapsed =
+    override !== null && override.auto === isShortViewport
+      ? override.value
+      : isShortViewport;
 
   const inference = inferTag(draftBullets);
   const showInference = inference && !draftTag;
@@ -94,7 +108,9 @@ export function PickerStrip({ timerState, updateDraft }: PickerStripProps) {
       {/* Label row doubles as the accordion toggle */}
       <button
         className={styles.labelRow}
-        onClick={() => setCollapsed((c) => !c)}
+        onClick={() =>
+          setOverride({ auto: isShortViewport, value: !collapsed })
+        }
         aria-expanded={!isCollapsed}
         data-testid="picker-strip-toggle"
       >
