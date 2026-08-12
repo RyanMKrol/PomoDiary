@@ -58,7 +58,14 @@ async function driveVisualStates() {
   const manifest = [];
 
   try {
-    const now = Date.now();
+    // Anchor the run at 09:00 local today rather than the real wall clock:
+    // the flows fast-forward the fake clock a few hours, and a late-evening
+    // start crossed midnight mid-run — shifting every seeded grid day down a
+    // row and breaking the empty-day step. Everything downstream runs on the
+    // fake clock, so a fixed morning anchor is safe at any real hour.
+    const anchor = new Date();
+    anchor.setHours(9, 0, 0, 0);
+    const now = anchor.getTime();
     const fixtureState = createFixtureState(now);
 
     const context = await browser.newContext({
