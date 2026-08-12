@@ -2,6 +2,12 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { Entry } from "@/lib/db/entries.store";
+import {
+  entriesCacheKey,
+  getCachedEntries,
+  setCachedEntries,
+  invalidateEntriesCache,
+} from "@/lib/client/entriesCache";
 import { fmtClock, gridCellTitle, gridCellEmptyTitle } from "@/lib/time";
 import { tagColor } from "@/lib/domain";
 import { EntryEditor } from "./EntryEditor";
@@ -50,6 +56,24 @@ export function DayView({ dayStart, dayEnd, timerState }: DayViewProps) {
       if (!dayChanged && !entriesChanged) return;
     }
 
+    // A fetch would fire here — consult the session cache first. A hit
+    // (same key, same entriesVersion) means the database can't have
+    // anything newer than what we already fetched, so skip the network
+    // entirely. Toggling day<->grid remounts this component; without the
+    // cache every toggle refetched from the database.
+    const cacheKey = entriesCacheKey(dayStart, dayEnd);
+    const cached = getCachedEntries(cacheKey, entriesVersion);
+    if (cached !== null) {
+      // Synchronous setState here is deliberate: this branch replaces the
+      // async fetch path's setState with the cached copy of the same data —
+      // it runs at most once per mount/day/version change, never cascades.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setEntries(cached);
+      setLoading(false);
+      setError(null);
+      return;
+    }
+
     // Refetches keep the previous entries on screen until fresh data lands —
     // only the very first load shows the blank container. Blanking on every
     // refetch made the whole panel flash empty right after page load.
@@ -64,7 +88,10 @@ export function DayView({ dayStart, dayEnd, timerState }: DayViewProps) {
           throw new Error("Failed to fetch entries");
         }
         const data = await response.json();
-        if (!cancelled) setEntries(data);
+        if (!cancelled) {
+          setCachedEntries(cacheKey, entriesVersion, data);
+          setEntries(data);
+        }
       } catch (err) {
         if (!cancelled)
           setError(err instanceof Error ? err.message : "Unknown error");
@@ -144,6 +171,9 @@ export function DayView({ dayStart, dayEnd, timerState }: DayViewProps) {
   }
 
   const handleEditSave = (updated: Entry) => {
+    // The local array patch is the immediate UI; the cache must not keep
+    // serving the pre-edit copy to the grid or a re-toggle, so drop it all.
+    invalidateEntriesCache();
     setEntries(entries.map((e) => (e.id === updated.id ? updated : e)));
     setEditingId(null);
   };

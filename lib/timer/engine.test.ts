@@ -519,7 +519,7 @@ describe("awayStart", () => {
 });
 
 describe("awayReturn", () => {
-  function away(since, overrides = {}) {
+  function away(since: number, overrides = {}) {
     return running({
       mode: "away",
       awayKind: "sleep",
