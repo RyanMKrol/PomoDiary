@@ -77,12 +77,12 @@ describe("consolidate", () => {
     expect(consolidate([draft, skip])).toEqual([skip]);
   });
 
-  it("drops a draftUpdate followed later by an awayReturn", () => {
-    const draft = rec({ type: "draftUpdate", patch: { tag: "A" } });
+  it("KEEPS a draftUpdate followed by an awayReturn — the return folds drafts into the pushed hour", () => {
+    const draft = rec({ type: "draftUpdate", patch: { bullets: ["kept"] } });
     const away = rec({ type: "awayStart", kind: "work" });
     const back = rec({ type: "awayReturn" });
 
-    expect(consolidate([draft, away, back])).toEqual([away, back]);
+    expect(consolidate([draft, away, back])).toEqual([draft, away, back]);
   });
 
   it("keeps a draftUpdate followed only by a bare awayStart", () => {

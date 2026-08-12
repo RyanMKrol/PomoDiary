@@ -10,6 +10,7 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Vine } from "./Vine";
+import { invalidateEntriesCache } from "@/lib/client/entriesCache";
 
 function mockFetchResponse(data: unknown) {
   return Promise.resolve({
@@ -20,6 +21,10 @@ function mockFetchResponse(data: unknown) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  // The entries cache is module-global and Vine mounts DayView/GridView,
+  // which read it — a slot left by an earlier test would mask the fetch
+  // mocks below.
+  invalidateEntriesCache();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   global.fetch = vi.fn(() => mockFetchResponse([])) as any;
 });

@@ -580,3 +580,62 @@ describe("createTimerClient", () => {
     client.stop();
   });
 });
+
+describe("StrictMode double-start (dev)", () => {
+  /** Minimal Web Locks stub faithful to the trap: one holder per name,
+   *  waiters queue until the holder's callback promise resolves. */
+  function stubWebLocks() {
+    const queues = new Map<string, Array<() => void>>();
+    const request = vi.fn(
+      async (name: string, cb: () => Promise<unknown> | unknown) => {
+        const queue = queues.get(name) ?? [];
+        queues.set(name, queue);
+        if (queue.length > 0) {
+          await new Promise<void>((resolve) => queue.push(resolve));
+        } else {
+          queue.push(() => {});
+        }
+        try {
+          await cb();
+        } finally {
+          queue.shift();
+          queue[0]?.();
+        }
+      },
+    );
+    Object.defineProperty(navigator, "locks", {
+      configurable: true,
+      value: { request },
+    });
+    return () => {
+      delete (navigator as { locks?: unknown }).locks;
+    };
+  }
+
+  it("start/stop/start still flushes actions (the abandoned first load must not hold the flush lock)", async () => {
+    const restore = stubWebLocks();
+    try {
+      const server = createFakeSyncServer(initialState(T0));
+      const client = createTimerClient(server.fetchImpl);
+
+      // React StrictMode's dev sequence on one client instance.
+      client.start();
+      client.stop();
+      client.start();
+      await settle();
+      expect(client.getState()?.mode).toBe("running");
+
+      client.updateDraft({ bullets: ["typed after strict-mode remount"] });
+      await vi.advanceTimersByTimeAsync(3500);
+
+      // The one live flusher must hold the lock and publish the batch.
+      expect(syncPosts(server)).toBe(1);
+      expect(server.getServerState().draftBullets).toEqual([
+        "typed after strict-mode remount",
+      ]);
+      client.stop();
+    } finally {
+      restore();
+    }
+  });
+});
