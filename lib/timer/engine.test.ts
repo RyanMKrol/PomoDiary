@@ -126,7 +126,7 @@ describe("resume", () => {
     expect(state.mode).toBe("running");
     expect(state.hourStart).toBe(floorHourBoundary(resumeAt));
     // The 13-minute held stretch is accounted inside the bucket.
-    expect(state.draftBullets).toEqual(["(first 13 min unaccounted)"]);
+    expect(state.draftBullets).toEqual(["(first 13 min unaccounted)", ""]);
     expect(entriesToInsert).toEqual([]);
 
     const { remainingSeconds } = deriveNow(state, resumeAt);
@@ -253,7 +253,7 @@ describe("log", () => {
     expect(state.hourStart).toBe(floorHourBoundary(now));
     expect(state.chimeFrom).toBeNull();
     expect(state.chimeTo).toBeNull();
-    expect(state.draftBullets).toEqual(["(first 13 min unaccounted)"]);
+    expect(state.draftBullets).toEqual(["(first 13 min unaccounted)", ""]);
     expect(state.phraseIdx).toBe(4);
   });
 
@@ -433,7 +433,7 @@ describe("skip", () => {
     expect(state.hourStart).toBe(floorHourBoundary(now));
     expect(state.chimeFrom).toBeNull();
     // Skipped at 13m22s past the hour: the dwell is accounted.
-    expect(state.draftBullets).toEqual(["(first 13 min unaccounted)"]);
+    expect(state.draftBullets).toEqual(["(first 13 min unaccounted)", ""]);
     expect(state.phraseIdx).toBe(0);
   });
 
@@ -575,7 +575,7 @@ describe("awayReturn", () => {
     expect(state.mode).toBe("running");
     // The SAME hour continues — hourStart untouched.
     expect(state.hourStart).toBe(T0);
-    expect(state.draftBullets).toEqual(["wrote a bit", "Asleep (15 min)"]);
+    expect(state.draftBullets).toEqual(["wrote a bit", "Asleep (15 min)", ""]);
     expect(state.awayKind).toBeNull();
     expect(state.awaySince).toBeNull();
   });
@@ -619,7 +619,7 @@ describe("awayReturn", () => {
       bullets: ["wrote a bit", "Asleep"],
     });
     expect(state.hourStart).toBe(floorHourBoundary(now));
-    expect(state.draftBullets).toEqual(["Asleep (43 min)"]);
+    expect(state.draftBullets).toEqual(["Asleep (43 min)", ""]);
   });
 
   it("whole away hours carry just the away bullet", () => {

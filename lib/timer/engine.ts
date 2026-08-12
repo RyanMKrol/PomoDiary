@@ -106,9 +106,12 @@ function bucketStart(now: number): { hourStart: number; gapBullets: string[] } {
   const gapMs = now - hourStart;
   return {
     hourStart,
+    // Seeded drafts end with an empty slot: the client's composer is
+    // always the LAST draft slot, so seeds must arrive as committed rows
+    // with a fresh slot after them.
     gapBullets:
       gapMs >= GAP_BULLET_MIN_MS
-        ? [`(first ${Math.round(gapMs / 60_000)} min unaccounted)`]
+        ? [`(first ${Math.round(gapMs / 60_000)} min unaccounted)`, ""]
         : [],
   };
 }
@@ -307,7 +310,7 @@ export function dispatch(
         const awayMinutes = Math.round((now - since) / 60000);
         const draftBullets =
           now - since >= MIN_BLOCK_MS
-            ? [...keptDraft, `${cfg.bullet} (${awayMinutes} min)`]
+            ? [...keptDraft, `${cfg.bullet} (${awayMinutes} min)`, ""]
             : state.draftBullets;
         return {
           state: {
@@ -357,7 +360,7 @@ export function dispatch(
       const trailingMs = now - lastBoundary;
       const seedBullets =
         trailingMs >= MIN_BLOCK_MS
-          ? [`${cfg.bullet} (${Math.round(trailingMs / 60_000)} min)`]
+          ? [`${cfg.bullet} (${Math.round(trailingMs / 60_000)} min)`, ""]
           : [];
       const nextState = resetForNextBlock(
         state,

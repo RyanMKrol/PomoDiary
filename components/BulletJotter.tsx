@@ -9,59 +9,78 @@ export interface BulletJotterProps {
   updateDraft: (patch: { bullets?: string[] }) => void;
 }
 
+/**
+ * The jotter is a fixed composer plus a list. You only ever TYPE in the
+ * composer, pinned at the top; Enter commits its text as a bullet in the
+ * list below and the cursor never leaves the composer. Rows below stay
+ * editable in place (typos), Enter there just returns you to the composer,
+ * and Backspace on an emptied row deletes it.
+ *
+ * Under the hood the composer is the LAST slot of the draft array, live-
+ * persisted on every keystroke so a crashing tab never loses the line in
+ * progress. Committing appends a fresh empty slot, which the composer then
+ * represents.
+ */
 export function BulletJotter({ timerState, updateDraft }: BulletJotterProps) {
   const { mode = "running" } = timerState;
-  // The composer invariant: the last row is ALWAYS an empty input inviting
-  // the next bullet. A seeded draft (an away bullet, an unaccounted-gap
-  // note) used to fill the only row, leaving no visible way to add more —
-  // you had to know to click in and press Enter.
+  // The composer IS the draft's last slot, verbatim — never re-derived
+  // from its content, or typing would re-bind the input mid-word. The
+  // engine seeds drafts with a trailing empty slot so seeded bullets land
+  // as committed rows; an empty draft just pads one.
   const rawBullets = timerState.draftBullets ?? [];
-  const draftBullets =
-    rawBullets.length > 0 && rawBullets[rawBullets.length - 1].trim() === ""
-      ? rawBullets
-      : [...rawBullets, ""];
+  const draftBullets = rawBullets.length > 0 ? rawBullets : [""];
+  const composerIndex = draftBullets.length - 1;
 
   const isRecap = mode === "recap";
 
-  const [pendingFocusIndex, setPendingFocusIndex] = useState<number | null>(
-    isRecap ? draftBullets.length - 1 : null,
-  );
+  const composerRef = useRef<HTMLInputElement | null>(null);
+  const rowRefs = useRef<Array<HTMLInputElement | null>>([]);
+  const [focusComposer, setFocusComposer] = useState(isRecap);
+  const [pendingRowFocus, setPendingRowFocus] = useState<number | null>(null);
 
-  const inputRefs = useRef<Array<HTMLInputElement | null>>([]);
-
-  // Keep the ref array in sync with bullet array
   useEffect(() => {
-    inputRefs.current = inputRefs.current.slice(0, draftBullets.length);
-  }, [draftBullets.length]);
+    rowRefs.current = rowRefs.current.slice(0, composerIndex);
+  }, [composerIndex]);
 
-  // Apply pending focus after state update
   useEffect(() => {
-    if (pendingFocusIndex !== null && inputRefs.current[pendingFocusIndex]) {
-      inputRefs.current[pendingFocusIndex]?.focus();
-      setPendingFocusIndex(null);
+    if (focusComposer) {
+      composerRef.current?.focus();
+      setFocusComposer(false);
     }
-  }, [pendingFocusIndex]);
+  }, [focusComposer]);
 
-  const handleBulletChange = (index: number, value: string) => {
+  useEffect(() => {
+    if (pendingRowFocus !== null) {
+      rowRefs.current[pendingRowFocus]?.focus();
+      setPendingRowFocus(null);
+    }
+  }, [pendingRowFocus]);
+
+  const setBullet = (index: number, value: string) => {
     const newBullets = [...draftBullets];
     newBullets[index] = value;
     updateDraft({ bullets: newBullets });
   };
 
-  const handleBulletKeyDown = (
+  const handleComposerKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key !== "Enter") return;
+    e.preventDefault();
+    // No stacking empties: an empty composer commits nothing.
+    if (draftBullets[composerIndex].trim() === "") return;
+    // Commit: the typed text stays in its slot (now a list row) and a fresh
+    // empty slot becomes the composer. The input element itself is stable
+    // (keyed "composer"), so focus never moves.
+    updateDraft({ bullets: [...draftBullets, ""] });
+  };
+
+  const handleRowKeyDown = (
     index: number,
     e: React.KeyboardEvent<HTMLInputElement>,
   ) => {
     if (e.key === "Enter") {
+      // Rows below never spawn rows — Enter hands you back to the composer.
       e.preventDefault();
-      // No stacking empties: an empty bullet can't spawn another (Enter-spam
-      // was persisting rows of empty strings into the draft).
-      if (draftBullets[index].trim() === "") return;
-      const newBullets = [...draftBullets];
-      newBullets.splice(index + 1, 0, "");
-      inputRefs.current.splice(index + 1, 0, null);
-      setPendingFocusIndex(index + 1);
-      updateDraft({ bullets: newBullets });
+      composerRef.current?.focus();
     } else if (
       e.key === "Backspace" &&
       draftBullets[index] === "" &&
@@ -70,8 +89,12 @@ export function BulletJotter({ timerState, updateDraft }: BulletJotterProps) {
       e.preventDefault();
       const newBullets = [...draftBullets];
       newBullets.splice(index, 1);
-      inputRefs.current.splice(index, 1);
-      setPendingFocusIndex(Math.max(0, index - 1));
+      rowRefs.current.splice(index, 1);
+      if (index > 0) {
+        setPendingRowFocus(index - 1);
+      } else {
+        setFocusComposer(true);
+      }
       updateDraft({ bullets: newBullets });
     }
   };
@@ -81,23 +104,9 @@ export function BulletJotter({ timerState, updateDraft }: BulletJotterProps) {
 
   const jotHeading = isRecap ? "What did you actually do?" : "As you go";
   const jotHint = isRecap ? "Tidy it up" : "Enter for the next bullet";
-
-  const composerIndex = draftBullets.length - 1;
-  const renderOrder = [
-    composerIndex,
-    ...Array.from({ length: composerIndex }, (_, i) => i),
-  ];
-
-  const getPlaceholder = (index: number): string => {
-    // The composer (always the last, always empty) carries the invitation;
-    // filled rows above it need no prompt.
-    if (index === draftBullets.length - 1) {
-      return isRecap
-        ? "Anything else worth noting?"
-        : "Jot it down while it's fresh…";
-    }
-    return "…";
-  };
+  const composerPlaceholder = isRecap
+    ? "Anything else worth noting?"
+    : "Jot it down while it's fresh…";
 
   return (
     <div className={styles.scroller} data-testid="bullet-jotter">
@@ -110,10 +119,28 @@ export function BulletJotter({ timerState, updateDraft }: BulletJotterProps) {
         role="group"
         aria-label="Bullets for this hour"
       >
-        {/* The composer renders FIRST so the place to type never moves,
-            while remaining the LAST slot of the draft array — committed
-            bullets appear in order beneath it. */}
-        {renderOrder.map((index) => (
+        {/* The composer: pinned first, stable element, cursor home. */}
+        <div key="composer" className={styles.bulletRow}>
+          <span
+            className={styles.marker}
+            style={{ backgroundColor: markerColor }}
+            data-testid={`bullet-marker-${composerIndex}`}
+          />
+          <input
+            ref={composerRef}
+            type="text"
+            value={draftBullets[composerIndex]}
+            onChange={(e) => setBullet(composerIndex, e.target.value)}
+            onKeyDown={handleComposerKeyDown}
+            placeholder={composerPlaceholder}
+            className={styles.input}
+            aria-label="New bullet for this hour"
+            data-testid={`bullet-input-${composerIndex}`}
+          />
+        </div>
+
+        {/* Committed bullets, in the order the hour wrote them. */}
+        {draftBullets.slice(0, composerIndex).map((bullet, index) => (
           <div key={index} className={styles.bulletRow}>
             <span
               className={styles.marker}
@@ -122,13 +149,13 @@ export function BulletJotter({ timerState, updateDraft }: BulletJotterProps) {
             />
             <input
               ref={(el) => {
-                inputRefs.current[index] = el;
+                rowRefs.current[index] = el;
               }}
               type="text"
-              value={draftBullets[index]}
-              onChange={(e) => handleBulletChange(index, e.target.value)}
-              onKeyDown={(e) => handleBulletKeyDown(index, e)}
-              placeholder={getPlaceholder(index)}
+              value={bullet}
+              onChange={(e) => setBullet(index, e.target.value)}
+              onKeyDown={(e) => handleRowKeyDown(index, e)}
+              placeholder="…"
               className={styles.input}
               aria-label={`Bullet ${index + 1} for this hour`}
               data-testid={`bullet-input-${index}`}

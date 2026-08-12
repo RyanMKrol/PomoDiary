@@ -12,6 +12,30 @@ import {
 import { render, screen, cleanup, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { BulletJotter } from "./BulletJotter";
+import { useState } from "react";
+
+/** Mimics the real client: applies updateDraft patches back into props so
+ *  controlled inputs actually accept typed text. */
+function StatefulJotter({
+  initial,
+  spy,
+  mode = "running",
+}: {
+  initial: string[];
+  spy: (patch: { bullets?: string[] }) => void;
+  mode?: string;
+}) {
+  const [bullets, setBullets] = useState(initial);
+  return (
+    <BulletJotter
+      timerState={{ mode: mode as never, draftBullets: bullets }}
+      updateDraft={(patch) => {
+        spy(patch);
+        if (patch.bullets) setBullets(patch.bullets);
+      }}
+    />
+  );
+}
 import { type UseTimerResult } from "@/lib/client/useTimer";
 
 beforeAll(() => {
@@ -158,7 +182,7 @@ describe("BulletJotter", () => {
       const updateDraft = vi.fn();
       const timerState: Partial<UseTimerResult> = {
         mode: "running",
-        draftBullets: ["At the gym (2 min)"],
+        draftBullets: ["At the gym (2 min)", ""],
         draftTag: null,
       };
 
@@ -233,33 +257,42 @@ describe("BulletJotter", () => {
   });
 
   describe("Enter key behavior", () => {
-    it("inserts empty bullet after current index on Enter", async () => {
-      const updateDraft = vi.fn();
-      const timerState: Partial<UseTimerResult> = {
-        mode: "running",
-        draftBullets: ["first"],
-        draftTag: null,
-      };
-
+    it("Enter in the composer commits the text and appends a fresh slot", async () => {
+      const spy = vi.fn();
       render(
-        <BulletJotter timerState={timerState} updateDraft={updateDraft} />,
+        <StatefulJotter initial={["first", "typed this", ""]} spy={spy} />,
       );
 
-      const input = screen.getByTestId("bullet-input-0");
-      await userEvent.click(input);
-      await userEvent.keyboard("{Enter}");
+      // The composer is the appended empty last slot (index 2), rendered
+      // FIRST. Typing fills it; Enter commits by appending a fresh slot.
+      const composer = screen.getByTestId("bullet-input-2");
+      await userEvent.click(composer);
+      await userEvent.keyboard("more{Enter}");
 
-      const lastCall =
-        updateDraft.mock.calls[updateDraft.mock.calls.length - 1];
-      // Display always carries the trailing composer row.
-      expect(lastCall[0].bullets).toEqual(["first", "", ""]);
+      const lastCall = spy.mock.calls[spy.mock.calls.length - 1];
+      expect(lastCall[0].bullets).toEqual(["first", "typed this", "more", ""]);
     });
 
-    it("inserts after middle bullet, not at the end", async () => {
+    it("keeps the cursor in the composer across a commit", async () => {
+      const spy = vi.fn();
+      render(<StatefulJotter initial={["first", ""]} spy={spy} />);
+
+      const composer = screen.getByTestId("bullet-input-1");
+      await userEvent.click(composer);
+      await userEvent.keyboard("note{Enter}");
+
+      // Same element, still focused, now representing the fresh slot.
+      expect(document.activeElement).toBe(composer);
+      expect((composer as HTMLInputElement).value).toBe("");
+      const lastCall = spy.mock.calls[spy.mock.calls.length - 1];
+      expect(lastCall[0].bullets).toEqual(["first", "note", ""]);
+    });
+
+    it("Enter on a committed row spawns nothing and returns focus to the composer", async () => {
       const updateDraft = vi.fn();
       const timerState: Partial<UseTimerResult> = {
         mode: "running",
-        draftBullets: ["first", "second", "third"],
+        draftBullets: ["first", "second", "third", ""],
         draftTag: null,
       };
 
@@ -267,34 +300,24 @@ describe("BulletJotter", () => {
         <BulletJotter timerState={timerState} updateDraft={updateDraft} />,
       );
 
-      const input = screen.getByTestId("bullet-input-1");
-      await userEvent.click(input);
+      const row = screen.getByTestId("bullet-input-1");
+      await userEvent.click(row);
       await userEvent.keyboard("{Enter}");
 
-      const lastCall =
-        updateDraft.mock.calls[updateDraft.mock.calls.length - 1];
-      expect(lastCall[0].bullets).toEqual(["first", "second", "", "third", ""]);
+      expect(updateDraft).not.toHaveBeenCalled();
+      expect(document.activeElement).toBe(screen.getByTestId("bullet-input-3"));
     });
 
     it("does not propagate form submission on Enter", async () => {
-      const updateDraft = vi.fn();
-      const timerState: Partial<UseTimerResult> = {
-        mode: "running",
-        draftBullets: ["something jotted"],
-        draftTag: null,
-      };
+      const spy = vi.fn();
+      render(<StatefulJotter initial={["something jotted", ""]} spy={spy} />);
 
-      render(
-        <BulletJotter timerState={timerState} updateDraft={updateDraft} />,
-      );
+      const composer = screen.getByTestId("bullet-input-1");
+      await userEvent.click(composer);
+      await userEvent.keyboard("x{Enter}");
 
-      const input = screen.getByTestId("bullet-input-0");
-      await userEvent.click(input);
-      await userEvent.keyboard("{Enter}");
-
-      const lastCall =
-        updateDraft.mock.calls[updateDraft.mock.calls.length - 1];
-      expect(lastCall[0].bullets?.length).toBe(3);
+      const lastCall = spy.mock.calls[spy.mock.calls.length - 1];
+      expect(lastCall[0].bullets).toEqual(["something jotted", "x", ""]);
     });
   });
 
@@ -321,11 +344,11 @@ describe("BulletJotter", () => {
       expect(backspaceCalls.length).toBe(0);
     });
 
-    it("removes empty bullet on Backspace", async () => {
+    it("removes an emptied committed row on Backspace", async () => {
       const updateDraft = vi.fn();
       const timerState: Partial<UseTimerResult> = {
         mode: "running",
-        draftBullets: ["first", ""],
+        draftBullets: ["first", "", "third", ""],
         draftTag: null,
       };
 
@@ -333,20 +356,20 @@ describe("BulletJotter", () => {
         <BulletJotter timerState={timerState} updateDraft={updateDraft} />,
       );
 
-      const input = screen.getByTestId("bullet-input-1");
-      await userEvent.click(input);
+      const row = screen.getByTestId("bullet-input-1");
+      await userEvent.click(row);
       await userEvent.keyboard("{Backspace}");
 
       const lastCall =
         updateDraft.mock.calls[updateDraft.mock.calls.length - 1];
-      expect(lastCall[0].bullets).toEqual(["first"]);
+      expect(lastCall[0].bullets).toEqual(["first", "third", ""]);
     });
 
     it("removes middle empty bullet", async () => {
       const updateDraft = vi.fn();
       const timerState: Partial<UseTimerResult> = {
         mode: "running",
-        draftBullets: ["first", "", "third"],
+        draftBullets: ["first", "", "third", ""],
         draftTag: null,
       };
 
@@ -404,10 +427,10 @@ describe("BulletJotter", () => {
       const updateDraft = vi.fn();
       const timerState: Partial<UseTimerResult> = {
         mode: "recap",
-        draftBullets: ["first", "second", "third"],
+        draftBullets: ["first", "second", "third", ""],
         draftTag: null,
       };
-      // The focus target is the composer row appended after the bullets.
+      // The focus target is the composer (the trailing empty slot).
 
       render(
         <BulletJotter timerState={timerState} updateDraft={updateDraft} />,
@@ -443,7 +466,7 @@ describe("BulletJotter", () => {
       const updateDraft = vi.fn();
       const timerState: Partial<UseTimerResult> = {
         mode: "running",
-        draftBullets: ["first", "second"],
+        draftBullets: ["first", "second", ""],
         draftTag: null,
       };
 
@@ -456,6 +479,9 @@ describe("BulletJotter", () => {
       ).toBeInTheDocument();
       expect(
         screen.getByLabelText("Bullet 2 for this hour"),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByLabelText("New bullet for this hour"),
       ).toBeInTheDocument();
     });
 
@@ -572,21 +598,23 @@ describe("empty bullet guard", () => {
     expect(updateDraft).not.toHaveBeenCalled();
   });
 
-  it("Enter on a filled bullet still adds the next one", async () => {
-    const updateDraft = vi.fn();
+  it("Enter on a filled composer still commits the next one", async () => {
+    const spy = vi.fn();
     const user = userEvent.setup();
     const { getByTestId } = render(
-      <BulletJotter
-        timerState={{ mode: "running", draftBullets: ["did a thing"] }}
-        updateDraft={updateDraft}
-      />,
+      <StatefulJotter initial={["did a thing", ""]} spy={spy} />,
     );
 
-    getByTestId("bullet-input-0").focus();
-    await user.keyboard("{Enter}");
-    expect(updateDraft).toHaveBeenCalledWith({
-      bullets: ["did a thing", "", ""],
-    });
+    // ["did a thing"] gets a composer appended at index 1; typing then
+    // committing appends a fresh empty slot.
+    getByTestId("bullet-input-1").focus();
+    await user.keyboard("x{Enter}");
+    const calls = spy.mock.calls;
+    expect(calls[calls.length - 1][0].bullets).toEqual([
+      "did a thing",
+      "x",
+      "",
+    ]);
   });
 });
 
@@ -600,7 +628,7 @@ describe("composer position", () => {
       <BulletJotter
         timerState={{
           mode: "running",
-          draftBullets: ["Asleep (5 min)", "another note"],
+          draftBullets: ["Asleep (5 min)", "another note", ""],
         }}
         updateDraft={vi.fn()}
       />,
