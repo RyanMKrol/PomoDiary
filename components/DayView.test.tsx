@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import "@testing-library/jest-dom/vitest";
+import React from "react";
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, cleanup, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -585,5 +586,41 @@ describe("DayView", () => {
       // Verify editor is still open
       expect(screen.getByTestId("editor-test-1")).toBeInTheDocument();
     });
+  });
+});
+
+describe("React StrictMode", () => {
+  it("still completes the first load when effects double-fire", async () => {
+    const mockEntry: Entry = {
+      id: "strict-1",
+      userId: "user-1",
+      from: new Date(100),
+      to: new Date(900),
+      tag: "Deep work",
+      feel: "Steady",
+      intent: "yes",
+      bullets: ["strict mode entry"],
+      createdAt: new Date(900),
+    };
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    global.fetch = vi.fn(() =>
+      Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve([mockEntry]),
+      }),
+    ) as any;
+
+    render(
+      <React.StrictMode>
+        <DayView dayStart={0} dayEnd={1000} timerState={{ mode: "running" }} />
+      </React.StrictMode>,
+    );
+
+    // StrictMode mounts effects twice, cancelling the first fetch; the
+    // second run must still fetch rather than early-return, or the vine
+    // stays blank forever (the bug this test pins).
+    expect(
+      await screen.findByTestId(`entry-${mockEntry.id}`),
+    ).toBeInTheDocument();
   });
 });
