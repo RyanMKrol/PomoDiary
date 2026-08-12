@@ -19,7 +19,6 @@ export interface PanelsProps {
 export function Panels({ timerState }: PanelsProps) {
   const {
     mode,
-    remainingSeconds,
     chimeFrom,
     chimeTo,
     awayKind,
