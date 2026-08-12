@@ -134,50 +134,6 @@ describe("resume", () => {
   });
 });
 
-describe("restart", () => {
-  it("resets hourStart to now but preserves drafts and does not advance phraseIdx", () => {
-    const s = running({
-      mode: "running",
-      hourStart: T0,
-      draftBullets: ["did a thing"],
-      draftTag: "Deep work",
-      draftFeel: "Charged",
-      draftIntent: "yes",
-      phraseIdx: 2,
-    });
-    const now = T0 + 30 * 60 * 1000;
-    const { state, entriesToInsert } = dispatch(
-      s,
-      SETTINGS,
-      { type: "restart" },
-      now,
-    );
-    expect(state.mode).toBe("running");
-    expect(state.hourStart).toBe(now);
-    expect(state.draftBullets).toEqual(["did a thing"]);
-    expect(state.draftTag).toBe("Deep work");
-    expect(state.draftFeel).toBe("Charged");
-    expect(state.draftIntent).toBe("yes");
-    expect(state.phraseIdx).toBe(2);
-    expect(entriesToInsert).toEqual([]);
-  });
-
-  it("works from paused too", () => {
-    const s = running({ mode: "paused", pausedRemaining: 100 });
-    const { state } = dispatch(s, SETTINGS, { type: "restart" }, T0 + 1000);
-    expect(state.mode).toBe("running");
-    expect(state.pausedRemaining).toBeNull();
-  });
-
-  it("is a no-op in chime/recap/away", () => {
-    for (const mode of ["chime", "recap", "away"] as const) {
-      const s = running({ mode });
-      const { state } = dispatch(s, SETTINGS, { type: "restart" }, T0 + 1000);
-      expect(state).toBe(s);
-    }
-  });
-});
-
 describe("ringNow", () => {
   it("chimes immediately using hourStart..now as the span", () => {
     const s = running({ hourStart: T0 });

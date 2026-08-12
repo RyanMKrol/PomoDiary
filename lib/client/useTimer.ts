@@ -172,7 +172,6 @@ export function applyDraftPatchLocally(
 type TimerAction =
   | { type: "pause" }
   | { type: "resume" }
-  | { type: "restart" }
   | { type: "ringNow" }
   | { type: "acknowledge" }
   | { type: "log"; payload: LogPayload }
@@ -190,7 +189,6 @@ export interface TimerClient {
   stop(): void;
   pause(): Promise<void>;
   resume(): Promise<void>;
-  restart(): Promise<void>;
   ringNow(): Promise<void>;
   acknowledge(): Promise<void>;
   log(payload: LogPayload): Promise<void>;
@@ -439,7 +437,6 @@ export function createTimerClient(fetchImpl: FetchLike = fetch): TimerClient {
 
     pause: () => performAction({ type: "pause" }),
     resume: () => performAction({ type: "resume" }),
-    restart: () => performAction({ type: "restart" }),
     ringNow: () => performAction({ type: "ringNow" }),
     acknowledge: () => performAction({ type: "acknowledge" }),
 
@@ -475,7 +472,6 @@ export interface UseTimerResult extends Partial<ClientState> {
   loading: boolean;
   pause(): Promise<void>;
   resume(): Promise<void>;
-  restart(): Promise<void>;
   ringNow(): Promise<void>;
   acknowledge(): Promise<void>;
   log(payload: LogPayload): Promise<void>;
@@ -514,7 +510,6 @@ export function useTimer(options: UseTimerOptions = {}): UseTimerResult {
     loading: state === null,
     pause: client.pause,
     resume: client.resume,
-    restart: client.restart,
     ringNow: client.ringNow,
     acknowledge: client.acknowledge,
     log: client.log,

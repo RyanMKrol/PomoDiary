@@ -24,7 +24,6 @@ export function Panels() {
     awayElapsedSeconds,
     updateDraft,
     resume,
-    restart,
     ringNow,
     awayStart,
     awayReturn,
@@ -47,7 +46,6 @@ export function Panels() {
         <ControlBar
           timerState={timerState}
           ringNow={ringNow}
-          restart={restart}
           awayStart={awayStart}
         />
         <RecapBar timerState={timerState} log={log} skip={skip} />
