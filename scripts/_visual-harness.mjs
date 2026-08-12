@@ -478,11 +478,15 @@ export const FLOWS = [
     covers: ["PauseOverlay", "SettingsPanel"],
     waitFor: '[data-testid="pause-overlay"]',
     async run(page) {
-      // Enable the wait-for-me hold, then end the hour early and log it.
+      // Enable the wait-for-me hold, then fast-forward past the next wall-clock
+      // :00 so the hour rings naturally (the End early button was removed —
+      // hours only end at :00), and log it. The fixture's blocks start "now",
+      // so 61 minutes always crosses the boundary.
       await page.getByTestId("vine-settings-button").click();
       await page.getByTestId("pause-wait-for-me-button").click();
       await page.keyboard.press("Escape");
-      await page.getByTestId("control-end-early").click();
+      await page.clock.fastForward(61 * 60_000);
+      await page.getByTestId("chime-overlay").waitFor();
       await page.getByTestId("chime-overlay").click();
       await page.getByTestId("recap-log-it").click();
     },
@@ -498,7 +502,8 @@ export const FLOWS = [
       await page.getByTestId("vine-settings-button").click();
       await page.getByTestId("pause-start-at-once-button").click();
       await page.keyboard.press("Escape");
-      await page.getByTestId("control-end-early").click();
+      // Cross the NEXT :00 boundary so the fresh block rings naturally.
+      await page.clock.fastForward(61 * 60_000);
     },
   },
   {

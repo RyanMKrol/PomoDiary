@@ -9,11 +9,6 @@
   display: flex;
 }
 
-.row + .row,
-.row + .customArea {
-  border-top: 2px solid rgba(32, 30, 29, 0.4);
-}
-
 .button {
   display: flex;
   align-items: center;
@@ -47,15 +42,6 @@
   width: 9px;
   height: 9px;
   flex-shrink: 0;
-}
-
-.endEarlyButton {
-  flex: 1;
-}
-
-.endEarlyButton:hover {
-  background-color: #ffe0d9;
-  color: #ae1800;
 }
 
 .moreButton {

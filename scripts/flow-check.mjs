@@ -242,7 +242,7 @@ async function waitForFixture(step, label, predicate) {
 const MIN = 60_000;
 
 async function main() {
-  // 09:00 local today, so ~5.5 fast-forwarded hours stay inside one local day
+  // 09:00 local today, so ~7.5 fast-forwarded hours stay inside one local day
   // (the header's today-bounds and the vine's day view both key off local dates).
   const t0Date = new Date();
   t0Date.setHours(9, 0, 0, 0);
@@ -256,7 +256,19 @@ async function main() {
     const page = await browser.newPage();
 
     const pageErrors = [];
-    page.on("pageerror", (err) => pageErrors.push(String(err)));
+    page.on("pageerror", (err) => {
+      const text = String(err);
+      // Clerk JS can never load from the fake frontend host; the big clock
+      // fast-forwards now fire its load-timeout as an uncaught rejection too —
+      // the same artifact the console filter below already excludes.
+      if (
+        text.includes(FAKE_CLERK_FRONTEND_HOST) ||
+        text.includes("Failed to load Clerk JS")
+      ) {
+        return;
+      }
+      pageErrors.push(text);
+    });
     page.on("console", (msg) => {
       // The harness runs against a fake Clerk project (see FAKE_CLERK_ENV), so
       // Clerk's own JS bundle can never load — both error shapes are artifacts
@@ -367,7 +379,10 @@ async function main() {
     const phraseBefore = PHRASES[fx.state.phraseIdx][0];
     await page.getByText(phraseBefore).waitFor();
 
-    await page.getByTestId("control-end-early").click();
+    // The End early button is gone (hours only end at :00) — raise the chime
+    // by advancing both clocks past the current block's wall-clock boundary.
+    const step3Advance = blockEndFor(fx.now) - fx.now + MIN;
+    await tick(page, fx, step3Advance);
     await page.getByTestId("chime-overlay").waitFor();
     await page.getByTestId("chime-overlay").click();
     await page.getByTestId("recap-bar").waitFor();
@@ -451,7 +466,9 @@ async function main() {
     await page.getByTestId("vine-settings-button").click();
     await page.getByTestId("pause-wait-for-me-button").click();
     await page.keyboard.press("Escape");
-    await page.getByTestId("control-end-early").click();
+    // As in step 3: no End early button any more, cross the :00 boundary.
+    const step5Advance = blockEndFor(fx.now) - fx.now + MIN;
+    await tick(page, fx, step5Advance);
     await page.getByTestId("chime-overlay").waitFor();
     await page.getByTestId("chime-overlay").click();
     await page.getByTestId("recap-bar").waitFor();
