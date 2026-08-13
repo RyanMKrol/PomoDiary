@@ -20,6 +20,7 @@ import {
   BASE_URL,
   FAKE_CLERK_FRONTEND_HOST,
   gotoWithRetry,
+  reloadWithRetry,
   launchChromium,
   startServer,
 } from "./_visual-harness.mjs";
@@ -367,7 +368,7 @@ async function main() {
 
     // The header fetches its count once on mount, so the increment is observed
     // on reload (fixture state lives in this process and survives it).
-    await page.reload({ waitUntil: "domcontentloaded" });
+    await reloadWithRetry(page, { waitUntil: "domcontentloaded" });
     await page.getByTestId("bullet-jotter").waitFor();
     // Class names are hashed in the production build, so assert on the header's
     // text; the count reads "00" until its fetch settles, so wait for the "01".
@@ -495,7 +496,7 @@ async function main() {
     );
     assertEqual("5-pause", "mode while holding", fx.state.mode, "paused");
 
-    await page.reload({ waitUntil: "domcontentloaded" });
+    await reloadWithRetry(page, { waitUntil: "domcontentloaded" });
     await page.getByTestId("pause-overlay").waitFor();
     assertEqual("5-pause", "mode after reload", fx.state.mode, "paused");
     // And the hold is escapable: click anywhere on the overlay to start a
