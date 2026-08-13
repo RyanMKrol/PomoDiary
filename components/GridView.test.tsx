@@ -2,7 +2,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import "@testing-library/jest-dom/vitest";
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, cleanup } from "@testing-library/react";
+import { act, render, screen, cleanup } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { GridView } from "./GridView";
 import type { Entry } from "@/lib/db/entries.store";
@@ -802,5 +802,31 @@ describe("history growth", () => {
     await screen.findByTestId("day-row-0");
     const rows = await screen.findAllByTestId(/^day-row-/);
     expect(rows).toHaveLength(1);
+  });
+});
+
+describe("midnight crossing", () => {
+  it("grows a fresh TODAY row when the grid stays open across midnight", async () => {
+    vi.useFakeTimers();
+    try {
+      vi.setSystemTime(new Date(2026, 7, 12, 23, 0, 0));
+      global.fetch = vi.fn(() => mockFetchResponse([entryDaysAgo(0)])) as any;
+
+      const { rerender } = render(
+        <GridView onSelectDay={() => {}} timerState={{ mode: "away" }} />,
+      );
+      await act(async () => {});
+      expect(screen.getAllByTestId(/^day-row-/)).toHaveLength(1);
+
+      // Cross midnight; any re-render (the timer publishes every minute)
+      // must add the new TODAY row instead of keeping yesterday on top.
+      vi.setSystemTime(new Date(2026, 7, 13, 8, 0, 0));
+      rerender(
+        <GridView onSelectDay={() => {}} timerState={{ mode: "running" }} />,
+      );
+      expect(screen.getAllByTestId(/^day-row-/)).toHaveLength(2);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

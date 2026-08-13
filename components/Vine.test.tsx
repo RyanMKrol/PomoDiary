@@ -2,6 +2,7 @@
 import "@testing-library/jest-dom/vitest";
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import {
+  act,
   render,
   screen,
   cleanup,
@@ -311,5 +312,35 @@ describe("back to the day", () => {
     await userEvent.click(screen.getByTestId("vine-zoom-button"));
     await userEvent.click(screen.getByTestId("vine-zoom-button"));
     expect(await screen.findByText("Today")).toBeInTheDocument();
+  });
+});
+
+describe("midnight crossing", () => {
+  it("shows the NEW day on the first render after midnight (overnight away)", async () => {
+    vi.useFakeTimers();
+    try {
+      vi.setSystemTime(new Date(2026, 7, 12, 23, 0, 0));
+      const d12 = new Date(2026, 7, 12, 0, 0, 0).getTime();
+      const d13 = d12 + 86_400_000;
+      const d14 = d13 + 86_400_000;
+      const urls = () =>
+        (global.fetch as ReturnType<typeof vi.fn>).mock.calls.map((c) =>
+          String(c[0]),
+        );
+
+      const { rerender } = render(<Vine timerState={{ mode: "away" }} />);
+      expect(urls()).toContain(`/api/entries?from=${d12}&to=${d13}`);
+      await act(async () => {});
+
+      // Asleep at 23:00, back at 08:00: the return click re-renders the
+      // vine, which must now fetch and show the new day — the cached-today
+      // regression kept it pinned to yesterday.
+      vi.setSystemTime(new Date(2026, 7, 13, 8, 0, 0));
+      rerender(<Vine timerState={{ mode: "running" }} />);
+      expect(urls()).toContain(`/api/entries?from=${d13}&to=${d14}`);
+      await act(async () => {});
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

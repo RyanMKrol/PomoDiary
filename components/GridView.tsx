@@ -95,11 +95,15 @@ export function GridView({ onSelectDay, timerState }: GridViewProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [entriesVersion]);
 
+  // Re-read on every render (see Vine.tsx): a grid left open across
+  // midnight must grow a fresh TODAY row, not keep yesterday on top.
+  // eslint-disable-next-line react-hooks/purity
+  const todayDate = new Date(Date.now());
+  todayDate.setHours(0, 0, 0, 0);
+  const todayStart = todayDate.getTime();
+
   const days = useMemo(() => {
-    // eslint-disable-next-line react-hooks/purity
-    const now = Date.now();
-    const today = new Date(now);
-    today.setHours(0, 0, 0, 0);
+    const today = new Date(todayStart);
 
     // One row per day from today back to the earliest entry — the grid
     // starts the day the diary started. Missed days in between still show
@@ -124,7 +128,7 @@ export function GridView({ onSelectDay, timerState }: GridViewProps) {
       dayList.push(dayStart);
     }
     return dayList;
-  }, [entries]);
+  }, [entries, todayStart]);
 
   if (loading) {
     return <div className={styles.container} />;
