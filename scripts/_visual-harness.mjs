@@ -103,6 +103,21 @@ export async function gotoWithRetry(page, url, options, attempts = 5) {
   throw lastError;
 }
 
+/** page.reload() hits the same resolver flake as page.goto() — see
+ *  gotoWithRetry above. Same cure: the server is provably up, so retry. */
+export async function reloadWithRetry(page, options, attempts = 5) {
+  let lastError;
+  for (let i = 0; i < attempts; i++) {
+    try {
+      return await page.reload(options);
+    } catch (err) {
+      lastError = err;
+      await new Promise((r) => setTimeout(r, 1000));
+    }
+  }
+  throw lastError;
+}
+
 export async function waitForServer(url, timeoutMs = 60_000) {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
